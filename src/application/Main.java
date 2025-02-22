@@ -14,7 +14,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import server.GameServer;
-import server.SharedState;
 import client.GameClient;
 import java.util.Random;
 
@@ -28,8 +27,11 @@ public class Main extends Application {
     private static Button hostServerButton = new Button("Host a Server");
     private static Button connectClientButton = new Button("Connect as Client");
     private static Button cancelButton = new Button("Cancel");
+    private static Button toGameButton = new Button("To game");
     private static TextField nameField = new TextField(); // Create a TextField for user name
     private int serverPort;
+    private static boolean isGameWindow = false;
+    private static int State = 0; //0 Idle, 1 Server, 2 Client;
     
     @Override
     public void start(Stage primaryStage) {
@@ -49,6 +51,11 @@ public class Main extends Application {
 
         cancelButton.setOnAction(event -> cancelBroadcast());
         cancelButton.setDisable(true);
+        toGameButton.setDisable(true);
+        toGameButton.setPrefWidth(140);
+        sendButton.setPrefWidth(65);
+        connectButton.setPrefWidth(65);
+
 
         VBox controls = new VBox();
         controls.setSpacing(20);
@@ -65,6 +72,7 @@ public class Main extends Application {
         
 
         sendButton.setDisable(true);
+        connectButton.setDisable(true);
         sendButton.setOnAction(event -> {
             if (sharedState.isClient()) {
                 GameClient.sendMessage(typeArea.getText(), logArea);
@@ -80,6 +88,7 @@ public class Main extends Application {
                 int serverIndex = Integer.parseInt(message.trim()) - 1;
                 boolean success = GameClient.connectToServer(serverIndex, logArea, getPlayerName());
                 if (success) {
+                toGameButton.setDisable(false);
                 sendButton.setDisable(false);
                 connectButton.setDisable(true);
                 typeArea.clear();
@@ -89,10 +98,22 @@ public class Main extends Application {
                 log("Invalid input. Please enter a number.");
             }
         });
-
+        
+        toGameButton.setOnAction(event ->{
+        	System.out.println("to game");
+        	startGame();
+        });
+        HBox SCbuttons = new HBox();
+        SCbuttons.setSpacing(10);
+        SCbuttons.getChildren().addAll(sendButton, connectButton);
+        
+        VBox buttonStack = new  VBox();
+        buttonStack.setSpacing(5);
+        buttonStack.getChildren().addAll(SCbuttons, toGameButton);
+        
         HBox messageBox = new HBox();
         messageBox.setSpacing(10);
-        messageBox.getChildren().addAll(typeArea, sendButton, connectButton);
+        messageBox.getChildren().addAll(typeArea, buttonStack);
 
         VBox Rbox = new VBox();
         Rbox.setSpacing(8);
@@ -114,6 +135,7 @@ public class Main extends Application {
     public void broadcastServer() {
         if (!sharedState.isBroadcast()) {
             log("Starting broadcast...");
+            State = 1;
             logArea.clear();
             sendButton.setDisable(false);
 	        connectButton.setDisable(true);
@@ -130,11 +152,13 @@ public class Main extends Application {
     public void connectClient() {
         if (!sharedState.isClient()) {
             log("Connecting as client...");
+            State = 2;
             logArea.clear();
             hostServerButton.setDisable(true);
             connectClientButton.setDisable(true);
             cancelButton.setDisable(false);
             nameField.setDisable(true); // Disable nameField
+            connectButton.setDisable(false);
             typeArea.setPromptText("Enter server number to connect first...");
             sharedState.setClient(true);
             sharedState.setBroadcast(false);
@@ -144,6 +168,7 @@ public class Main extends Application {
 
     public void cancelBroadcast() {
         log("Stopping ...");
+        State = 0;
         cancelButton.setDisable(true);
         nameField.setDisable(false); // Re-enable nameField
         typeArea.setPromptText("");
@@ -155,8 +180,8 @@ public class Main extends Application {
         
         if (sharedState.isClient()) {
             sharedState.setClient(false);
-            connectButton.setDisable(false); // Re-enable connectButton
-            sendButton.setDisable(true); // Disable sendButton
+            sendButton.setDisable(true);
+            connectButton.setDisable(true);
             GameClient.stopClient(logArea); // Pass logArea to stopClient
         }
         hostServerButton.setDisable(false);
@@ -202,4 +227,24 @@ public class Main extends Application {
     public static String getServerName() {
     	return nameField.getText().isEmpty() ? "Host" : nameField.getText();
     }
+    
+    public static void settoGamedisable(boolean  set) {
+    	toGameButton.setDisable(set);
+    }
+    
+    private void startGame() {
+    	isGameWindow = true;
+        Stage gameStage = new Stage();
+        new GameWindow().start(gameStage); // Start the GameWindow in a new window
+        settoGamedisable(true);
+    }
+    
+    public static boolean isGameWindow() {
+    	return isGameWindow;
+    }
+    
+    public static int getState() {
+    	return State;
+    }
+
 }
