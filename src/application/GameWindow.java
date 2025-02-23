@@ -115,11 +115,12 @@ public class GameWindow {
             playerY = GameServer.getServerY();
         } else { // Client
             localKey = GameClient.getLocalAddressPort();
-            PlayerInfo playerInfo = GameClient.getPlayerPositions().get(localKey);
+            PlayerInfo playerInfo = GameClient.getplayerList().get(localKey);
             if (playerInfo != null) {
                 playerX = playerInfo.getX();
                 playerY = playerInfo.getY();
             } else {
+            	
                 return; // No position data yet
             }
         }
@@ -154,9 +155,9 @@ public class GameWindow {
 
             // Draw clients
             gc.setFill(Color.GREEN);
-            for (String key : GameServer.getPlayerPositions().keySet()) {
+            for (String key : GameServer.getplayerList().keySet()) {
                 if (!key.equals(serverKey)) {
-                    PlayerInfo playerInfo = GameServer.getPlayerPositions().get(key);
+                    PlayerInfo playerInfo = GameServer.getplayerList().get(key);
                     double playerScreenX = playerInfo.getX() - backgroundX;
                     double playerScreenY = playerInfo.getY() - backgroundY;
                     gc.fillOval(playerScreenX, playerScreenY, 20, 20);
@@ -164,8 +165,8 @@ public class GameWindow {
             }
         } else if (Main.getState() == 2) { // Client Mode
             // Draw all players from client's perspective
-            for (String key : GameClient.getPlayerPositions().keySet()) {
-                PlayerInfo playerInfo = GameClient.getPlayerPositions().get(key);
+            for (String key : GameClient.getplayerList().keySet()) {
+                PlayerInfo playerInfo = GameClient.getplayerList().get(key);
                 double playerScreenX = playerInfo.getX() - backgroundX;
                 double playerScreenY = playerInfo.getY() - backgroundY;
 

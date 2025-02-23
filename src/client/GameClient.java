@@ -38,7 +38,7 @@ public class GameClient {
 	private static double deltaY = 0;
 	private static double serverX = 0;
 	private static double serverY = 0;
-	private static ConcurrentHashMap<String, PlayerInfo> playerPositions = new ConcurrentHashMap<>();
+	private static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 
 	public static void startClient(SharedState state, TextArea logArea) {
 		try {
@@ -215,7 +215,7 @@ public class GameClient {
 						clientSocket.receive(packet);
 						String received = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
 						// System.out.println(received);
-						if (received.startsWith("/sys/") || received.startsWith("/data/")) {
+						if (received.startsWith("/sys/")) {
 							if ("/sys/PONG".equals(received)) {
 								missedPings = 0; // Reset missed ping count
 								// System.out.println("Received PONG from server"); // Print to terminal for
@@ -223,41 +223,46 @@ public class GameClient {
 							} else if ("/sys/ACK".equals(received)) {
 								System.out.println("Handshake Test Complete"); // Print to terminal for debugging
 							}
+						} else if (received.startsWith("/data/")) {
+							// put here to prevent cout to log area
 						} else if (received.startsWith("/r/")) {
 							String msg = received.substring(3);
 							log(logArea, msg);
 						} else if (received.startsWith("/sname/")) {
 							String output = received.substring(7);
 							log(logArea, output);
+						} else if (received.startsWith("/ls/")) {
+							String list = received.substring(4);
+							log(logArea, list);
 						} else {
 							log(logArea, received);
 						}
 
 						if (received.startsWith("/data/")) {
-						    String jsonStr = received.substring(6);
-						    JSONObject json = new JSONObject(jsonStr);
-						    //System.out.println(received);
-						    
-						    // Update positions and additional fields
-						    for (String key : json.keySet()) {
-						        JSONObject playerData = json.getJSONObject(key);
-						        double[] pos = playerData.getJSONArray("position").toList().stream()
-						                .mapToDouble(o -> ((Number) o).doubleValue()).toArray();
-						        String name = playerData.getString("name");
-						        int score = playerData.getInt("score");
-						        String status = playerData.getString("status");
-						        
-						        playerPositions.put(key, new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
-						                Integer.parseInt(key.split(":")[1]), name, pos[0], pos[1], score, status));
-						    }
+							String jsonStr = received.substring(6);
+							JSONObject json = new JSONObject(jsonStr);
+							// System.out.println(received);
 
-						    // Update the client's own position
-						    String clientKey = getLocalAddressPort();
-						    if (playerPositions.containsKey(clientKey)) {
-						        PlayerInfo clientInfo = playerPositions.get(clientKey);
-						        clientX = clientInfo.getX();
-						        clientY = clientInfo.getY();
-						    }
+							// Update positions and additional fields
+							for (String key : json.keySet()) {
+								JSONObject playerData = json.getJSONObject(key);
+								double[] pos = playerData.getJSONArray("position").toList().stream()
+										.mapToDouble(o -> ((Number) o).doubleValue()).toArray();
+								String name = playerData.getString("name");
+								int score = playerData.getInt("score");
+								String status = playerData.getString("status");
+
+								playerList.put(key, new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
+										Integer.parseInt(key.split(":")[1]), name, pos[0], pos[1], score, status));
+							}
+
+							// Update the client's own position
+							String clientKey = getLocalAddressPort();
+							if (playerList.containsKey(clientKey)) {
+								PlayerInfo clientInfo = playerList.get(clientKey);
+								clientX = clientInfo.getX();
+								clientY = clientInfo.getY();
+							}
 						}
 					} catch (SocketTimeoutException e) {
 						// log(logArea, "No message received. Waiting...");
@@ -282,19 +287,6 @@ public class GameClient {
 					Thread.sleep(40); // Ping every 40 ms
 
 
-					if (missedPings > 10) {
-						wasDiscon = true;
-						if (missedPings == 11) { // run once on disconnect
-							log(logArea, "Server disconnected.");
-							System.out.println("Server disconnected."); // Print to terminal for debugging
-							log(logArea, "Attempting Reconnection ...");
-						}
-					} else {
-						if (wasDiscon) {
-							log(logArea, "Server Reconnect Succesful");
-							wasDiscon = false;
-						}
-					}
 				} catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 					log(logArea, "Ping thread interrupted.");
@@ -309,27 +301,41 @@ public class GameClient {
 	private static void sendPing(TextArea logArea) { /// send ping and also information to server run every 100ms
 		if (connectedServerAddress != null && connectedServerPort != -1) {
 			try {
-				if (sendPingCount > 15) { // run  every ~500  ms check if server avail
+				if (sendPingCount > 8) { // run to check if server avail
 					sendPingCount = 0;
+					
+					if (missedPings > 5) {
+						wasDiscon = true;
+						if (missedPings == 11) { // run once on disconnect
+							log(logArea, "Server disconnected.");
+							System.out.println("Server disconnected."); // Print to terminal for debugging
+							log(logArea, "Attempting Reconnection ...");
+						}
+					} else {
+						if (wasDiscon) {
+							sendMessage("/name/" + Main.getPlayerName(), logArea);
+							log(logArea, "Server Reconnect Succesful");
+							wasDiscon = false;
+						}
+					}
+					
 					String pingMessage = "/sys/PING";
-					missedPings += 1;
 					byte[] buf = pingMessage.getBytes(StandardCharsets.UTF_8);
 					DatagramPacket packet = new DatagramPacket(buf, buf.length, connectedServerAddress,
 							connectedServerPort);
 					clientSocket.send(packet);
-					//System.out.println("Sent PING to server");
+					missedPings +=1;
 				} else {
-					// System.out.println("Run but not ping");
 					sendPingCount++;
 				}
-				// Send Information (Not Ping)
+				
+				// Send Player Information (Not Ping)
 				if (Main.isGameWindow()) {
 					try {
 						JSONObject json = new JSONObject();
 						json.put("deltaX", deltaX);
 						json.put("deltaY", deltaY);
-						json.put("KUY", 100);
-						//TODO Add more data
+						// TODO Add more data
 						String message = "/data/" + json.toString();
 						byte[] buf = message.getBytes(StandardCharsets.UTF_8);
 						DatagramPacket packet = new DatagramPacket(buf, buf.length, connectedServerAddress,
@@ -369,8 +375,8 @@ public class GameClient {
 		return serverY;
 	}
 
-	public static ConcurrentHashMap<String, PlayerInfo> getPlayerPositions() {
-		return playerPositions;
+	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {
+		return playerList;
 	}
 
 	public static void setDelta(double MdeltaX, double MdeltaY) {

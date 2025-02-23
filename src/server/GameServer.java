@@ -33,7 +33,7 @@ public class GameServer {
 	private static double deltaX = 0;
 	private static double deltaY = 0;
 
-	private static ConcurrentHashMap<String, PlayerInfo> playerPositions = new ConcurrentHashMap<>();
+	private static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 
 	public static void startBroadcasting(SharedState state, TextArea logArea, String serverName, int serverPort) {
 		Thread thread = new Thread(() -> {
@@ -96,7 +96,7 @@ public class GameServer {
 						log(logArea, clientName + " has connected");
 					} else if (received.startsWith("/sys/")) { // System Message
 						if ("/sys/PING".equals(received)) {
-							//System.out.println("Ping Received Pong Sent");
+							// System.out.println("Ping Received Pong Sent");
 							String response = "/sys/PONG";
 							buf = response.getBytes(StandardCharsets.UTF_8);
 							packet = new DatagramPacket(buf, buf.length, clientAddress, clientPort);
@@ -114,19 +114,37 @@ public class GameServer {
 							serverSocket.send(packet);
 							System.out.println("Sent ACK to client at " + clientAddress + ":" + clientPort);
 							Main.settoGamedisable(false);
+						} else if ("/sys/ls".equals(received)) {
+							String response = "/ls/";
+							response += "======LIST OF PLAYERS======\n";
+							response += InetAddress.getLocalHost().getHostAddress() + ":" + serverSocket.getLocalPort();
+							response += " - " + Main.getServerName() + "\n";
+							if (clientAddresses.size() != 0) {
+								for (ClientInfo clientInfo : clientAddresses) {
+									String key = clientInfo.getAddress().getHostAddress() + ":" + clientInfo.getPort();
+									response += key + " - " + clientInfo.getName();
+								}
+							}
+							log(logArea,response);
+							byte[] responseBuf = response.getBytes(StandardCharsets.UTF_8);
+							DatagramPacket responsePacket = new DatagramPacket(responseBuf, responseBuf.length,
+									packet.getAddress(), packet.getPort());
+							serverSocket.send(responsePacket);
 						} else { // Other server messages here
 							System.out.println("Received System Message: " + received);
 						}
+
 					} else if (received.startsWith("/data/")) {
 						String jsonStr = received.substring(6);
 						JSONObject json = new JSONObject(jsonStr);
 						double deltaX = json.getDouble("deltaX");
 						double deltaY = json.getDouble("deltaY");
 
-						// Update the player's position in playerPositions map
+						// Update the player's position in playerList map
 						String clientKey = packet.getAddress().getHostAddress() + ":" + packet.getPort();
-						playerPositions.putIfAbsent(clientKey, new PlayerInfo(packet.getAddress(), packet.getPort(), "player", 0, 0, 0, "active"));
-						PlayerInfo playerInfo = playerPositions.get(clientKey);
+						playerList.putIfAbsent(clientKey,
+								new PlayerInfo(packet.getAddress(), packet.getPort(), "player", 0, 0, 0, "active"));
+						PlayerInfo playerInfo = playerList.get(clientKey);
 						playerInfo.setX(playerInfo.getX() + deltaX);
 						playerInfo.setY(playerInfo.getY() + deltaY);
 
@@ -137,21 +155,21 @@ public class GameServer {
 						String serverKey = InetAddress.getLocalHost().getHostAddress() + ":"
 								+ serverSocket.getLocalPort();
 						JSONObject serverData = new JSONObject();
-					    serverData.put("position", new double[]{serverX, serverY});
-					    serverData.put("name", "server");
-					    serverData.put("score", 1000);
-					    serverData.put("status", "active");
-					    json.put(serverKey, serverData);
+						serverData.put("position", new double[] { serverX, serverY });
+						serverData.put("name", Main.getServerName());
+						serverData.put("score", 1000);
+						serverData.put("status", "active");
+						json.put(serverKey, serverData);
 
 						// Add player positions without PC name
-						for (PlayerInfo info : playerPositions.values()) {
+						for (PlayerInfo info : playerList.values()) {
 							String key = info.getAddress().getHostAddress() + ":" + info.getPort();
-					        JSONObject playerData = new JSONObject();
-					        playerData.put("position", new double[]{info.getX(), info.getY()});
-					        playerData.put("name", info.getName());
-					        playerData.put("score", info.getScore());
-					        playerData.put("status", info.getStatus());
-					        json.put(key, playerData);
+							JSONObject playerData = new JSONObject();
+							playerData.put("position", new double[] { info.getX(), info.getY() });
+							playerData.put("name", info.getName());
+							playerData.put("score", info.getScore());
+							playerData.put("status", info.getStatus());
+							json.put(key, playerData);
 						}
 
 						String response = "/data/" + json.toString();
@@ -187,7 +205,7 @@ public class GameServer {
 		if (Main.isGameWindow()) {
 			System.out.println("Player and Server Locations:");
 			System.out.println("Server - X: " + serverX + ", Y: " + serverY); // Print server position
-			for (PlayerInfo player : playerPositions.values()) {
+			for (PlayerInfo player : playerList.values()) {
 				System.out.println(player.getName() + " - X: " + player.getX() + ", Y: " + player.getY());
 			}
 		}
@@ -229,18 +247,19 @@ public class GameServer {
 						+ " has missed 5 PINGs and is considered disconnected.");
 				clientPingCount.remove(clientInfo);
 				clientAddresses.remove(clientInfo);
-				 // Remove player position using clientKey
-	            String clientKey = clientInfo.getAddress().getHostAddress() + ":" + clientInfo.getPort();
-	            playerPositions.remove(clientKey);			}
+				// Remove player position using clientKey
+				String clientKey = clientInfo.getAddress().getHostAddress() + ":" + clientInfo.getPort();
+				playerList.remove(clientKey);
+			}
 		}
 	}
 
 	public static void stopServer() {
-		
+
 		clientPingCount.clear();
 		clientAddresses.clear();
-		playerPositions.clear();
-		
+		playerList.clear();
+
 		if (serverSocket != null && !serverSocket.isClosed()) {
 			serverSocket.close();
 		}
@@ -294,8 +313,8 @@ public class GameServer {
 		serverY += deltaY;
 	}
 
-	public static ConcurrentHashMap<String, PlayerInfo> getPlayerPositions() {
-		return playerPositions;
+	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {
+		return playerList;
 	}
 
 	// Method to get local address and port in the required format
