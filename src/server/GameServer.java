@@ -96,7 +96,7 @@ public class GameServer {
 						log(logArea, clientName + " has connected");
 					} else if (received.startsWith("/sys/")) { // System Message
 						if ("/sys/PING".equals(received)) {
-							System.out.println("Ping Recieved Pong Sent");
+							//System.out.println("Ping Received Pong Sent");
 							String response = "/sys/PONG";
 							buf = response.getBytes(StandardCharsets.UTF_8);
 							packet = new DatagramPacket(buf, buf.length, clientAddress, clientPort);
