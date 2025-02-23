@@ -87,8 +87,13 @@ public class GameServer {
 					String received = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
 					InetAddress clientAddress = packet.getAddress();
 					int clientPort = packet.getPort();
-
-					if (received.startsWith("/name/")) { // First Contact
+					
+					if (received.startsWith("/report/")) {
+						System.out.println("report received");
+						String clientName = received.substring(8);
+						log(logArea,"Dead player reported by "+ clientName);
+					}
+					else if (received.startsWith("/name/")) { // First Contact
 						String clientName = received.substring(6);
 						ClientInfo clientInfo = new ClientInfo(clientAddress, clientPort, clientName);
 						clientAddresses.remove(clientInfo); // Remove old client info if exists
@@ -137,6 +142,8 @@ public class GameServer {
 					} else if (received.startsWith("/data/")) {
 						String jsonStr = received.substring(6);
 						JSONObject json = new JSONObject(jsonStr);
+
+
 						double deltaX = json.getDouble("deltaX");
 						double deltaY = json.getDouble("deltaY");
 

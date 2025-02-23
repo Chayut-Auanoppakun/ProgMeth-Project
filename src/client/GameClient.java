@@ -134,6 +134,7 @@ public class GameClient {
 	}
 
 	public static void sendMessage(String message, TextArea logArea) {
+		System.out.println(message);
 		if (connectedServerAddress != null && connectedServerPort != -1) {
 			try {
 				if (message.startsWith("/sys/") || message.startsWith("/name/")) {
@@ -156,7 +157,25 @@ public class GameClient {
 			log(logArea, "Not connected to any server.");
 		}
 	}
+	
+	public void reportDeadBody() {
+	    if (clientSocket == null || connectedServerAddress == null || connectedServerPort == -1) {
+	        System.out.println("Not connected to a server.");
+	        return;
+	    }
+	    String message = "/report/" + Main.getPlayerName();
+	    byte[] buf = message.getBytes(StandardCharsets.UTF_8);
+		DatagramPacket packet = new DatagramPacket(buf, buf.length, connectedServerAddress,
+				connectedServerPort);
+		try {
+			clientSocket.send(packet);
+			System.out.println("report sent");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
+	
 	public static void stopClient(TextArea logArea) {
 		if (clientSocket != null && !clientSocket.isClosed()) {
 			clientSocket.close();

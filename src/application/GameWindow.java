@@ -44,7 +44,12 @@ public class GameWindow {
     private int frames = 0;
     private long fpsUpdateTime = System.nanoTime();
     private int fps = 0;
-    
+    private GameClient gameClient; // Declare it at the top
+
+    public GameWindow(GameClient gameClient) {  // Modify constructor
+        this.gameClient = gameClient;
+    }
+
     public void start(Stage stage) {
         this.gameStage = stage;
         canvas = new Canvas(screenWidth, screenHeight);
@@ -207,6 +212,9 @@ public class GameWindow {
         }
         if (pressedKeys.contains(KeyCode.D)) {
             deltaX += 5;
+        }
+        if (pressedKeys.contains(KeyCode.R)) {
+			gameClient.reportDeadBody();
         }
 
         if (Main.getState() == 1) { // Server

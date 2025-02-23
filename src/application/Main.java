@@ -235,8 +235,12 @@ public class Main extends Application {
     private void startGame() {
     	isGameWindow = true;
         Stage gameStage = new Stage();
-        new GameWindow().start(gameStage); // Start the GameWindow in a new window
+        GameClient client = new GameClient();
+        new GameWindow(client).start(gameStage); // Start the GameWindow in a new window
         settoGamedisable(true);
+        
+        
+
     }
     
     public static boolean isGameWindow() {
