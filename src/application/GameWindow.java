@@ -6,10 +6,16 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.scene.image.Image;
+
+import java.util.HashSet;
+import java.util.Set;
+
 import client.GameClient;
 import server.GameServer;
 import server.PlayerInfo;
@@ -26,13 +32,19 @@ public class GameWindow {
     private double backgroundY = 0;
     
     // Screen dimensions
-    private final double screenWidth = 600;
-    private final double screenHeight = 600;
+    private final double screenWidth = 1920;
+    private final double screenHeight = 1080;
     
     // Movement flags
     private boolean up, down, left, right;
     private final double speed = 10;
-
+    private Set<KeyCode> pressedKeys = new HashSet<>();
+    
+    private long lastTime = System.nanoTime();
+    private int frames = 0;
+    private long fpsUpdateTime = System.nanoTime();
+    private int fps = 0;
+    
     public void start(Stage stage) {
         this.gameStage = stage;
         canvas = new Canvas(screenWidth, screenHeight);
@@ -50,8 +62,17 @@ public class GameWindow {
         timer = new AnimationTimer() {
             @Override
             public void handle(long now) {
+                // Calculate FPS
+                frames++;
+                if (now - fpsUpdateTime >= 1_000_000_000) { // One second has passed
+                    fps = frames;
+                    frames = 0;
+                    fpsUpdateTime = now;
+                }
+
                 update();
                 render();
+                displayFPS();
             }
         };
         timer.start();
@@ -72,24 +93,15 @@ public class GameWindow {
             Platform.runLater(() -> Main.settoGamedisable(false));
         });
     }
+    
+    private void displayFPS() {
+        gc.setFill(Color.WHITE);
+        gc.setFont(new Font("Arial", 20));
+        gc.fillText("FPS: " + fps, 10, 20);
+    }
 
     private void update() {
-        // Calculate movement delta
-        double dx = 0, dy = 0;
-        if (up) dy -= speed;
-        if (down) dy += speed;
-        if (left) dx -= speed;
-        if (right) dx += speed;
-
-        // Send movement input
-        if (dx != 0 || dy != 0) {
-            if (Main.getState() == 1) { // Server
-                GameServer.setDelta(dx, dy);
-            } else if (Main.getState() == 2) { // Client
-                GameClient.setDelta(dx, dy);
-            }
-        }
-
+     
         // Update camera position based on current player position
         updateCamera();
     }
@@ -169,24 +181,39 @@ public class GameWindow {
             }
         }
     }
-
+    
     private void handleKeyPress(KeyEvent event) {
-        switch (event.getCode()) {
-            case W -> up = true;
-            case S -> down = true;
-            case A -> left = true;
-            case D -> right = true;
-            default -> {}
-        }
+        pressedKeys.add(event.getCode());
+        updateMovement();
     }
 
     private void handleKeyRelease(KeyEvent event) {
-        switch (event.getCode()) {
-            case W -> up = false;
-            case S -> down = false;
-            case A -> left = false;
-            case D -> right = false;
-            default -> {}
+        pressedKeys.remove(event.getCode());
+        updateMovement();
+    }
+
+    private void updateMovement() {
+        double deltaX = 0, deltaY = 0;
+
+        if (pressedKeys.contains(KeyCode.W)) {
+            deltaY -= 5;
+        }
+        if (pressedKeys.contains(KeyCode.S)) {
+            deltaY += 5;
+        }
+        if (pressedKeys.contains(KeyCode.A)) {
+            deltaX -= 5;
+        }
+        if (pressedKeys.contains(KeyCode.D)) {
+            deltaX += 5;
+        }
+
+        if (Main.getState() == 1) { // Server
+            GameServer.setDelta(deltaX, deltaY);
+        } else if (Main.getState() == 2) { // Client
+            GameClient.setDelta(deltaX, deltaY);
         }
     }
+    
+    
 }
