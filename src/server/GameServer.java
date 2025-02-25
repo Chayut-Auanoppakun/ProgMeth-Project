@@ -32,7 +32,7 @@ public class GameServer {
 	private static double serverY = 300;
 	private static double deltaX = 0;
 	private static double deltaY = 0;
-
+	private String name;
 	private static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 
 	public static void startBroadcasting(SharedState state, TextArea logArea, String serverName, int serverPort) {
@@ -88,12 +88,13 @@ public class GameServer {
 					InetAddress clientAddress = packet.getAddress();
 					int clientPort = packet.getPort();
 					
-					if (received.startsWith("/report/")) {
-						System.out.println("report received");
-						String clientName = received.substring(8);
-						log(logArea,"Dead player reported by "+ clientName);
-					}
-					else if (received.startsWith("/name/")) { // First Contact
+//					if (received.startsWith("/report/")) {
+//						System.out.println("report received");
+//						String clientName = received.substring(8);
+//						log(logArea,"Dead player reported by "+ clientName);
+//					}
+					//else
+						if (received.startsWith("/name/")) { // First Contact
 						String clientName = received.substring(6);
 						ClientInfo clientInfo = new ClientInfo(clientAddress, clientPort, clientName);
 						clientAddresses.remove(clientInfo); // Remove old client info if exists

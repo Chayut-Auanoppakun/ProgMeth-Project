@@ -16,6 +16,7 @@ import javafx.scene.image.Image;
 import java.util.HashSet;
 import java.util.Set;
 
+import Logic.GameLogic;
 import client.GameClient;
 import server.GameServer;
 import server.PlayerInfo;
@@ -214,9 +215,15 @@ public class GameWindow {
             deltaX += 5;
         }
         if (pressedKeys.contains(KeyCode.R)) {
-			gameClient.reportDeadBody();
+//        	if(dead player nearby) {
+//        		
+//        	}
+        	if (Main.getState() == 1) { // Server
+        		GameLogic.reportDeadBody(Main.getServerName());
+            } else if (Main.getState() == 2) { // Client
+                	GameLogic.reportDeadBody(Main.getPlayerName());
+                }
         }
-
         if (Main.getState() == 1) { // Server
             GameServer.setDelta(deltaX, deltaY);
         } else if (Main.getState() == 2) { // Client
