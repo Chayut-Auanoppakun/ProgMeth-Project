@@ -11,13 +11,13 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import logic.ClientLogic;
 import logic.ServerLogic;
 import javafx.scene.image.Image;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import client.GameClient;
 import server.PlayerInfo;
 
 public class GameWindow {
@@ -49,7 +49,7 @@ public class GameWindow {
         
         // Load background image
         try {
-            background = new Image(getClass().getResourceAsStream("/background.png"));
+            background = new Image(getClass().getResourceAsStream("/background.jpg"));
             System.out.println("Background loaded successfully");
         } catch (Exception e) {
             System.err.println("Failed to load background image: " + e.getMessage());
@@ -111,8 +111,8 @@ public class GameWindow {
             playerX = ServerLogic.getServerX();
             playerY = ServerLogic.getServerY();
         } else { // Client
-            localKey = GameClient.getLocalAddressPort();
-            PlayerInfo playerInfo = GameClient.getplayerList().get(localKey);
+            localKey = ClientLogic.getLocalAddressPort();
+            PlayerInfo playerInfo = ClientLogic.getplayerList().get(localKey);
             if (playerInfo != null) {
                 playerX = playerInfo.getX();
                 playerY = playerInfo.getY();
@@ -162,12 +162,12 @@ public class GameWindow {
             }
         } else if (ServerGui.getState() == 2) { // Client Mode
             // Draw all players from client's perspective
-            for (String key : GameClient.getplayerList().keySet()) {
-                PlayerInfo playerInfo = GameClient.getplayerList().get(key);
+            for (String key : ClientLogic.getplayerList().keySet()) {
+                PlayerInfo playerInfo = ClientLogic.getplayerList().get(key);
                 double playerScreenX = playerInfo.getX() - backgroundX;
                 double playerScreenY = playerInfo.getY() - backgroundY;
 
-                if (key.equals(GameClient.getLocalAddressPort())) {
+                if (key.equals(ClientLogic.getLocalAddressPort())) {
                     gc.setFill(Color.RED); // Current client
                 } else if (key.equals(ServerLogic.getLocalAddressPort())) {
                     gc.setFill(Color.BLUE); // Server
@@ -209,7 +209,7 @@ public class GameWindow {
         if (ServerGui.getState() == 1) { // Server
             ServerLogic.setDelta(deltaX, deltaY);
         } else if (ServerGui.getState() == 2) { // Client
-            GameClient.setDelta(deltaX, deltaY);
+            ClientLogic.setDelta(deltaX, deltaY);
         }
     }
     

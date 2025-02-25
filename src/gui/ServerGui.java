@@ -12,9 +12,10 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+import logic.ClientLogic;
 import logic.ServerLogic;
 import logic.State;
-import client.GameClient;
+
 import java.util.Random;
 import gui.GameWindow; // not used yet
 import javafx.scene.layout.Pane;
@@ -25,13 +26,9 @@ public class ServerGui extends Pane {
 	private static TextArea typeArea = new TextArea(); // Create a TextArea for typing messages
 	private static Button sendButton = new Button("Send"); // Create a Send button
 	private static Button startButton = new Button("Connect"); // Create a Connect button
-	private static Button hostServerButton = new Button("Host a Server");
-	private static Button connectClientButton = new Button("Connect as Client");
-	private static Button cancelButton = new Button("Cancel");
 	private static Button toGameButton = new Button("Start Match");
 	private int serverPort;
 	static State CurState;
-	private boolean started = false;
 	private static boolean isGameWindow = false;
 	Stage thisStage;
 	public ServerGui(State state, Stage primaryStage) {
@@ -87,8 +84,12 @@ public class ServerGui extends Pane {
 
 		} else if (CurState.equals(logic.State.CLIENT)) {
 			startButton.setOnAction(event -> connectClient());
-			sendButton.setOnAction(event -> GameClient.sendMessage(typeArea.getText(), logArea));
+			sendButton.setOnAction(event -> ClientLogic.sendMessage(typeArea.getText(), logArea));
 		}
+		
+		toGameButton.setOnAction(event -> {
+			startGame();
+		});
 
 		// Chat box layout (Stack messages horizontally)
 		HBox buttonSet = new HBox(10, sendButton, startButton);
@@ -113,7 +114,6 @@ public class ServerGui extends Pane {
 			sendButton.setDisable(false);
 			startButton.setDisable(true);
 			
-			cancelButton.setDisable(false);
 			startButton.setDisable(true); // Disable Start BT
 			MainMenuPane.setNameDisable(true); // Disable nameField
 			MainMenuPane.setHostDisable(true); // Disable HOST
@@ -126,7 +126,6 @@ public class ServerGui extends Pane {
 	public void connectClient() {
 			log("Connecting as client...");
 			logArea.clear();
-			cancelButton.setDisable(false);
 			MainMenuPane.setNameDisable(true); // Disable nameField
 			MainMenuPane.setHostDisable(true); // Disable HOST
 			MainMenuPane.setJoinDisable(true); // Disable JOIN
@@ -135,7 +134,7 @@ public class ServerGui extends Pane {
 	            String message = typeArea.getText();
 	            try {
 	                int serverIndex = Integer.parseInt(message.trim()) - 1;
-	                boolean success = GameClient.connectToServer(serverIndex, logArea, MainMenuPane.getPlayerName());
+	                boolean success = ClientLogic.connectToServer(serverIndex, logArea, MainMenuPane.getPlayerName());
 	                if (success) {
 	                toGameButton.setDisable(false);
 	                sendButton.setDisable(false);
@@ -150,15 +149,14 @@ public class ServerGui extends Pane {
 			//startButton.setDisable(true);
 			typeArea.setPromptText("Enter server number to connect first...");
 			CurState = logic.State.CLIENT;
-			GameClient.startClient(CurState, logArea);
+			ClientLogic.startClient(CurState, logArea);
 	}
 
-	public void cancelBroadcast() {
+	public static void stopGame() {
 		log("Stopping ...");
-		cancelButton.setDisable(true);
 		MainMenuPane.setNameDisable(false); // Re-enable nameField
-		MainMenuPane.setHostDisable(false); // Disable HOST
-		MainMenuPane.setJoinDisable(false); // Disable JOIN
+		MainMenuPane.setHostDisable(false); // Enable HOST
+		MainMenuPane.setJoinDisable(false); // Enable JOIN
 		typeArea.setPromptText("");
 
 		if (CurState.equals(logic.State.SERVER)) {
@@ -168,12 +166,11 @@ public class ServerGui extends Pane {
 
 		if (CurState.equals(logic.State.CLIENT)) {
 			CurState = logic.State.IDLE;
-			sendButton.setDisable(true);
-			startButton.setDisable(true);
-			GameClient.stopClient(logArea); // Pass logArea to stopClient
+			ClientLogic.stopClient(logArea); // Pass logArea to stopClient
 		}
-		hostServerButton.setDisable(false);
-		connectClientButton.setDisable(false);
+		sendButton.setDisable(true);
+		startButton.setDisable(false);
+		toGameButton.setDisable(true);
 		logArea.clear();
 	}
 
@@ -181,13 +178,13 @@ public class ServerGui extends Pane {
 		log("Window is closing...");
 		CurState = logic.State.IDLE;
 		ServerLogic.stopServer();
-		GameClient.stopClient(logArea);
+		ClientLogic.stopClient(logArea);
 		System.out.println("Window is closing...");
 		Platform.exit();
 		System.exit(0);
 	}
 
-	private void log(String message) {
+	private static void log(String message) {
 		logArea.appendText(message + "\n");
 	}
 
