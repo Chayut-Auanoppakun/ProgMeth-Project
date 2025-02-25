@@ -224,6 +224,18 @@ public class GameWindow {
                 	GameLogic.reportDeadBody(Main.getPlayerName());
                 }
         }
+        if (pressedKeys.contains(KeyCode.V)) {
+//        	if(isImposter) {
+//        		
+//        	}
+        	if (Main.getState() == 1) { // Server
+        		GameLogic.imposterVentEnter(Main.getServerName());
+            } else if (Main.getState() == 2) { // Client
+                	GameLogic.imposterVentEnter(Main.getPlayerName());
+                }
+        }
+        
+        
         if (Main.getState() == 1) { // Server
             GameServer.setDelta(deltaX, deltaY);
         } else if (Main.getState() == 2) { // Client

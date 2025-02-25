@@ -15,4 +15,8 @@ public class GameLogic {
         System.out.println("Dead body reported by: " + playerName);
         //meeting start
     }
+    public static void imposterVentEnter(String playerName) {
+        System.out.println(playerName+" Entered vent");
+        //imposter enter vent
+    }
 }
