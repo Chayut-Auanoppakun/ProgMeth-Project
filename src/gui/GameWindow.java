@@ -58,8 +58,8 @@ public class GameWindow {
     private double viewportY = 0;
 
     // Screen dimensions
-    private final double screenWidth = 800;
-    private final double screenHeight = 600;
+    private final double screenWidth = 1080;
+    private final double screenHeight = 720;
 
     // Movement flags
     private Set<KeyCode> pressedKeys = new HashSet<>();
@@ -71,7 +71,7 @@ public class GameWindow {
     
     // Player size
     private final double PLAYER_RADIUS = 10;
-    private final double CAMERA_ZOOM = 0.50; // 15% of screen (much closer than before)
+    private final double CAMERA_ZOOM = 2; // 15% of screen (much closer than before)
 
     public void start(Stage stage) {
         this.gameStage = stage;
@@ -170,43 +170,43 @@ public class GameWindow {
     }
 
     private void updateCamera() {
-        double playerX = 0, playerY = 0;
-        String localKey;
+    	double playerX =0;
+    	double playerY = 0;
+    	if (ServerGui.getState() == 1) {
+         playerX = ServerLogic.getServerX();
+        // Get the player's current X position
+         playerY = ServerLogic.getServerY();  // Get the player's current Y position
+    	}
+    	else {
+    		 playerX = ClientLogic.getClientX();
+    		 playerY = ClientLogic.getClientY();
+    	}
+    		
+        // Calculate ideal camera position (keeping the player centered)
+        double cameraCenterX = playerX - (screenWidth / 2) / CAMERA_ZOOM;
+        double cameraCenterY = playerY - (screenHeight / 2) / CAMERA_ZOOM;
 
-        // Get the current player position
-        if (ServerGui.getState() == 1) { // Server
-            playerX = ServerLogic.getServerX();
-            playerY = ServerLogic.getServerY();
-        } else { // Client
-            localKey = ClientLogic.getLocalAddressPort();
-            PlayerInfo playerInfo = ClientLogic.getplayerList().get(localKey);
-            if (playerInfo != null) {
-                playerX = playerInfo.getX();
-                playerY = playerInfo.getY();
-            } else {
-                return; // No position data yet
-            }
-        }
+        // Smoothly interpolate the camera position
+        double smoothFactor = 0.05;  // Adjust smoothness of camera following
+        viewportX += (cameraCenterX - viewportX) * smoothFactor;
+        viewportY += (cameraCenterY - viewportY) * smoothFactor;
 
-        // Calculate ideal camera position (much closer to player)
-        double idealViewportX = playerX - screenWidth * CAMERA_ZOOM;
-        double idealViewportY = playerY - screenHeight * CAMERA_ZOOM;
+        // Clamp the camera position to the map boundaries
+        int mapPixelWidth = map.getWidth() * map.getTileWidth();
+        int mapPixelHeight = map.getHeight() * map.getTileHeight();
 
-        // Smoothly interpolate camera position for less jerky movement
-        double smoothFactor = 0.5; // Adjust value for smoother/faster camera
-        viewportX = viewportX + (idealViewportX - viewportX) * smoothFactor;
-        viewportY = viewportY + (idealViewportY - viewportY) * smoothFactor;
-
-        // Clamp camera to map bounds
-        if (map != null) {
-            int mapPixelWidth = map.getWidth() * map.getTileWidth();
-            int mapPixelHeight = map.getHeight() * map.getTileHeight();
-            viewportX = Math.max(0, Math.min(viewportX, mapPixelWidth - screenWidth));
-            viewportY = Math.max(0, Math.min(viewportY, mapPixelHeight - screenHeight));
-        }
+        // Clamp based on zoom (camera must stay within bounds even when zoomed)
+        viewportX = Math.max(0, Math.min(viewportX, mapPixelWidth - screenWidth / CAMERA_ZOOM));
+        viewportY = Math.max(0, Math.min(viewportY, mapPixelHeight - screenHeight / CAMERA_ZOOM));
     }
+
+
     private void render() {
         gc.clearRect(0, 0, screenWidth, screenHeight);
+
+        // Scale the graphics context for zoom
+        gc.save();
+        gc.scale(CAMERA_ZOOM, CAMERA_ZOOM);  // Zoom in or out
 
         // Draw TMX map
         if (map != null) {
@@ -219,10 +219,14 @@ public class GameWindow {
 
         // Draw players
         renderPlayers();
-        
+
         // Debug: Draw collision objects
         renderCollisionObjects();
+
+        gc.restore();
     }
+
+
     
     private void renderCollisionObjects() {
 //         Uncomment this section for debugging collision objects
@@ -357,22 +361,32 @@ public class GameWindow {
     }
     
     private boolean wouldCollide(double currentX, double currentY, double newX, double newY) {
-        // Check collision with each collision object
-        for (CollisionObject obj : collisionObjects) {
-            // Simple circle vs rectangle collision
-            double closestX = Math.max(obj.x, Math.min(newX, obj.x + obj.width));
-            double closestY = Math.max(obj.y, Math.min(newY, obj.y + obj.height));
-            
-            double distanceX = newX - closestX;
-            double distanceY = newY - closestY;
-            
-            if ((distanceX * distanceX + distanceY * distanceY) <= (PLAYER_RADIUS * PLAYER_RADIUS)) {
-                return true; // Collision detected
+        // Perform continuous collision detection by checking multiple small steps
+        int steps = 10;  // Number of steps to break the movement into
+        double stepX = (newX - currentX) / steps;
+        double stepY = (newY - currentY) / steps;
+
+        for (int i = 1; i <= steps; i++) {
+            double checkX = currentX + stepX * i;
+            double checkY = currentY + stepY * i;
+
+            // Check for collision with each collision object
+            for (CollisionObject obj : collisionObjects) {
+                double closestX = Math.max(obj.x, Math.min(checkX, obj.x + obj.width));
+                double closestY = Math.max(obj.y, Math.min(checkY, obj.y + obj.height));
+
+                double distanceX = checkX - closestX;
+                double distanceY = checkY - closestY;
+
+                if ((distanceX * distanceX + distanceY * distanceY) <= (PLAYER_RADIUS * PLAYER_RADIUS)) {
+                    return true; // Collision detected
+                }
             }
         }
-        
-        return false; // No collision
+
+        return false; // No collision after all checks
     }
+
 
     // TMX Map rendering methods from the first example
     private void drawMap(GraphicsContext gc, double viewportX, double viewportY, double viewportWidth, double viewportHeight) {
