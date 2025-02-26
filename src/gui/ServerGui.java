@@ -3,11 +3,9 @@ package gui;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -17,9 +15,7 @@ import logic.ServerLogic;
 import logic.State;
 
 import java.util.Random;
-import gui.GameWindow; // not used yet
 import javafx.scene.layout.Pane;
-import gui.MainMenuPane;
 
 public class ServerGui extends Pane {
 	private static TextArea logArea = new TextArea(); // Create a TextArea for logging

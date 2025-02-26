@@ -17,7 +17,6 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import logic.ServerLogic;
 import logic.State;
 
 public class MainMenuPane extends Pane {

@@ -8,5 +8,10 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="assets"/>
 	<classpathentry kind="lib" path="W:/json-20250107.jar"/>
+	<classpathentry kind="lib" path="W:/libtiled-1.4.2.jar"/>
+	<classpathentry kind="lib" path="W:/ProgMeth Depend/activation-1.1.1.jar"/>
+	<classpathentry kind="lib" path="W:/ProgMeth Depend/jaxb-api-2.3.1.jar"/>
+	<classpathentry kind="lib" path="W:/ProgMeth Depend/jaxb-core-2.3.0.1.jar"/>
+	<classpathentry kind="lib" path="W:/ProgMeth Depend/jaxb-impl-2.3.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -22,8 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.json.JSONObject;
 
-import application.Main;
-import logic.State;
+
 import gui.MainMenuPane;
 import gui.ServerGui;
 
