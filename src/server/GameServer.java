@@ -30,9 +30,7 @@ public class GameServer {
 	private static Timer pingCheckTimer;
 	private static double serverX = 300;
 	private static double serverY = 300;
-	private static double deltaX = 0;
-	private static double deltaY = 0;
-
+	
 	private static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 
 	public static void startBroadcasting(SharedState state, TextArea logArea, String serverName, int serverPort) {
@@ -78,7 +76,6 @@ public class GameServer {
 				// Schedule the task to print player locations every second
 				ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 				executor.scheduleAtFixedRate(() -> printPlayerLocations(), 0, 1, TimeUnit.SECONDS);
-				executor.scheduleAtFixedRate(() -> updateServerPosition(), 0, 40, TimeUnit.MILLISECONDS);
 
 				while (state.isBroadcast()) {
 					byte[] buf = new byte[1024];
@@ -303,15 +300,10 @@ public class GameServer {
 		return serverY;
 	}
 
-	public static void setDelta(double dx, double dy) {
-		deltaX = dx;
-		deltaY = dy;
-	}
-
-	private static void updateServerPosition() {
-		serverX += deltaX;
-		serverY += deltaY;
-	}
+    public static void setPosition(double x, double  y) {
+    	serverX = x;
+    	serverY = y;
+    }
 
 	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {
 		return playerList;
