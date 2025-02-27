@@ -83,7 +83,6 @@ public class ServerLogic {
 				ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 				executor.scheduleAtFixedRate(() -> printPlayerLocations(), 0, 1, TimeUnit.SECONDS);
 				executor.scheduleAtFixedRate(() -> updateServerPosition(), 0, 40, TimeUnit.MILLISECONDS);
-
 				while (state.equals(logic.State.SERVER)) {
 					byte[] buf = new byte[1024];
 					DatagramPacket packet = new DatagramPacket(buf, buf.length);
@@ -141,16 +140,16 @@ public class ServerLogic {
 					} else if (received.startsWith("/data/")) {
 						String jsonStr = received.substring(6);
 						JSONObject json = new JSONObject(jsonStr);
-						double deltaX = json.getDouble("deltaX");
-						double deltaY = json.getDouble("deltaY");
+						double posX = json.getDouble("PosX");
+						double posY = json.getDouble("PosY");
 
 						// Update the player's position in playerList map
 						String clientKey = packet.getAddress().getHostAddress() + ":" + packet.getPort();
 						playerList.putIfAbsent(clientKey,
 								new PlayerInfo(packet.getAddress(), packet.getPort(), "player", 0, 0, 0, "active"));
 						PlayerInfo playerInfo = playerList.get(clientKey);
-						playerInfo.setX(playerInfo.getX() + deltaX);
-						playerInfo.setY(playerInfo.getY() + deltaY);
+						playerInfo.setX(posX);
+						playerInfo.setY(posY);
 
 						// Create JSON response
 						json = new JSONObject();
@@ -305,6 +304,12 @@ public class ServerLogic {
 	public static double getServerY() {
 		return serverY;
 	}
+	
+    public static void setPosition(double x, double  y) {
+    	serverX = x;
+    	serverY = y;
+    }
+
 
 	public static void setDelta(double dx, double dy) {
 		deltaX = dx;

@@ -34,10 +34,7 @@ public class ClientLogic {
 	private static boolean wasDiscon = false;
 	private static double clientX = 100;
 	private static double clientY = 100;
-	private static double deltaX = 0;
-	private static double deltaY = 0;
-	private static double serverX = 0;
-	private static double serverY = 0;
+
 	private static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 
 	public static void startClient(State state, TextArea logArea) {
@@ -257,12 +254,12 @@ public class ClientLogic {
 							}
 
 							// Update the client's own position
-							String clientKey = getLocalAddressPort();
-							if (playerList.containsKey(clientKey)) {
-								PlayerInfo clientInfo = playerList.get(clientKey);
-								clientX = clientInfo.getX();
-								clientY = clientInfo.getY();
-							}
+//							String clientKey = getLocalAddressPort();
+//							if (playerList.containsKey(clientKey)) {
+//								PlayerInfo clientInfo = playerList.get(clientKey);
+//								clientX = clientInfo.getX();
+//								clientY = clientInfo.getY();
+//							}
 						}
 					} catch (SocketTimeoutException e) {
 						// log(logArea, "No message received. Waiting...");
@@ -333,8 +330,8 @@ public class ClientLogic {
 				if (ServerGui.isGameWindow()) {
 					try {
 						JSONObject json = new JSONObject();
-						json.put("deltaX", deltaX);
-						json.put("deltaY", deltaY);
+						json.put("PosX", clientX);
+						json.put("PosY", clientY);
 						// TODO Add more data
 						String message = "/data/" + json.toString();
 						byte[] buf = message.getBytes(StandardCharsets.UTF_8);
@@ -354,11 +351,6 @@ public class ClientLogic {
 		}
 	}
 
-	public static void updateClientPosition(double deltaX, double deltaY) {
-		clientX += deltaX;
-		clientY += deltaY;
-	}
-
 	public static double getClientX() {
 		return clientX;
 	}
@@ -367,21 +359,13 @@ public class ClientLogic {
 		return clientY;
 	}
 
-	public static double getServerX() {
-		return serverX;
-	}
-
-	public static double getServerY() {
-		return serverY;
-	}
-
 	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {
 		return playerList;
 	}
-
-	public static void setDelta(double MdeltaX, double MdeltaY) {
-		deltaX = MdeltaX;
-		deltaY = MdeltaY;
+	
+	public static void setPosition(double x, double y) {
+	    clientX = x;
+	    clientY = y;
 	}
 
 	public static String getLocalAddressPort() {
