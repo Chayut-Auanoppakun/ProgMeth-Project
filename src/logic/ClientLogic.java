@@ -244,11 +244,12 @@ public class ClientLogic {
 								double[] pos = playerData.getJSONArray("position").toList().stream()
 										.mapToDouble(o -> ((Number) o).doubleValue()).toArray();
 								String name = playerData.getString("name");
-								int score = playerData.getInt("score");
+								int direction = playerData.getInt("Direction");
 								String status = playerData.getString("status");
+								boolean isMoving = playerData.getBoolean("isMoving");
 
 								playerList.put(key, new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
-										Integer.parseInt(key.split(":")[1]), name, pos[0], pos[1], score, status));
+										Integer.parseInt(key.split(":")[1]), name, pos[0], pos[1],isMoving, direction, status));
 							}
 
 							// Update the client's own position
@@ -330,6 +331,9 @@ public class ClientLogic {
 						JSONObject json = new JSONObject();
 						json.put("PosX",  PlayerLogic.getMyPosX());
 						json.put("PosY",  PlayerLogic.getMyPosY());
+						json.put("Direction",PlayerLogic.getDirection());
+						json.put("isMoving",PlayerLogic.getMoving());
+
 						// TODO Add more data
 						String message = "/data/" + json.toString();
 						byte[] buf = message.getBytes(StandardCharsets.UTF_8);

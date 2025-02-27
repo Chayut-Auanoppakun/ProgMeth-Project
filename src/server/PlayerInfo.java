@@ -6,19 +6,41 @@ public class PlayerInfo extends ClientInfo {
     private double x;
     private double y;
     public String name;
-    private int score;
     private String status;
+    private int Direction;
+    private boolean isMoving;
 
-    public PlayerInfo(InetAddress address, int port, String name, double x, double y, int score, String status) {
+    public PlayerInfo(InetAddress address, int port, String name, double x, double y,boolean isMoving, int Direction, String status) {
         super(address, port, name);
         this.x = x;
         this.y = y;
         this.name = name;
-        this.score = score;
+        this.isMoving = isMoving;
+        this.Direction = Direction;
         this.status = status;
     }
 
-    public double getX() {
+    public int getDirection() {
+		return Direction;
+	}
+
+	public void setDirection(int direction) {
+		Direction = direction;
+	}
+
+	public boolean isMoving() {
+		return isMoving;
+	}
+
+	public void setMoving(boolean isMoving) {
+		this.isMoving = isMoving;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public double getX() {
         return x;
     }
 
@@ -32,14 +54,6 @@ public class PlayerInfo extends ClientInfo {
 
     public void setY(double y) {
         this.y = y;
-    }
-
-    public int getScore() {
-        return score;
-    }
-
-    public void setScore(int score) {
-        this.score = score;
     }
 
     public String getStatus() {

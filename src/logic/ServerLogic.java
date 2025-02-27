@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.json.JSONObject;
 
-
 import gui.MainMenuPane;
 import gui.ServerGui;
 
@@ -123,7 +122,7 @@ public class ServerLogic {
 									response += key + " - " + clientInfo.getName();
 								}
 							}
-							log(logArea,response);
+							log(logArea, response);
 							byte[] responseBuf = response.getBytes(StandardCharsets.UTF_8);
 							DatagramPacket responsePacket = new DatagramPacket(responseBuf, responseBuf.length,
 									packet.getAddress(), packet.getPort());
@@ -137,14 +136,18 @@ public class ServerLogic {
 						JSONObject json = new JSONObject(jsonStr);
 						double posX = json.getDouble("PosX");
 						double posY = json.getDouble("PosY");
+						int direction = json.getInt("Direction");
+						boolean isMoving = json.getBoolean("isMoving");
 
 						// Update the player's position in playerList map
 						String clientKey = packet.getAddress().getHostAddress() + ":" + packet.getPort();
-						playerList.putIfAbsent(clientKey,
-								new PlayerInfo(packet.getAddress(), packet.getPort(), "player", 0, 0, 0, "active"));
+						playerList.putIfAbsent(clientKey, new PlayerInfo(packet.getAddress(), packet.getPort(),
+								"default-name", 0, 0, false, 0, "active"));
 						PlayerInfo playerInfo = playerList.get(clientKey);
 						playerInfo.setX(posX);
 						playerInfo.setY(posY);
+						playerInfo.setDirection(direction);
+						playerInfo.setMoving(isMoving);
 
 						// Create JSON response
 						json = new JSONObject();
@@ -155,8 +158,9 @@ public class ServerLogic {
 						JSONObject serverData = new JSONObject();
 						serverData.put("position", new double[] { PlayerLogic.getMyPosX(), PlayerLogic.getMyPosY() });
 						serverData.put("name", MainMenuPane.getServerName());
-						serverData.put("score", 1000);
-						serverData.put("status", "active");
+						serverData.put("Direction", PlayerLogic.getDirection());
+						serverData.put("isMoving", PlayerLogic.getMoving());
+						serverData.put("status", "default Status");
 						json.put(serverKey, serverData);
 
 						// Add player positions without PC name
@@ -165,8 +169,11 @@ public class ServerLogic {
 							JSONObject playerData = new JSONObject();
 							playerData.put("position", new double[] { info.getX(), info.getY() });
 							playerData.put("name", info.getName());
-							playerData.put("score", info.getScore());
 							playerData.put("status", info.getStatus());
+							playerData.put("Direction", info.getDirection());
+							playerData.put("isMoving", info.isMoving());
+
+
 							json.put(key, playerData);
 						}
 
@@ -202,7 +209,9 @@ public class ServerLogic {
 	private static void printPlayerLocations() {
 		if (ServerGui.isGameWindow()) {
 			System.out.println("Player and Server Locations:");
-			System.out.println("Server - X: " + PlayerLogic.getMyPosX() + ", Y: " + PlayerLogic.getMyPosY()); // Print server position
+			System.out.println("Server - X: " + PlayerLogic.getMyPosX() + ", Y: " + PlayerLogic.getMyPosY()); // Print
+																												// server
+																												// position
 			for (PlayerInfo player : playerList.values()) {
 				System.out.println(player.getName() + " - X: " + player.getX() + ", Y: " + player.getY());
 			}
@@ -291,8 +300,6 @@ public class ServerLogic {
 	private static void log(TextArea logArea, String message) {
 		Platform.runLater(() -> logArea.appendText(message + "\n"));
 	}
-
-
 
 	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {
 		return playerList;
