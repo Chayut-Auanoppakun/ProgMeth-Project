@@ -32,9 +32,7 @@ public class ClientLogic {
 	private static Timer timer;
 	private static int missedPings = 0;
 	private static boolean wasDiscon = false;
-	private static double clientX = 100;
-	private static double clientY = 100;
-
+	
 	private static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 
 	public static void startClient(State state, TextArea logArea) {
@@ -238,7 +236,7 @@ public class ClientLogic {
 						if (received.startsWith("/data/")) {
 							String jsonStr = received.substring(6);
 							JSONObject json = new JSONObject(jsonStr);
-							System.out.println(received);
+							//System.out.println(received);
 
 							// Update positions and additional fields
 							for (String key : json.keySet()) {
@@ -330,8 +328,8 @@ public class ClientLogic {
 				if (ServerGui.isGameWindow()) {
 					try {
 						JSONObject json = new JSONObject();
-						json.put("PosX", clientX);
-						json.put("PosY", clientY);
+						json.put("PosX",  PlayerLogic.getMyPosX());
+						json.put("PosY",  PlayerLogic.getMyPosY());
 						// TODO Add more data
 						String message = "/data/" + json.toString();
 						byte[] buf = message.getBytes(StandardCharsets.UTF_8);
@@ -351,22 +349,12 @@ public class ClientLogic {
 		}
 	}
 
-	public static double getClientX() {
-		return clientX;
-	}
-
-	public static double getClientY() {
-		return clientY;
-	}
 
 	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {
 		return playerList;
 	}
 	
-	public static void setPosition(double x, double y) {
-	    clientX = x;
-	    clientY = y;
-	}
+
 
 	public static String getLocalAddressPort() {
 		try {

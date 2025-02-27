@@ -32,8 +32,6 @@ public class ServerLogic {
 	private static Set<ClientInfo> clientAddresses = new HashSet<>();
 	private static ConcurrentHashMap<ClientInfo, AtomicInteger> clientPingCount = new ConcurrentHashMap<>();
 	private static Timer pingCheckTimer;
-	private static double serverX = 300;
-	private static double serverY = 300;
 
 	private static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 
@@ -155,7 +153,7 @@ public class ServerLogic {
 						String serverKey = InetAddress.getLocalHost().getHostAddress() + ":"
 								+ serverSocket.getLocalPort();
 						JSONObject serverData = new JSONObject();
-						serverData.put("position", new double[] { serverX, serverY });
+						serverData.put("position", new double[] { PlayerLogic.getMyPosX(), PlayerLogic.getMyPosY() });
 						serverData.put("name", MainMenuPane.getServerName());
 						serverData.put("score", 1000);
 						serverData.put("status", "active");
@@ -204,7 +202,7 @@ public class ServerLogic {
 	private static void printPlayerLocations() {
 		if (ServerGui.isGameWindow()) {
 			System.out.println("Player and Server Locations:");
-			System.out.println("Server - X: " + serverX + ", Y: " + serverY); // Print server position
+			System.out.println("Server - X: " + PlayerLogic.getMyPosX() + ", Y: " + PlayerLogic.getMyPosY()); // Print server position
 			for (PlayerInfo player : playerList.values()) {
 				System.out.println(player.getName() + " - X: " + player.getX() + ", Y: " + player.getY());
 			}
@@ -294,18 +292,6 @@ public class ServerLogic {
 		Platform.runLater(() -> logArea.appendText(message + "\n"));
 	}
 
-	public static double getServerX() {
-		return serverX;
-	}
-
-	public static double getServerY() {
-		return serverY;
-	}
-	
-    public static void setPosition(double x, double  y) {
-    	serverX = x;
-    	serverY = y;
-    }
 
 
 	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {

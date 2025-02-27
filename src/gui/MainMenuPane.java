@@ -33,6 +33,7 @@ public class MainMenuPane extends Pane {
 	private static Button joinButton;
 	Scene Curscene;
 	Stage thisStage;
+	private static State thisState = logic.State.IDLE;
 
 	public MainMenuPane(Stage primaryStage, double width, double height) {
 		setPrefSize(width, height);
@@ -106,9 +107,15 @@ public class MainMenuPane extends Pane {
 		} else if (text.equals("EXIT")) {
 			button.setOnAction(e -> showMainMenu());
 		} else if (text.equals("HOST")) {
-			button.setOnAction(e -> openServerGui(State.SERVER));
+			button.setOnAction(e -> {
+				thisState = logic.State.SERVER;
+				openServerGui(thisState);
+			});
 		} else if (text.equals("JOIN")) {
-			button.setOnAction(e -> openServerGui(State.CLIENT));
+			button.setOnAction(e -> {
+				thisState = logic.State.CLIENT;
+				openServerGui(thisState);
+			});
 		}
 		// Add hover effect
 		button.setOnMouseEntered(e -> {
@@ -205,7 +212,7 @@ public class MainMenuPane extends Pane {
 			// Change BACK button to EXIT
 			exitButton.setText("EXIT");
 			ServerGui.stopGame();
-			for (int i = 0; i< this.getChildren().size(); i++) {
+			for (int i = 0; i < this.getChildren().size(); i++) {
 				if (this.getChildren().get(i) instanceof ServerGui) {
 					ServerGui sgui = (ServerGui) this.getChildren().get(i);
 					this.getChildren().remove(sgui);
@@ -292,6 +299,10 @@ public class MainMenuPane extends Pane {
 
 	public static void setJoinDisable(boolean disable) {
 		joinButton.setDisable(disable);
+	}
+
+	public static State getState() {
+		return thisState;
 	}
 
 }
