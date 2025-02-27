@@ -34,8 +34,6 @@ public class ServerLogic {
 	private static Timer pingCheckTimer;
 	private static double serverX = 300;
 	private static double serverY = 300;
-	private static double deltaX = 0;
-	private static double deltaY = 0;
 
 	private static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 
@@ -82,7 +80,6 @@ public class ServerLogic {
 				// Schedule the task to print player locations every second
 				ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 				executor.scheduleAtFixedRate(() -> printPlayerLocations(), 0, 1, TimeUnit.SECONDS);
-				executor.scheduleAtFixedRate(() -> updateServerPosition(), 0, 40, TimeUnit.MILLISECONDS);
 				while (state.equals(logic.State.SERVER)) {
 					byte[] buf = new byte[1024];
 					DatagramPacket packet = new DatagramPacket(buf, buf.length);
@@ -310,16 +307,6 @@ public class ServerLogic {
     	serverY = y;
     }
 
-
-	public static void setDelta(double dx, double dy) {
-		deltaX = dx;
-		deltaY = dy;
-	}
-
-	private static void updateServerPosition() {
-		serverX += deltaX;
-		serverY += deltaY;
-	}
 
 	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {
 		return playerList;

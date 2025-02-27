@@ -238,7 +238,7 @@ public class ClientLogic {
 						if (received.startsWith("/data/")) {
 							String jsonStr = received.substring(6);
 							JSONObject json = new JSONObject(jsonStr);
-							// System.out.println(received);
+							System.out.println(received);
 
 							// Update positions and additional fields
 							for (String key : json.keySet()) {

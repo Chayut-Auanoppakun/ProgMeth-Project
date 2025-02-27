@@ -40,7 +40,7 @@ public class MainMenuPane extends Pane {
 		Background background;
 		try {
 			BackgroundImage backgroundImage = new BackgroundImage(
-					new Image(getClass().getResourceAsStream("/background.png")), BackgroundRepeat.NO_REPEAT,
+					new Image(getClass().getResourceAsStream("/MainMenu.png")), BackgroundRepeat.NO_REPEAT,
 					BackgroundRepeat.NO_REPEAT, BackgroundPosition.CENTER,
 					new BackgroundSize(BackgroundSize.AUTO, BackgroundSize.AUTO, false, false, true, true));
 			background = new Background(backgroundImage);

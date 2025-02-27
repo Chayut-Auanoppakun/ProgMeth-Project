@@ -2,6 +2,7 @@ package gui;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.math.RoundingMode;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
@@ -122,7 +123,7 @@ public class GameWindow {
 					frames = 0;
 					fpsUpdateTime = now;
 				}
-		        updateMovement(now);
+				updateMovement(now);
 				update();
 				render();
 				displayFPS();
@@ -254,9 +255,6 @@ public class GameWindow {
 		gc.restore();
 	}
 
-	
-	
-	
 	private void renderCollisionObjects() {
 //         Uncomment this section for debugging collision objects
 //        /*
@@ -270,11 +268,16 @@ public class GameWindow {
 	}
 
 	private void renderPlayers() {
+	    // Define FOV rendering radius (larger than tile rendering to prevent pop-in)
+	    final int FOV_RADIUS = 1000; // Adjust this value as needed
+	    
 	    if (ServerGui.getState() == 1) { // Server Mode
+	        String serverKey = ServerLogic.getLocalAddressPort();
+	        double serverScreenX = ServerLogic.getServerX() - viewportX;
+	        double serverScreenY = ServerLogic.getServerY() - viewportY; // Fixed variable name
+	        
 	        // Draw server position
 	        gc.setFill(Color.RED);
-	        double serverScreenX = ServerLogic.getServerX() - viewportX;
-	        double serverScreenY = ServerLogic.getServerY() - viewportY;
 	        gc.fillOval(serverScreenX - PLAYER_RADIUS, serverScreenY - PLAYER_RADIUS, PLAYER_RADIUS * 2,
 	                PLAYER_RADIUS * 2);
 
@@ -288,19 +291,39 @@ public class GameWindow {
 	        gc.setStroke(Color.CYAN); // Use a different color for the collision area
 	        double collisionAreaY = serverScreenY + 12; // Bottom 20 pixels (64 - 20 = 44, 44 / 2 = 22, 32 - 22 = 10)
 	        gc.strokeRect(collisionBoxX, collisionAreaY, 48, 20);
+	        
+	        // Draw clients using FOV logic
+	        gc.setFill(Color.GREEN);
+	        for (String key : ServerLogic.getplayerList().keySet()) {
+	            if (!key.equals(serverKey)) {
+	                PlayerInfo playerInfo = ServerLogic.getplayerList().get(key);
+	                
+	                // Check if player is within FOV
+	                double distX = playerInfo.getX() - ServerLogic.getServerX();
+	                double distY = playerInfo.getY() - ServerLogic.getServerY();
+	                double distance = Math.sqrt(distX * distX + distY * distY);
+	                
+	                if (distance <= FOV_RADIUS) {
+	                    double playerScreenX = playerInfo.getX() - viewportX;
+	                    double playerScreenY = playerInfo.getY() - viewportY;
+	                    gc.fillOval(playerScreenX - PLAYER_RADIUS, playerScreenY - PLAYER_RADIUS, 
+	                            PLAYER_RADIUS * 2, PLAYER_RADIUS * 2);
+	                }
+	            }
+	        }
 	    } else if (ServerGui.getState() == 2) { // Client Mode
-	        // Draw the local client's position
+	        // Draw all players from client's perspective with FOV logic
 	        String localKey = ClientLogic.getLocalAddressPort();
 	        PlayerInfo localPlayer = ClientLogic.getplayerList().get(localKey);
-
+	        
 	        if (localPlayer != null) {
 	            double playerScreenX = localPlayer.getX() - viewportX;
 	            double playerScreenY = localPlayer.getY() - viewportY;
 
 	            // Draw the local player
 	            gc.setFill(Color.RED); // Current client
-	            gc.fillOval(playerScreenX - PLAYER_RADIUS, playerScreenY - PLAYER_RADIUS, PLAYER_RADIUS * 2,
-	                    PLAYER_RADIUS * 2);
+	            gc.fillOval(playerScreenX - PLAYER_RADIUS, playerScreenY - PLAYER_RADIUS, 
+	                    PLAYER_RADIUS * 2, PLAYER_RADIUS * 2);
 
 	            // Draw collision bounding box
 	            gc.setStroke(Color.YELLOW);
@@ -312,6 +335,32 @@ public class GameWindow {
 	            gc.setStroke(Color.CYAN);
 	            double collisionAreaY = playerScreenY + 12;
 	            gc.strokeRect(collisionBoxX, collisionAreaY, 48, 20);
+	            
+	            // Draw other players
+	            for (String key : ClientLogic.getplayerList().keySet()) {
+	                if (!key.equals(localKey)) {
+	                    PlayerInfo playerInfo = ClientLogic.getplayerList().get(key);
+	                    
+	                    // Check if player is within FOV
+	                    double distX = playerInfo.getX() - localPlayer.getX();
+	                    double distY = playerInfo.getY() - localPlayer.getY();
+	                    double distance = Math.sqrt(distX * distX + distY * distY);
+	                    
+	                    if (distance <= FOV_RADIUS) {
+	                        double otherPlayerScreenX = playerInfo.getX() - viewportX;
+	                        double otherPlayerScreenY = playerInfo.getY() - viewportY;
+	                        
+	                        if (key.equals(ServerLogic.getLocalAddressPort())) {
+	                            gc.setFill(Color.BLUE); // Server
+	                        } else {
+	                            gc.setFill(Color.GREEN); // Other clients
+	                        }
+	                        
+	                        gc.fillOval(otherPlayerScreenX - PLAYER_RADIUS, otherPlayerScreenY - PLAYER_RADIUS, 
+	                                PLAYER_RADIUS * 2, PLAYER_RADIUS * 2);
+	                    }
+	                }
+	            }
 	        }
 	    }
 	}
@@ -326,99 +375,99 @@ public class GameWindow {
 	}
 
 	private void updateMovement(long now) {
-	    if (lastUpdate == 0) {
-	        lastUpdate = now;
-	        return;
-	    }
+		if (lastUpdate == 0) {
+			lastUpdate = now;
+			return;
+		}
 
-	    // Calculate delta time (time since last frame in seconds)
-	    double deltaTime = (now - lastUpdate) / 1_000_000_000.0;
-	    lastUpdate = now;
+		// Calculate delta time (time since last frame in seconds)
+		double deltaTime = (now - lastUpdate) / 1_000_000_000.0;
+		lastUpdate = now;
 
-	    // Cap delta time to avoid huge jumps after lag
-	    if (deltaTime > 0.1) {
-	        deltaTime = 0.1;
-	    }
+		// Cap delta time to avoid huge jumps after lag
+		if (deltaTime > 0.1) {
+			deltaTime = 0.1;
+		}
 
-	    // Calculate movement
-	    double dx = 0, dy = 0;
-	    if (pressedKeys.contains(KeyCode.W)) {
-	        dy -= speed * deltaTime; // Move up
-	    }
-	    if (pressedKeys.contains(KeyCode.S)) {
-	        dy += speed * deltaTime; // Move down
-	    }
-	    if (pressedKeys.contains(KeyCode.A)) {
-	        dx -= speed * deltaTime; // Move left
-	    }
-	    if (pressedKeys.contains(KeyCode.D)) {
-	        dx += speed * deltaTime; // Move right
-	    }
+		// Calculate movement
+		double dx = 0, dy = 0;
+		if (pressedKeys.contains(KeyCode.W)) {
+			dy -= speed * deltaTime; // Move up
+		}
+		if (pressedKeys.contains(KeyCode.S)) {
+			dy += speed * deltaTime; // Move down
+		}
+		if (pressedKeys.contains(KeyCode.A)) {
+			dx -= speed * deltaTime; // Move left
+		}
+		if (pressedKeys.contains(KeyCode.D)) {
+			dx += speed * deltaTime; // Move right
+		}
 
-	    // Move horizontally
-	    if (dx != 0) {
-	        if (!checkCollision(playerX + dx, playerY)) {
-	            playerX += dx;
-	        }
-	    }
+		// Move horizontally
+		if (dx != 0) {
+			if (!checkCollision(playerX + dx, playerY)) {
+				playerX += dx;
+			}
+		}
 
-	    // Move vertically
-	    if (dy != 0) {
-	        if (!checkCollision(playerX, playerY + dy)) {
-	            playerY += dy;
-	        }
-	    }
+		// Move vertically
+		if (dy != 0) {
+			if (!checkCollision(playerX, playerY + dy)) {
+				playerY += dy;
+			}
+		}
 
-	    // Send the updated position to the server or client
-	    sendPositionUpdate(playerX, playerY);
+		// Send the updated position to the server or client
+		sendPositionUpdate(playerX, playerY);
 	}
 
 	private void sendPositionUpdate(double x, double y) {
 		if (ServerGui.getState() == 1) { // Server
-			ServerLogic.setPosition(x, y);
+			ServerLogic.setPosition(Math.floor(x), Math.floor(y));
 		} else if (ServerGui.getState() == 2) { // Client
-			ClientLogic.setPosition(x, y);
+			ClientLogic.setPosition(Math.floor(x), Math.floor(y));
 		}
 	}
 
 	// Optimized collision check using spatial grid
 	private boolean checkCollision(double x, double y) {
-	    double playerLeft = x - 24; // Half of 48 (width)
-	    double playerRight = x + 24; // Half of 48 (width)
-	    double playerBottom = y + 32; // Bottom of the player's bounding box (64 height)
-	    double playerFeetTop = playerBottom - 20; // Top of the 20-pixel tall collision area
+		double playerLeft = x - 24; // Half of 48 (width)
+		double playerRight = x + 24; // Half of 48 (width)
+		double playerBottom = y + 32; // Bottom of the player's bounding box (64 height)
+		double playerFeetTop = playerBottom - 20; // Top of the 20-pixel tall collision area
 
-	    int startGridX = (int)(playerLeft / GRID_CELL_SIZE);
-	    int startGridY = (int)(playerFeetTop / GRID_CELL_SIZE);
-	    int endGridX = (int)(playerRight / GRID_CELL_SIZE);
-	    int endGridY = (int)(playerBottom / GRID_CELL_SIZE);
+		int startGridX = (int) (playerLeft / GRID_CELL_SIZE);
+		int startGridY = (int) (playerFeetTop / GRID_CELL_SIZE);
+		int endGridX = (int) (playerRight / GRID_CELL_SIZE);
+		int endGridY = (int) (playerBottom / GRID_CELL_SIZE);
 
-	    for (int gridY = startGridY; gridY <= endGridY; gridY++) {
-	        for (int gridX = startGridX; gridX <= endGridX; gridX++) {
-	            String key = gridX + ":" + gridY;
-	            ConcurrentLinkedQueue<CollisionObject> cellObjects = spatialGrid.get(key);
+		for (int gridY = startGridY; gridY <= endGridY; gridY++) {
+			for (int gridX = startGridX; gridX <= endGridX; gridX++) {
+				String key = gridX + ":" + gridY;
+				ConcurrentLinkedQueue<CollisionObject> cellObjects = spatialGrid.get(key);
 
-	            if (cellObjects != null) {
-	                for (CollisionObject obj : cellObjects) {
-	                    double objLeft = obj.x;
-	                    double objRight = obj.x + obj.width;
-	                    double objTop = obj.y;
-	                    double objBottom = obj.y + obj.height;
+				if (cellObjects != null) {
+					for (CollisionObject obj : cellObjects) {
+						double objLeft = obj.x;
+						double objRight = obj.x + obj.width;
+						double objTop = obj.y;
+						double objBottom = obj.y + obj.height;
 
-	                    // Check for collision with the bottom 20 pixels of the player
-	                    if (playerRight > objLeft && playerLeft < objRight && 
-	                        playerBottom > objTop && playerFeetTop < objBottom) {
-	                        System.out.println("Collision with object at (" + obj.x + ", " + obj.y + ")");
-	                        return true; // Collision detected
-	                    }
-	                }
-	            }
-	        }
-	    }
+						// Check for collision with the bottom 20 pixels of the player
+						if (playerRight > objLeft && playerLeft < objRight && playerBottom > objTop
+								&& playerFeetTop < objBottom) {
+							System.out.println("Collision with object at (" + obj.x + ", " + obj.y + ")");
+							return true; // Collision detected
+						}
+					}
+				}
+			}
+		}
 
-	    return false; // No collision
+		return false; // No collision
 	}
-	
+
 	// TMX Map rendering methods from the first example
 	private void drawMap(GraphicsContext gc, double viewportX, double viewportY, double viewportWidth,
 			double viewportHeight) {

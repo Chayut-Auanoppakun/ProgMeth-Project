@@ -1,5 +1,9 @@
 {
-    "activeFile": "map.tmx",
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "map.tsx",
     "expandedProjectPaths": [
         "."
     ],
@@ -9,6 +13,7 @@
             "scaleInDock": 1
         },
         "18_Jail_Black_Shadow_32x32.tsx": {
+            "dynamicWrapping": false,
             "scaleInDock": 1
         },
         "1_Generic_Black_Shadow_32x32.tsx": {
@@ -27,11 +32,17 @@
         "5_Classroom_and_library_Black_Shadow_32x32.tsx": {
             "scaleInDock": 1
         },
+        "7_Art_Black_Shadow_32x32.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
         "9_Fishing_Black_Shadow_32x32.tsx": {
-            "scaleInDock": 1
+            "scaleInDock": 1,
+            "scaleInEditor": 1
         },
         "Interiors_32x32.tsx": {
-            "scaleInDock": 1
+            "scaleInDock": 1,
+            "scaleInEditor": 1
         },
         "ME_Singles_Camping_48x48_Tree_163.tsx": {
             "scaleInDock": 1
@@ -50,31 +61,47 @@
             "scaleInDock": 1
         },
         "map.tmx": {
-            "scale": 1,
-            "selectedLayer": 0,
+            "scale": 0.5,
+            "selectedLayer": 11,
             "viewCenter": {
-                "x": 1893,
-                "y": 1818
+                "x": 2009,
+                "y": 2476
             }
         },
         "map.tsx": {
             "dynamicWrapping": false,
             "scaleInDock": 1,
-            "scaleInEditor": 1
+            "scaleInEditor": 0.5
+        },
+        "map_old.tmx": {
+            "scale": 0.31171875,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 2975.438596491228,
+                "y": 1918.3959899749375
+            }
         },
         "output-onlinetools.tsx": {
             "scaleInDock": 1
         }
     },
     "openFiles": [
-        "map.tmx",
+        "Room_Builder_32x32.tsx",
+        "7_Art_Black_Shadow_32x32.tsx",
+        "Interiors_32x32.tsx",
         "map.tsx",
-        "Room_Builder_32x32.tsx"
+        "9_Fishing_Black_Shadow_32x32.tsx",
+        "map.tmx",
+        "map_old.tmx"
     ],
     "project": "untitled.tiled-project",
     "recentFiles": [
         "Room_Builder_32x32.tsx",
-        "map.tsx",
-        "map.tmx"
+        "7_Art_Black_Shadow_32x32.tsx",
+        "Interiors_32x32.tsx",
+        "map_old.tmx",
+        "map.tmx",
+        "9_Fishing_Black_Shadow_32x32.tsx",
+        "map.tsx"
     ]
 }
