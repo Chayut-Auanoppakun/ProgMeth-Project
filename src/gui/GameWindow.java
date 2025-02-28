@@ -402,39 +402,6 @@ public class GameWindow {
 		// Define FOV rendering radius (larger than tile rendering to prevent pop-in)
 		final int FOV_RADIUS = 1000; // Adjust this value as needed
 
-		// Render the local player
-		double localPlayerScreenX = PlayerLogic.getMyPosX() - viewportX;
-		double localPlayerScreenY = PlayerLogic.getMyPosY() - viewportY;
-
-		// Draw the local player using the playerIMG sprite
-		if (playerIMG != null) {
-			// Configure snapshot parameters to support transparency
-			SnapshotParameters params = new SnapshotParameters();
-			params.setFill(Color.TRANSPARENT); // Set the background to transparent
-
-			// Take a snapshot of the playerIMG with transparency
-			Image playerImage = playerIMG.snapshot(params, null);
-
-			// Draw the player image
-			gc.drawImage(playerImage, localPlayerScreenX - FRAME_WIDTH / 2, localPlayerScreenY - FRAME_HEIGHT / 2);
-		} else {
-			// Fallback: Draw a circle if the sprite is not loaded
-			gc.setFill(Color.RED);
-			gc.fillOval(localPlayerScreenX - PLAYER_RADIUS, localPlayerScreenY - PLAYER_RADIUS, PLAYER_RADIUS * 2,
-					PLAYER_RADIUS * 2);
-		}
-
-		// Draw collision bounding box for the local player
-		gc.setStroke(Color.YELLOW);
-		double collisionBoxX = localPlayerScreenX - 24; // Half of 48 (width)
-		double collisionBoxY = localPlayerScreenY - 32; // Half of 64 (height)
-		gc.strokeRect(collisionBoxX, collisionBoxY, 48, 64);
-
-		// Draw the bottom 20-pixel collision area for the local player
-		gc.setStroke(Color.CYAN);
-		double collisionAreaY = localPlayerScreenY + 12; // Bottom 20 pixels (64 - 20 = 44, 44 / 2 = 22, 32 - 22 = 10)
-		gc.strokeRect(collisionBoxX, collisionAreaY, 48, 20);
-
 		// Render other players
 		if (MainMenuPane.getState().equals(logic.State.SERVER)) { // Server Mode
 			String serverKey = ServerLogic.getLocalAddressPort();
@@ -455,45 +422,85 @@ public class GameWindow {
 				}
 			}
 		}
+		
+		
+		// Render the local player
+				double localPlayerScreenX = PlayerLogic.getMyPosX() - viewportX;
+				double localPlayerScreenY = PlayerLogic.getMyPosY() - viewportY;
+
+				// Draw the local player using the playerIMG sprite
+				if (playerIMG != null) {
+					// Configure snapshot parameters to support transparency
+					SnapshotParameters params = new SnapshotParameters();
+					params.setFill(Color.TRANSPARENT); // Set the background to transparent
+
+					// Take a snapshot of the playerIMG with transparency
+					Image playerImage = playerIMG.snapshot(params, null);
+
+					// Draw the player image
+					gc.drawImage(playerImage, localPlayerScreenX - FRAME_WIDTH / 2, localPlayerScreenY - FRAME_HEIGHT / 2 - 5);
+				} else {
+					// Fallback: Draw a circle if the sprite is not loaded
+					gc.setFill(Color.RED);
+					gc.fillOval(localPlayerScreenX - PLAYER_RADIUS, localPlayerScreenY - PLAYER_RADIUS, PLAYER_RADIUS * 2,
+							PLAYER_RADIUS * 2);
+				}
+
+				// Draw collision bounding box for the local player
+				gc.setStroke(Color.YELLOW);
+				double collisionBoxX = localPlayerScreenX - 24; // Half of 48 (width)
+				double collisionBoxY = localPlayerScreenY - 32; // Half of 64 (height)
+				gc.strokeRect(collisionBoxX, collisionBoxY, 48, 64);
+
+				// Draw the bottom 20-pixel collision area for the local player
+				gc.setStroke(Color.CYAN);
+				double collisionAreaY = localPlayerScreenY + 12; // Bottom 20 pixels (64 - 20 = 44, 44 / 2 = 22, 32 - 22 = 10)
+				gc.strokeRect(collisionBoxX, collisionAreaY, 48, 20);
+
 	}
 
 	private void renderOtherPlayer(PlayerInfo playerInfo) {
-	    final int FOV_RADIUS = 1000; // Adjust this value as needed
-	    double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
-	    double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
-	    double distance = Math.sqrt(distX * distX + distY * distY);
+		final int FOV_RADIUS = 1000; // Adjust this value as needed
+		double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
+		double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
+		double distance = Math.sqrt(distX * distX + distY * distY);
 
-	    if (distance <= FOV_RADIUS) {
-	        double playerScreenX = playerInfo.getX() - viewportX;
-	        double playerScreenY = playerInfo.getY() - viewportY;
+		if (distance <= FOV_RADIUS) {
+			double playerScreenX = playerInfo.getX() - viewportX;
+			double playerScreenY = playerInfo.getY() - viewportY;
 
-	        // Get or create the player's ImageView
-	        ImageView otherPlayerIMG = playerSpriteCache.computeIfAbsent(playerInfo.toString(), id -> {
-	            ImageView imgView = new ImageView(new Image("/player/01.png")); // Replace with player-specific sprite if needed
-	            imgView.setViewport(new Rectangle2D(0, FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
-	            return imgView;
-	        });
+			// Get or create the player's ImageView
+			ImageView otherPlayerIMG = playerSpriteCache.computeIfAbsent(playerInfo.toString(), id -> {
+				ImageView imgView = new ImageView(new Image("/player/01.png")); // Replace with player-specific sprite
+																				// if needed
+				imgView.setViewport(new Rectangle2D(0, FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+				return imgView;
+			});
 
-	        // Set the sprite direction based on the player's last direction
-	        int direction = playerInfo.isMoving() ? playerInfo.getDirection() : playerInfo.getDirection();
-	        int frameIndex = playerInfo.isMoving() ? (int) ((System.currentTimeMillis() / ANIMATION_SPEED) % SPRITE_COLUMNS) : 0; // Stop animation when not moving
+			// Set the sprite direction based on the player's last direction
+			int direction = playerInfo.isMoving() ? playerInfo.getDirection() : playerInfo.getDirection();
+			int frameIndex = playerInfo.isMoving()
+					? (int) ((System.currentTimeMillis() / ANIMATION_SPEED) % SPRITE_COLUMNS)
+					: 0; // Stop animation when not moving
 
-	        if (direction == 1) { // Left
-	            otherPlayerIMG.setViewport(new Rectangle2D(frameIndex * FRAME_WIDTH, 1 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
-	        } else if (direction == 2) { // Right
-	            otherPlayerIMG.setViewport(new Rectangle2D(frameIndex * FRAME_WIDTH, 0 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
-	        }
+			if (direction == 1) { // Left
+				otherPlayerIMG.setViewport(
+						new Rectangle2D(frameIndex * FRAME_WIDTH, 1 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+			} else if (direction == 2) { // Right
+				otherPlayerIMG.setViewport(
+						new Rectangle2D(frameIndex * FRAME_WIDTH, 0 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+			}
 
-	        // Configure snapshot parameters to support transparency
-	        SnapshotParameters params = new SnapshotParameters();
-	        params.setFill(Color.TRANSPARENT); // Set the background to transparent
+			// Configure snapshot parameters to support transparency
+			SnapshotParameters params = new SnapshotParameters();
+			params.setFill(Color.TRANSPARENT); // Set the background to transparent
 
-	        // Take a snapshot of the playerIMG with transparency
-	        Image playerImage = otherPlayerIMG.snapshot(params, null);
+			// Take a snapshot of the playerIMG with transparency
+			Image playerImage = otherPlayerIMG.snapshot(params, null);
 
-	        // Draw the player image
-	        gc.drawImage(playerImage, playerScreenX - FRAME_WIDTH / 2, playerScreenY - FRAME_HEIGHT / 2);
-	    }
+			// Draw the player image
+			gc.drawImage(playerImage, playerScreenX - FRAME_WIDTH / 2, playerScreenY - FRAME_HEIGHT / 2 - 5);
+		}
 	}
 
 	private void handleKeyPress(KeyEvent event) {
