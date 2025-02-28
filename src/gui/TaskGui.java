@@ -4,8 +4,10 @@ import java.util.Random;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
@@ -17,6 +19,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
@@ -73,14 +77,18 @@ public class TaskGui extends Pane{
 			break;
 		}
 	}
-	private void task1() {
+	public void task1() {
 	    BorderPane root = new BorderPane();
-	    
-	    VBox leftSwitches = new VBox(10);
-	    VBox rightSwitches = new VBox(10);
-	    
-	    leftSwitches.setPadding(new Insets(80, 80, 20, 400));  // Add padding for separation
-	    rightSwitches.setPadding(new Insets(80, 20, 20, 80)); // Increase padding from the center
+	    root.prefWidthProperty().bind(this.widthProperty());
+	    root.prefHeightProperty().bind(this.heightProperty());
+
+	    VBox leftSwitches = new VBox();
+	    VBox rightSwitches = new VBox();
+	    leftSwitches.setAlignment(Pos.CENTER);
+	    rightSwitches.setAlignment(Pos.CENTER);
+
+	    HBox switchContainer = new HBox(50);
+	    switchContainer.setAlignment(Pos.CENTER);
 
 	    Image switchOnImage = new Image("/FixLight/On.png");
 	    Image switchOffImage = new Image("/FixLight/Off.png");
@@ -89,8 +97,10 @@ public class TaskGui extends Pane{
 
 	    for (int i = 0; i < 8; i++) {
 	        ImageView switchIcon = new ImageView(switchOffImage);
-	        switchIcon.setFitWidth(120);
-	        switchIcon.setFitHeight(180);
+
+	        // Dynamically scale switch size based on window size
+	        switchIcon.fitWidthProperty().bind(this.widthProperty().multiply(0.1));
+	        switchIcon.fitHeightProperty().bind(this.heightProperty().multiply(0.1));
 
 	        switches[i] = new ToggleButton();
 	        switches[i].setGraphic(switchIcon);
@@ -107,23 +117,27 @@ public class TaskGui extends Pane{
 	            rightSwitches.getChildren().add(switches[i]);
 	        }
 	    }
-	    
+
+	    switchContainer.getChildren().addAll(leftSwitches, rightSwitches);
+
+	    // Wrap in StackPane to ensure proper centering
+	    StackPane centerPane = new StackPane(switchContainer);
+	    centerPane.setAlignment(Pos.CENTER);
+	    root.setCenter(centerPane);
+
+	    // Randomly turn on 4 switches
 	    Random random = new Random();
-	    for (int i = 0; i < 4; i++) { // Randomly turn on 4 switches
+	    for (int i = 0; i < 4; i++) {
 	        int index = random.nextInt(8);
 	        if (!switches[index].isSelected()) {
 	            switches[index].setSelected(true);
 	        }
 	    }
-	    
-	    root.setLeft(leftSwitches);
-	    root.setRight(rightSwitches);
-
-	    BorderPane.setAlignment(leftSwitches, Pos.CENTER_LEFT);
-	    BorderPane.setAlignment(rightSwitches, Pos.CENTER_RIGHT);
 
 	    this.getChildren().add(root);
 	}
+
+
 	private void task2() {
         // Progress Bar
         ProgressBar progressBar = new ProgressBar(0);
