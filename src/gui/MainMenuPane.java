@@ -11,6 +11,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
@@ -27,11 +28,13 @@ public class MainMenuPane extends Pane {
 	private Button loadGameButton;
 	private Button helpButton;
 	private Button exitButton;
+	private Button testButton;
 	private VBox menuVBox;
 	private boolean isGameOptionsVisible = false;
 	private static TextField InputName;
 	private static Button hostButton;
 	private static Button joinButton;
+	private TaskGui activeTaskGui;
 	Scene Curscene;
 	Stage thisStage;
 
@@ -60,8 +63,9 @@ public class MainMenuPane extends Pane {
 		loadGameButton = createMenuButton("ABOUT");
 		helpButton = createMenuButton("HELP");
 		exitButton = createMenuButton("EXIT");
+		testButton = createMenuButton("TEST");
 
-		menuVBox = new VBox(10, titleText, newGameButton, optionButton, loadGameButton, helpButton);
+		menuVBox = new VBox(10, titleText, newGameButton, optionButton, loadGameButton, helpButton, testButton);
 		menuVBox.setAlignment(Pos.TOP_LEFT);
 		menuVBox.setPadding(new Insets(40, 10, 10, 40));
 
@@ -110,6 +114,9 @@ public class MainMenuPane extends Pane {
 			button.setOnAction(e -> openServerGui(State.SERVER));
 		} else if (text.equals("JOIN")) {
 			button.setOnAction(e -> openServerGui(State.CLIENT));
+		}
+		else if (text.equals("TEST")) {
+			button.setOnAction(e -> task(Integer.parseInt(InputName.getText().isEmpty() ? "1" : InputName.getText())));
 		}
 		// Add hover effect
 		button.setOnMouseEntered(e -> {
@@ -274,6 +281,42 @@ public class MainMenuPane extends Pane {
 		// Add it to the MainMenuPane
 		this.getChildren().add(serverGui);
 	}
+	private void task(int taskId) {
+	    if (activeTaskGui != null) {
+	        this.getChildren().remove(activeTaskGui);
+	    }
+
+	    activeTaskGui = new TaskGui(taskId);
+	    activeTaskGui.setLayoutX(this.getWidth() / 4);
+	    activeTaskGui.setLayoutY(this.getHeight() / 10);
+	    
+	    this.getChildren().add(activeTaskGui);
+	}
+	public void taskClose(boolean success) {
+	    if (activeTaskGui != null) {
+	        getChildren().remove(activeTaskGui);
+	        activeTaskGui = null;
+	    }
+	    if(success) {
+	    	StackPane successOverlay = new StackPane();
+            Rectangle background = new Rectangle(this.getWidth(), this.getHeight(), Color.rgb(0, 0, 0, 0.5)); // 50% transparent black
+            Text successText = new Text("Task Success!");
+            successText.setFont(new Font(30));
+            successText.setFill(Color.WHITE);
+            successText.setTextAlignment(TextAlignment.CENTER);
+
+            successOverlay.getChildren().addAll(background, successText);
+            this.getChildren().add(successOverlay);
+            new Thread(() -> {
+                try {
+                    Thread.sleep(2000); // Wait 2 seconds
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                Platform.runLater(() -> this.getChildren().remove(successOverlay));
+            }).start();
+	    }
+	}
 
 	public static String getPlayerName() {
 		return InputName.getText().isEmpty() ? "Player" : InputName.getText();
@@ -294,5 +337,4 @@ public class MainMenuPane extends Pane {
 	public static void setJoinDisable(boolean disable) {
 		joinButton.setDisable(disable);
 	}
-
 }

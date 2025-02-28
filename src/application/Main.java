@@ -25,8 +25,8 @@ public class Main extends Application {
         }
         
 
-        MainMenuPane mainMenu = new MainMenuPane(primaryStage,900,600);
-        Scene scene = new Scene(mainMenu, 900, 600);
+        MainMenuPane mainMenu = new MainMenuPane(primaryStage,1920,1050);
+        Scene scene = new Scene(mainMenu, 1920, 1050);
         primaryStage.setTitle("Among CEDT");
         primaryStage.setScene(scene);
         primaryStage.setResizable(false);

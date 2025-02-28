@@ -1,0 +1,23 @@
+.check-box {
+    -fx-background-color: transparent;
+    -fx-padding: 5px;
+}
+
+.check-box .box {
+    -fx-background-color: #ddd;
+    -fx-border-color: #999;
+    -fx-border-radius: 15px;
+    -fx-background-radius: 15px;
+    -fx-min-width: 40px;
+    -fx-min-height: 20px;
+}
+
+.check-box:selected .box {
+    -fx-background-color: #4CAF50; /* Green when selected */
+}
+
+.check-box .mark {
+    -fx-shape: "M 0 0 L 1 0 L 1 1 L 0 1 Z"; /* Hides default check mark */
+    -fx-scale-x: 0;
+    -fx-scale-y: 0;
+}
