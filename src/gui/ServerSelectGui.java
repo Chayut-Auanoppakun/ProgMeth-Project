@@ -15,9 +15,10 @@ import logic.ServerLogic;
 import logic.State;
 
 import java.util.Random;
+
 import javafx.scene.layout.Pane;
 
-public class ServerGui extends Pane {
+public class ServerSelectGui extends Pane {
 	private static TextArea logArea = new TextArea(); // Create a TextArea for logging
 	private static TextArea typeArea = new TextArea(); // Create a TextArea for typing messages
 	private static Button sendButton = new Button("Send"); // Create a Send button
@@ -27,7 +28,8 @@ public class ServerGui extends Pane {
 	static State CurState;
 	private static boolean isGameWindow = false;
 	Stage thisStage;
-	public ServerGui(State state, Stage primaryStage) {
+	
+	public ServerSelectGui(State state, Stage primaryStage) {
 		thisStage = primaryStage;
 		this.setStyle("-fx-background-color: #1e1e1e;"); // Dark background
 		CurState = state;
@@ -211,16 +213,8 @@ public class ServerGui extends Pane {
 		return isGameWindow;
 	}
 
-	public static int getState() { //0 Idle, 1 Server, 2 Client;
-		if (CurState.equals(logic.State.SERVER)) {
-			return 1;
-		}
-		else if (CurState.equals(logic.State.CLIENT)) {
-			return 2;
-		}
-		else {
-			return 0;
-		}
+	public static State getState() {
+		return CurState;
 	}
 
 }

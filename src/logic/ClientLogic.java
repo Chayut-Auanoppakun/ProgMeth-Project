@@ -19,7 +19,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import gui.MainMenuPane;
-import gui.ServerGui;
+import gui.ServerSelectGui;
 
 public class ClientLogic {
 	private static final Set<String> serverSet = new HashSet<>();
@@ -33,8 +33,6 @@ public class ClientLogic {
 	private static int missedPings = 0;
 	private static boolean wasDiscon = false;
 	
-	private static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
-
 	public static void startClient(State state, TextArea logArea) {
 		try {
 			clientSocket = new DatagramSocket();
@@ -248,7 +246,7 @@ public class ClientLogic {
 								String status = playerData.getString("status");
 								boolean isMoving = playerData.getBoolean("isMoving");
 
-								playerList.put(key, new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
+								GameLogic.playerList.put(key, new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
 										Integer.parseInt(key.split(":")[1]), name, pos[0], pos[1],isMoving, direction, status));
 							}
 
@@ -319,7 +317,7 @@ public class ClientLogic {
 				}
 				
 				// Send Player Information (Not Ping)
-				if (ServerGui.isGameWindow()) {
+				if (ServerSelectGui.isGameWindow()) {
 					try {
 						JSONObject json = new JSONObject();
 						json.put("PosX",  PlayerLogic.getMyPosX());
@@ -346,10 +344,6 @@ public class ClientLogic {
 		}
 	}
 
-
-	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {
-		return playerList;
-	}
 	
 
 

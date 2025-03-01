@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.json.JSONObject;
 
 import gui.MainMenuPane;
-import gui.ServerGui;
+import gui.ServerSelectGui;
 
 public class ServerLogic {
 	private static DatagramSocket serverSocket;
@@ -32,7 +32,6 @@ public class ServerLogic {
 	private static ConcurrentHashMap<ClientInfo, AtomicInteger> clientPingCount = new ConcurrentHashMap<>();
 	private static Timer pingCheckTimer;
 
-	private static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 
 	public static void startBroadcasting(State state, TextArea logArea, String serverName, int serverPort) {
 		Thread thread = new Thread(() -> {
@@ -110,7 +109,7 @@ public class ServerLogic {
 							packet = new DatagramPacket(buf, buf.length, clientAddress, clientPort);
 							serverSocket.send(packet);
 							System.out.println("Sent ACK to client at " + clientAddress + ":" + clientPort);
-							ServerGui.settoGamedisable(false);
+							ServerSelectGui.settoGamedisable(false);
 						} else if ("/sys/ls".equals(received)) {
 							String response = "/ls/";
 							response += "======LIST OF PLAYERS======\n";
@@ -141,9 +140,9 @@ public class ServerLogic {
 
 						// Update the player's position in playerList map
 						String clientKey = packet.getAddress().getHostAddress() + ":" + packet.getPort();
-						playerList.putIfAbsent(clientKey, new PlayerInfo(packet.getAddress(), packet.getPort(),
+						GameLogic.playerList.putIfAbsent(clientKey, new PlayerInfo(packet.getAddress(), packet.getPort(),
 								"default-name", 0, 0, false, 0, "active"));
-						PlayerInfo playerInfo = playerList.get(clientKey);
+						PlayerInfo playerInfo = GameLogic.playerList.get(clientKey);
 						playerInfo.setX(posX);
 						playerInfo.setY(posY);
 						playerInfo.setDirection(direction);
@@ -164,7 +163,7 @@ public class ServerLogic {
 						json.put(serverKey, serverData);
 
 						// Add player positions without PC name
-						for (PlayerInfo info : playerList.values()) {
+						for (PlayerInfo info : GameLogic.playerList.values()) {
 							String key = info.getAddress().getHostAddress() + ":" + info.getPort();
 							JSONObject playerData = new JSONObject();
 							playerData.put("position", new double[] { info.getX(), info.getY() });
@@ -207,12 +206,12 @@ public class ServerLogic {
 	}
 
 	private static void printPlayerLocations() {
-		if (ServerGui.isGameWindow()) {
+		if (ServerSelectGui.isGameWindow()) {
 			System.out.println("Player and Server Locations:");
 			System.out.println("Server - X: " + PlayerLogic.getMyPosX() + ", Y: " + PlayerLogic.getMyPosY()); // Print
 																												// server
 																												// position
-			for (PlayerInfo player : playerList.values()) {
+			for (PlayerInfo player : GameLogic.playerList.values()) {
 				System.out.println(player.getName() + " - X: " + player.getX() + ", Y: " + player.getY());
 			}
 		}
@@ -256,7 +255,7 @@ public class ServerLogic {
 				clientAddresses.remove(clientInfo);
 				// Remove player position using clientKey
 				String clientKey = clientInfo.getAddress().getHostAddress() + ":" + clientInfo.getPort();
-				playerList.remove(clientKey);
+				GameLogic.playerList.remove(clientKey);
 			}
 		}
 	}
@@ -265,7 +264,7 @@ public class ServerLogic {
 
 		clientPingCount.clear();
 		clientAddresses.clear();
-		playerList.clear();
+		GameLogic.playerList.clear();
 
 		if (serverSocket != null && !serverSocket.isClosed()) {
 			serverSocket.close();
@@ -301,9 +300,9 @@ public class ServerLogic {
 		Platform.runLater(() -> logArea.appendText(message + "\n"));
 	}
 
-	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {
-		return playerList;
-	}
+//	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {
+//		return playerList;
+//	}
 
 	// Method to get local address and port in the required format
 	public static String getLocalAddressPort() {

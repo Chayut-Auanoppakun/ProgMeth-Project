@@ -33,6 +33,7 @@ public class MainMenuPane extends Pane {
 	private static Button hostButton;
 	private static Button joinButton;
 	private static Button testButton;
+	private static Button testButton2;
 	private TaskGui activeTaskGui;
 	Scene Curscene;
 	Stage thisStage;
@@ -63,9 +64,11 @@ public class MainMenuPane extends Pane {
 		loadGameButton = createMenuButton("ABOUT");
 		helpButton = createMenuButton("HELP");
 		exitButton = createMenuButton("EXIT");
-		testButton = createMenuButton("TEST");
+		testButton = createMenuButton("TEST TASK");
+		testButton2 = createMenuButton("Test Setup");
 
-		menuVBox = new VBox(10, titleText, newGameButton, optionButton, loadGameButton, helpButton, testButton);
+		menuVBox = new VBox(10, titleText, newGameButton, optionButton, loadGameButton, helpButton, testButton,
+				testButton2);
 		menuVBox.setAlignment(Pos.TOP_LEFT);
 		menuVBox.setPadding(new Insets(40, 10, 10, 40));
 
@@ -120,8 +123,14 @@ public class MainMenuPane extends Pane {
 				thisState = logic.State.CLIENT;
 				openServerGui(thisState);
 			});
-		} else if (text.equals("TEST")) {
+		} else if (text.equals("TEST TASK")) {
 			button.setOnAction(e -> task(Integer.parseInt(InputName.getText().isEmpty() ? "1" : InputName.getText())));
+		} else if (text.equals("Test Setup")) {
+			button.setOnAction(e -> {
+				MatchSetupPane setup = new MatchSetupPane();
+				this.getChildren().add(setup);
+			});
+
 		}
 		// Add hover effect
 		button.setOnMouseEntered(e -> {
@@ -217,10 +226,10 @@ public class MainMenuPane extends Pane {
 
 			// Change BACK button to EXIT
 			exitButton.setText("EXIT");
-			ServerGui.stopGame();
+			ServerSelectGui.stopGame();
 			for (int i = 0; i < this.getChildren().size(); i++) {
-				if (this.getChildren().get(i) instanceof ServerGui) {
-					ServerGui sgui = (ServerGui) this.getChildren().get(i);
+				if (this.getChildren().get(i) instanceof ServerSelectGui) {
+					ServerSelectGui sgui = (ServerSelectGui) this.getChildren().get(i);
 					this.getChildren().remove(sgui);
 				}
 			}
@@ -275,7 +284,7 @@ public class MainMenuPane extends Pane {
 
 	private void openServerGui(State state) {
 
-		ServerGui serverGui = new ServerGui(state, thisStage);
+		ServerSelectGui serverGui = new ServerSelectGui(state, thisStage);
 
 		// Set the width of the ServerGui (adjust as needed)
 

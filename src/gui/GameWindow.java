@@ -32,6 +32,7 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import logic.ClientLogic;
+import logic.GameLogic;
 import logic.PlayerLogic;
 import logic.ServerLogic;
 import logic.SoundLogic;
@@ -80,8 +81,8 @@ public class GameWindow {
 	private Map map;
 	private MapRenderer renderer;
 	private long lastUpdate = 0; // Track the last update time
-	private double playerX = 1300; // Example player X position
-	private double playerY = 2175; // Example player Y position
+	private double playerX = 1010; // Starting Position
+	private double playerY = 3616; // Starting Position
 	private double speed = 100; // Movement speed in units per second
 	// List to store collision objects
 	private List<gameObjects.CollisionObject> collisionObjects = new CopyOnWriteArrayList<>();
@@ -92,7 +93,7 @@ public class GameWindow {
 	private static boolean showCollision = false;
 	private static long lastCollisionChanged = 0;
 	private static long lastFpressed = 0;
-
+	private static boolean hasGameStarted;
 	private final int GRID_CELL_SIZE = 128; // Size of each grid cell, adjust based on game scale
 
 	// Player position tracking (now serving as camera position)
@@ -169,26 +170,13 @@ public class GameWindow {
 				} else {
 					animation.stop();
 				}
-				if (MainMenuPane.getState().equals(logic.State.SERVER)) {
-					// System.out.println(ServerLogic.getplayerList().size());
-					for (String key : ServerLogic.getplayerList().keySet()) {
-						try {
-							SoundLogic.checkAndPlayWalkingSounds(ServerLogic.getplayerList().get(key));
-						} catch (UnknownHostException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-					}
-				}
 
-				if (MainMenuPane.getState().equals(logic.State.CLIENT)) {
-					for (String key : ClientLogic.getplayerList().keySet()) {
-						try {
-							SoundLogic.checkAndPlayWalkingSounds(ClientLogic.getplayerList().get(key));
-						} catch (UnknownHostException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
+				for (String key : GameLogic.playerList.keySet()) {
+					try {
+						SoundLogic.checkAndPlayWalkingSounds(GameLogic.playerList.get(key));
+					} catch (UnknownHostException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
 				}
 			}
@@ -216,7 +204,7 @@ public class GameWindow {
 			} catch (InterruptedException e) {
 				threadPool.shutdownNow();
 			}
-			Platform.runLater(() -> ServerGui.settoGamedisable(false));
+			Platform.runLater(() -> ServerSelectGui.settoGamedisable(false));
 		});
 	}
 
@@ -399,63 +387,56 @@ public class GameWindow {
 	}
 
 	private void renderPlayers() {
-		// Define FOV rendering radius (larger than tile rendering to prevent pop-in)
-		final int FOV_RADIUS = 1000; // Adjust this value as needed
-
+		String OurKey = "";
 		// Render other players
 		if (MainMenuPane.getState().equals(logic.State.SERVER)) { // Server Mode
-			String serverKey = ServerLogic.getLocalAddressPort();
-
-			for (String key : ServerLogic.getplayerList().keySet()) {
-				if (!key.equals(serverKey)) {
-					PlayerInfo playerInfo = ServerLogic.getplayerList().get(key);
-					renderOtherPlayer(playerInfo);
-				}
-			}
-		} else if (MainMenuPane.getState().equals(logic.State.CLIENT)) { // Client Mode
-			String localKey = ClientLogic.getLocalAddressPort();
-
-			for (String key : ClientLogic.getplayerList().keySet()) {
-				if (!key.equals(localKey)) {
-					PlayerInfo playerInfo = ClientLogic.getplayerList().get(key);
-					renderOtherPlayer(playerInfo);
-				}
-			}
+			OurKey = ServerLogic.getLocalAddressPort();
 		}
-		
-		
-		// Render the local player
-				double localPlayerScreenX = PlayerLogic.getMyPosX() - viewportX;
-				double localPlayerScreenY = PlayerLogic.getMyPosY() - viewportY;
+		else if (MainMenuPane.getState().equals(logic.State.CLIENT)) { 
+			OurKey = ClientLogic.getLocalAddressPort();
 
-				// Draw the local player using the playerIMG sprite
-				if (playerIMG != null) {
-					// Configure snapshot parameters to support transparency
-					SnapshotParameters params = new SnapshotParameters();
-					params.setFill(Color.TRANSPARENT); // Set the background to transparent
+		}
 
-					// Take a snapshot of the playerIMG with transparency
-					Image playerImage = playerIMG.snapshot(params, null);
-
-					// Draw the player image
-					gc.drawImage(playerImage, localPlayerScreenX - FRAME_WIDTH / 2, localPlayerScreenY - FRAME_HEIGHT / 2 - 5);
-				} else {
-					// Fallback: Draw a circle if the sprite is not loaded
-					gc.setFill(Color.RED);
-					gc.fillOval(localPlayerScreenX - PLAYER_RADIUS, localPlayerScreenY - PLAYER_RADIUS, PLAYER_RADIUS * 2,
-							PLAYER_RADIUS * 2);
+			for (String key : GameLogic.playerList.keySet()) {
+				if (!key.equals(OurKey)) {
+					PlayerInfo playerInfo = GameLogic.playerList.get(key);
+					renderOtherPlayer(playerInfo);
 				}
+			}
+		
 
-				// Draw collision bounding box for the local player
-				gc.setStroke(Color.YELLOW);
-				double collisionBoxX = localPlayerScreenX - 24; // Half of 48 (width)
-				double collisionBoxY = localPlayerScreenY - 32; // Half of 64 (height)
-				gc.strokeRect(collisionBoxX, collisionBoxY, 48, 64);
+		// Render the local player
+		double localPlayerScreenX = PlayerLogic.getMyPosX() - viewportX;
+		double localPlayerScreenY = PlayerLogic.getMyPosY() - viewportY;
 
-				// Draw the bottom 20-pixel collision area for the local player
-				gc.setStroke(Color.CYAN);
-				double collisionAreaY = localPlayerScreenY + 12; // Bottom 20 pixels (64 - 20 = 44, 44 / 2 = 22, 32 - 22 = 10)
-				gc.strokeRect(collisionBoxX, collisionAreaY, 48, 20);
+		// Draw the local player using the playerIMG sprite
+		if (playerIMG != null) {
+			// Configure snapshot parameters to support transparency
+			SnapshotParameters params = new SnapshotParameters();
+			params.setFill(Color.TRANSPARENT); // Set the background to transparent
+
+			// Take a snapshot of the playerIMG with transparency
+			Image playerImage = playerIMG.snapshot(params, null);
+
+			// Draw the player image
+			gc.drawImage(playerImage, localPlayerScreenX - FRAME_WIDTH / 2, localPlayerScreenY - FRAME_HEIGHT / 2 - 5);
+		} else {
+			// Fallback: Draw a circle if the sprite is not loaded
+			gc.setFill(Color.RED);
+			gc.fillOval(localPlayerScreenX - PLAYER_RADIUS, localPlayerScreenY - PLAYER_RADIUS, PLAYER_RADIUS * 2,
+					PLAYER_RADIUS * 2);
+		}
+
+		// Draw collision bounding box for the local player
+		gc.setStroke(Color.YELLOW);
+		double collisionBoxX = localPlayerScreenX - 24; // Half of 48 (width)
+		double collisionBoxY = localPlayerScreenY - 32; // Half of 64 (height)
+		gc.strokeRect(collisionBoxX, collisionBoxY, 48, 64);
+
+		// Draw the bottom 20-pixel collision area for the local player
+		gc.setStroke(Color.CYAN);
+		double collisionAreaY = localPlayerScreenY + 12; // Bottom 20 pixels (64 - 20 = 44, 44 / 2 = 22, 32 - 22 = 10)
+		gc.strokeRect(collisionBoxX, collisionAreaY, 48, 20);
 
 	}
 
@@ -563,7 +544,9 @@ public class GameWindow {
 				moved = true;
 			}
 		}
-
+//		playerY += dy;
+//		playerX += dx;
+//		moved = true;
 		// Send the updated position to the server or client
 		PlayerLogic.isMoving(moved, Direction);
 		sendPositionUpdate(playerX, playerY);
@@ -590,9 +573,9 @@ public class GameWindow {
 	}
 
 	private void sendPositionUpdate(double x, double y) {
-		if (ServerGui.getState() == 1) { // Server
+		if (ServerSelectGui.getState().equals(logic.State.SERVER)) { // Server
 			PlayerLogic.setPosition(Math.floor(x), Math.floor(y));
-		} else if (ServerGui.getState() == 2) { // Client
+		} else if (ServerSelectGui.getState().equals(logic.State.CLIENT)) { // Client
 			PlayerLogic.setPosition(Math.floor(x), Math.floor(y));
 		}
 	}
