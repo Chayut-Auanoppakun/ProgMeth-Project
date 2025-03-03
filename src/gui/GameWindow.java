@@ -512,9 +512,10 @@ public class GameWindow {
 
 	        // Set the sprite direction based on the player's last direction
 	        int direction = playerInfo.isMoving() ? playerInfo.getDirection() : playerInfo.getDirection();
-	        int frameIndex = playerInfo.isMoving()
-	                ? (int) ((System.currentTimeMillis() / ANIMATION_SPEED) % SPRITE_COLUMNS)
-	                : 0; // Stop animation when not moving
+	        int frameIndex = playerInfo.isMoving() ? 
+	        	    (int) ((System.currentTimeMillis() / ANIMATION_SPEED) % SPRITE_COLUMNS) 
+	        	    : 5; // Set idle frame index when stationary
+
 
 	        if (direction == 1) { // Left
 	            otherPlayerIMG.setViewport(
