@@ -32,7 +32,7 @@ public class ClientLogic {
 	private static Timer timer;
 	private static int missedPings = 0;
 	private static boolean wasDiscon = false;
-	
+
 	public static void startClient(State state, TextArea logArea) {
 		try {
 			clientSocket = new DatagramSocket();
@@ -73,7 +73,7 @@ public class ClientLogic {
 			public void run() {
 				Platform.runLater(() -> logUniqueServerIDs(logArea));
 			}
-		}, 0, 3000); // 0 delay, 3000 milliseconds (3 seconds) period
+		}, 0, 1000); // 0 delay, 1000 milliseconds (1 seconds) period
 	}
 
 	public static boolean connectToServer(int serverIndex, TextArea logArea, String playerName) {
@@ -234,20 +234,42 @@ public class ClientLogic {
 						if (received.startsWith("/data/")) {
 							String jsonStr = received.substring(6);
 							JSONObject json = new JSONObject(jsonStr);
-							//System.out.println(received);
+							// System.out.println(received);
 
 							// Update positions and additional fields
 							for (String key : json.keySet()) {
 								JSONObject playerData = json.getJSONObject(key);
 								double[] pos = playerData.getJSONArray("position").toList().stream()
 										.mapToDouble(o -> ((Number) o).doubleValue()).toArray();
+
 								String name = playerData.getString("name");
 								int direction = playerData.getInt("Direction");
 								String status = playerData.getString("status");
 								boolean isMoving = playerData.getBoolean("isMoving");
-
-								GameLogic.playerList.put(key, new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
-										Integer.parseInt(key.split(":")[1]), name, pos[0], pos[1],isMoving, direction, status));
+								int charID = playerData.getInt("charID");
+								if (PlayerLogic.getLocalAddressPort().equals(key) && PlayerLogic.getCharID() == 99) {
+									System.out.println(name + " " + charID);
+									PlayerLogic.setCharID(charID);
+								}
+								if (PlayerLogic.getLocalAddressPort().equals(key)) {
+									//PlayerLogic.setPosition(pos[0], pos[1]);
+									PlayerLogic.setCharID(charID);
+									PlayerLogic.setName(name);
+								}
+								else if (GameLogic.playerList.containsKey(key)) {
+									PlayerInfo existing = GameLogic.playerList.get(key);
+									existing.setX(pos[0]);
+									existing.setY(pos[1]);
+									existing.setMoving(isMoving);
+									existing.setDirection(direction);
+									existing.setStatus(status);
+									existing.setCharacterID(charID);
+								} else {
+									GameLogic.playerList.put(key,
+											new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
+													Integer.parseInt(key.split(":")[1]), name, pos[0], pos[1], isMoving,
+													direction, status, charID));
+								}
 							}
 
 						}
@@ -273,7 +295,6 @@ public class ClientLogic {
 					sendPing(logArea);
 					Thread.sleep(40); // Ping every 40 ms
 
-
 				} catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 					log(logArea, "Ping thread interrupted.");
@@ -290,7 +311,7 @@ public class ClientLogic {
 			try {
 				if (sendPingCount > 8) { // run to check if server avail
 					sendPingCount = 0;
-					
+
 					if (missedPings > 5) {
 						wasDiscon = true;
 						if (missedPings == 11) { // run once on disconnect
@@ -305,25 +326,29 @@ public class ClientLogic {
 							wasDiscon = false;
 						}
 					}
-					
+
 					String pingMessage = "/sys/PING";
 					byte[] buf = pingMessage.getBytes(StandardCharsets.UTF_8);
 					DatagramPacket packet = new DatagramPacket(buf, buf.length, connectedServerAddress,
 							connectedServerPort);
 					clientSocket.send(packet);
-					missedPings +=1;
+					missedPings += 1;
 				} else {
 					sendPingCount++;
 				}
-				
+
 				// Send Player Information (Not Ping)
 				if (ServerSelectGui.isGameWindow()) {
 					try {
 						JSONObject json = new JSONObject();
-						json.put("PosX",  PlayerLogic.getMyPosX());
-						json.put("PosY",  PlayerLogic.getMyPosY());
-						json.put("Direction",PlayerLogic.getDirection());
-						json.put("isMoving",PlayerLogic.getMoving());
+						json.put("name", ""); // where do we keep our own name bruh
+						json.put("PosX", PlayerLogic.getMyPosX());
+						json.put("PosY", PlayerLogic.getMyPosY());
+						json.put("Direction", PlayerLogic.getDirection());
+						json.put("isMoving", PlayerLogic.getMoving());
+						json.put("name", PlayerLogic.getName());
+						json.put("charID", PlayerLogic.getCharID());
+						// System.out.println("charID = " + PlayerLogic.getCharID());
 
 						// TODO Add more data
 						String message = "/data/" + json.toString();
@@ -344,18 +369,8 @@ public class ClientLogic {
 		}
 	}
 
-	
-
-
-	public static String getLocalAddressPort() {
-		try {
-			InetAddress localAddress = InetAddress.getLocalHost();
-			int localPort = clientSocket.getLocalPort();
-			return localAddress.getHostAddress() + ":" + localPort;
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			return "unknown:0";
-		}
+	public static DatagramSocket getClientSocket() {
+		return clientSocket;
 	}
 
 }

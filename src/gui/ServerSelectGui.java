@@ -11,6 +11,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import logic.ClientLogic;
+import logic.PlayerLogic;
 import logic.ServerLogic;
 import logic.State;
 
@@ -73,6 +74,7 @@ public class ServerSelectGui extends Pane {
 		if (CurState.equals(logic.State.SERVER)) {
 			startButton.setOnAction(event -> {
 				broadcastServer();
+				PlayerLogic.setName(MainMenuPane.getServerName());
 				ServerLogic.startServer(CurState, logArea, serverPort);
 			});
 			sendButton.setOnAction(event -> {
@@ -133,6 +135,7 @@ public class ServerSelectGui extends Pane {
 	            try {
 	                int serverIndex = Integer.parseInt(message.trim()) - 1;
 	                boolean success = ClientLogic.connectToServer(serverIndex, logArea, MainMenuPane.getPlayerName());
+	                PlayerLogic.setName(MainMenuPane.getPlayerName());
 	                if (success) {
 	                toGameButton.setDisable(false);
 	                sendButton.setDisable(false);

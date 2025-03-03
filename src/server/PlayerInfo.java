@@ -2,6 +2,7 @@ package server;
 
 import java.net.InetAddress;
 
+//For all the other players
 public class PlayerInfo extends ClientInfo {
 	private double x;
 	private double y;
@@ -12,7 +13,7 @@ public class PlayerInfo extends ClientInfo {
 	private int CharacterID;
 
 	public PlayerInfo(InetAddress address, int port, String name, double x, double y, boolean isMoving, int Direction,
-			String status) {
+			String status, int CharID) {
 		super(address, port, name);
 		this.x = x;
 		this.y = y;
@@ -20,6 +21,7 @@ public class PlayerInfo extends ClientInfo {
 		this.isMoving = isMoving;
 		this.Direction = Direction;
 		this.status = status;
+		this.CharacterID = CharID;
 	}
 
 	public int getCharacterID() {

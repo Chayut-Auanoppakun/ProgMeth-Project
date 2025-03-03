@@ -21,12 +21,7 @@ public class SoundLogic {
 	private static long otherLastPlayed = 0;
 
 	public static void checkAndPlayWalkingSounds(PlayerInfo player) throws UnknownHostException {
-		String myKey = "";
-		if (MainMenuPane.getState().equals(logic.State.SERVER)) {
-			myKey = ServerLogic.getLocalAddressPort();
-		} else if (MainMenuPane.getState().equals(logic.State.CLIENT)) {
-			myKey = ClientLogic.getLocalAddressPort();
-		}
+		String myKey = PlayerLogic.getLocalAddressPort();
 		if (myKey != player.toString()) { // this player OBJ is us
 			if (player.isMoving()) {
 				float volume = isInRange(player, PlayerLogic.getMyPosX(), PlayerLogic.getMyPosY());
@@ -37,7 +32,6 @@ public class SoundLogic {
 						otherLastPlayed = System.currentTimeMillis();
 					}
 				}
-
 			}
 		}
 	}

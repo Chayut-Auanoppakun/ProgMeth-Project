@@ -127,7 +127,7 @@ public class MainMenuPane extends Pane {
 			button.setOnAction(e -> task(Integer.parseInt(InputName.getText().isEmpty() ? "1" : InputName.getText())));
 		} else if (text.equals("Test Setup")) {
 			button.setOnAction(e -> {
-				MatchSetupPane setup = new MatchSetupPane();
+				MatchSetupPane setup = new MatchSetupPane(this::onCharacterSelected);
 				this.getChildren().add(setup);
 			});
 
@@ -146,6 +146,11 @@ public class MainMenuPane extends Pane {
 		});
 
 		return button;
+	}
+	
+	public void onCharacterSelected() {
+	    System.out.println("Character selected! Updating game state...");
+	    // Perform actions such as updating the game UI or starting the game
 	}
 
 	private void showGameOptions() {

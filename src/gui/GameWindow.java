@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
@@ -63,6 +64,9 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+
+import application.Main;
+
 import org.w3c.dom.Element;
 
 public class GameWindow {
@@ -79,11 +83,12 @@ public class GameWindow {
 	private java.util.concurrent.ConcurrentLinkedDeque<String> tileCacheOrder = new java.util.concurrent.ConcurrentLinkedDeque<>();
 	private ExecutorService threadPool;
 	private Map map;
+	private Group root;
 	private MapRenderer renderer;
 	private long lastUpdate = 0; // Track the last update time
 	private double playerX = 1010; // Starting Position
 	private double playerY = 3616; // Starting Position
-	private double speed = 100; // Movement speed in units per second
+	private double speed = 120; // Movement speed in units per second
 	// List to store collision objects
 	private List<gameObjects.CollisionObject> collisionObjects = new CopyOnWriteArrayList<>();
 	private List<gameObjects.eventObject> eventObjects = new CopyOnWriteArrayList<>();
@@ -123,6 +128,8 @@ public class GameWindow {
 	private static final int SPRITE_COLUMNS = 6;
 	private static final int ANIMATION_SPEED = 150; // milliseconds per frame
 
+	private TaskGui activeTaskGui;
+
 	public void start(Stage stage) {
 		this.gameStage = stage;
 
@@ -140,7 +147,27 @@ public class GameWindow {
 			renderer = createRenderer(map);
 			System.out.println("Map loaded successfully.");
 
-			// Initialize collision objects
+			//If server gen random player char
+			if (MainMenuPane.getState().equals(logic.State.SERVER)) {
+				Random random = new Random();
+				int newChar = 0;
+				while (true) {
+					 newChar = random.nextInt(9);
+					boolean dup = false;
+					for (String key : GameLogic.playerList.keySet())
+					{
+						PlayerInfo info = GameLogic.playerList.get(key);
+						 if (info.getCharacterID() == newChar) {
+							 dup = true;
+						 }
+					}
+					if (!dup) {
+						break;
+					}
+				}
+				System.out.println("CHAR = " + newChar);
+				PlayerLogic.setCharID(newChar);
+			}
 			loadPlayerimg();
 			loadCollisionObjects();
 			loadEventObjects();
@@ -170,7 +197,6 @@ public class GameWindow {
 				} else {
 					animation.stop();
 				}
-
 				for (String key : GameLogic.playerList.keySet()) {
 					try {
 						SoundLogic.checkAndPlayWalkingSounds(GameLogic.playerList.get(key));
@@ -183,10 +209,9 @@ public class GameWindow {
 		};
 		timer.start();
 
-		Group root = new Group();
+		root = new Group();
 		root.getChildren().add(canvas);
 		Scene scene = new Scene(root, screenWidth, screenHeight);
-
 		scene.setOnKeyPressed(this::handleKeyPress);
 		scene.setOnKeyReleased(this::handleKeyRelease);
 
@@ -210,7 +235,10 @@ public class GameWindow {
 
 	private void loadPlayerimg() {
 		// Load the sprite sheet
-		Image spriteSheet = new Image(getClass().getResourceAsStream("/player/01.png"));
+		String playerPath[] = { "/player/01.png", "/player/02.png", "/player/03.png", "/player/04.png",
+				"/player/05.png", "/player/06.png", "/player/07.png", "/player/08.png", "/player/09.png",
+				"/player/10.png" };
+		Image spriteSheet = new Image(getClass().getResourceAsStream(playerPath[PlayerLogic.getCharID()]));
 		if (spriteSheet.isError()) {
 			System.err.println("Error loading player sprite sheet: " + spriteSheet.getException().getMessage());
 			return;
@@ -240,7 +268,6 @@ public class GameWindow {
 					playerIMG.setViewport(
 							new Rectangle2D(index * FRAME_WIDTH, 0 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
 				}
-
 			}
 		};
 
@@ -249,7 +276,17 @@ public class GameWindow {
 			animation.play();
 		} else {
 			animation.stop();
+			setPlayerIdleFrame();
 		}
+	}
+
+	private void setPlayerIdleFrame() {
+		if (PlayerLogic.getDirection() == 1) {
+			playerIMG.setViewport(new Rectangle2D(5 * FRAME_WIDTH, 1 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+		} else {
+			playerIMG.setViewport(new Rectangle2D(5 * FRAME_WIDTH, 0 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+		}
+
 	}
 
 	private void loadCollisionObjects() {
@@ -387,23 +424,15 @@ public class GameWindow {
 	}
 
 	private void renderPlayers() {
-		String OurKey = "";
+		String OurKey = PlayerLogic.getLocalAddressPort();
 		// Render other players
-		if (MainMenuPane.getState().equals(logic.State.SERVER)) { // Server Mode
-			OurKey = ServerLogic.getLocalAddressPort();
-		}
-		else if (MainMenuPane.getState().equals(logic.State.CLIENT)) { 
-			OurKey = ClientLogic.getLocalAddressPort();
 
-		}
-
-			for (String key : GameLogic.playerList.keySet()) {
-				if (!key.equals(OurKey)) {
-					PlayerInfo playerInfo = GameLogic.playerList.get(key);
-					renderOtherPlayer(playerInfo);
-				}
+		for (String key : GameLogic.playerList.keySet()) {
+			if (!key.equals(OurKey)) {
+				PlayerInfo playerInfo = GameLogic.playerList.get(key);
+				renderOtherPlayer(playerInfo);
 			}
-		
+		}
 
 		// Render the local player
 		double localPlayerScreenX = PlayerLogic.getMyPosX() - viewportX;
@@ -511,7 +540,7 @@ public class GameWindow {
 
 		// Calculate movement
 		double dx = 0, dy = 0;
-		int Direction = 1;
+		int Direction = PlayerLogic.getDirection();
 		boolean moved = false;
 		if (pressedKeys.contains(KeyCode.W)) {
 			dy -= speed * deltaTime; // Move up
@@ -550,6 +579,17 @@ public class GameWindow {
 		// Send the updated position to the server or client
 		PlayerLogic.isMoving(moved, Direction);
 		sendPositionUpdate(playerX, playerY);
+
+		if (moved) {
+			if (animation.getStatus() != Animation.Status.RUNNING) {
+				animation.play();
+			}
+		} else {
+			if (animation.getStatus() == Animation.Status.RUNNING) {
+				animation.stop();
+				setPlayerIdleFrame();
+			}
+		}
 	}
 
 	private void keylogger() {
@@ -570,6 +610,21 @@ public class GameWindow {
 			}
 		}
 
+		if (pressedKeys.contains(KeyCode.V)) {
+			if (System.currentTimeMillis() - lastFpressed > 250) {
+				lastFpressed = System.currentTimeMillis();
+				System.out.println("V pressed");
+				MatchSetupPane setup = new MatchSetupPane(this::onCharacterSelected);
+
+				root.getChildren().add(setup);
+			}
+		}
+
+	}
+
+	public void onCharacterSelected() {
+		System.out.println("Character selected! Updating game state...");
+		loadPlayerimg();
 	}
 
 	private void sendPositionUpdate(double x, double y) {
@@ -918,5 +973,4 @@ public class GameWindow {
 			}
 		}
 	}
-
 }

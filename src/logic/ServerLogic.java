@@ -12,6 +12,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -31,7 +32,6 @@ public class ServerLogic {
 	private static Set<ClientInfo> clientAddresses = new HashSet<>();
 	private static ConcurrentHashMap<ClientInfo, AtomicInteger> clientPingCount = new ConcurrentHashMap<>();
 	private static Timer pingCheckTimer;
-
 
 	public static void startBroadcasting(State state, TextArea logArea, String serverName, int serverPort) {
 		Thread thread = new Thread(() -> {
@@ -74,8 +74,8 @@ public class ServerLogic {
 				}, 0, 1000); // Ensure the period is positive and check every 1 second
 
 				// Schedule the task to print player locations every second
-				ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-				executor.scheduleAtFixedRate(() -> printPlayerLocations(), 0, 1, TimeUnit.SECONDS);
+				//ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+				//executor.scheduleAtFixedRate(() -> printPlayerLocations(), 0, 1, TimeUnit.SECONDS);
 				while (state.equals(logic.State.SERVER)) {
 					byte[] buf = new byte[1024];
 					DatagramPacket packet = new DatagramPacket(buf, buf.length);
@@ -137,21 +137,29 @@ public class ServerLogic {
 						double posY = json.getDouble("PosY");
 						int direction = json.getInt("Direction");
 						boolean isMoving = json.getBoolean("isMoving");
-
+						String name = json.getString("name");
+						int charID = json.getInt("charID");
 						// Update the player's position in playerList map
 						String clientKey = packet.getAddress().getHostAddress() + ":" + packet.getPort();
-						GameLogic.playerList.putIfAbsent(clientKey, new PlayerInfo(packet.getAddress(), packet.getPort(),
-								"default-name", 0, 0, false, 0, "active"));
+						
 						PlayerInfo playerInfo = GameLogic.playerList.get(clientKey);
-						playerInfo.setX(posX);
-						playerInfo.setY(posY);
-						playerInfo.setDirection(direction);
-						playerInfo.setMoving(isMoving);
+						if (playerInfo == null) { // new player
+							Random random = new Random();
+							int randomChar = random.nextInt(9);
+						    playerInfo = new PlayerInfo(packet.getAddress(), packet.getPort(), name, 0, 0, false, 0, "active", randomChar);
+						    GameLogic.playerList.put(clientKey, playerInfo);
+						} else {
+						    playerInfo.setX(posX);
+						    playerInfo.setY(posY);
+						    playerInfo.setDirection(direction);
+						    playerInfo.setMoving(isMoving);
+						    playerInfo.setCharacterID(charID);
+						}
 
 						// Create JSON response
 						json = new JSONObject();
 
-						// Add server's position without PC name
+						// Add server's position
 						String serverKey = InetAddress.getLocalHost().getHostAddress() + ":"
 								+ serverSocket.getLocalPort();
 						JSONObject serverData = new JSONObject();
@@ -160,9 +168,10 @@ public class ServerLogic {
 						serverData.put("Direction", PlayerLogic.getDirection());
 						serverData.put("isMoving", PlayerLogic.getMoving());
 						serverData.put("status", "default Status");
+						serverData.put("charID", PlayerLogic.getCharID());
 						json.put(serverKey, serverData);
 
-						// Add player positions without PC name
+						// Add player positions send to all client
 						for (PlayerInfo info : GameLogic.playerList.values()) {
 							String key = info.getAddress().getHostAddress() + ":" + info.getPort();
 							JSONObject playerData = new JSONObject();
@@ -171,8 +180,7 @@ public class ServerLogic {
 							playerData.put("status", info.getStatus());
 							playerData.put("Direction", info.getDirection());
 							playerData.put("isMoving", info.isMoving());
-
-
+							playerData.put("charID", info.getCharacterID());
 							json.put(key, playerData);
 						}
 
@@ -305,18 +313,8 @@ public class ServerLogic {
 //	}
 
 	// Method to get local address and port in the required format
-	public static String getLocalAddressPort() {
-		if (serverSocket == null) {
-			return "unknown:0";
-		}
-		try {
-			InetAddress localAddress = InetAddress.getLocalHost();
-			int localPort = serverSocket.getLocalPort();
-			return localAddress.getHostAddress() + ":" + localPort;
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			return "unknown:0";
-		}
+	public static DatagramSocket getServerSocket() {
+		return serverSocket;
 	}
 
 }
