@@ -247,10 +247,10 @@ public class ClientLogic {
 								String status = playerData.getString("status");
 								boolean isMoving = playerData.getBoolean("isMoving");
 								int charID = playerData.getInt("charID");
-								if (PlayerLogic.getLocalAddressPort().equals(key) && PlayerLogic.getCharID() == 99) {
-									System.out.println(name + " " + charID);
-									PlayerLogic.setCharID(charID);
-								}
+//								if (PlayerLogic.getLocalAddressPort().equals(key) && PlayerLogic.getCharID() == 99) {
+//									//System.out.println(name + " " + charID);
+//									PlayerLogic.setCharID(charID);
+//								}
 								if (PlayerLogic.getLocalAddressPort().equals(key)) {
 									//PlayerLogic.setPosition(pos[0], pos[1]);
 									PlayerLogic.setCharID(charID);

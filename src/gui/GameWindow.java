@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -56,6 +57,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import gameObjects.*;
@@ -70,63 +72,77 @@ import application.Main;
 import org.w3c.dom.Element;
 
 public class GameWindow {
+	// === JavaFX Components ===
 	private Stage gameStage;
+	private Group root;
 	private Canvas canvas;
 	private GraphicsContext gc;
-	private AnimationTimer timer;
 
-	// TMX Map variables
-	private static final String MAP_FILE = "assets/map.tmx";
-	private static final int MAX_CACHE_SIZE = 2000; // Increased for complex maps
-	private ConcurrentHashMap<String, WritableImage> tileImageCache = new ConcurrentHashMap<>();
-
-	private java.util.concurrent.ConcurrentLinkedDeque<String> tileCacheOrder = new java.util.concurrent.ConcurrentLinkedDeque<>();
-	private ExecutorService threadPool;
-	private Map map;
-	private Group root;
-	private MapRenderer renderer;
-	private long lastUpdate = 0; // Track the last update time
-	private double playerX = 1010; // Starting Position
-	private double playerY = 3616; // Starting Position
-	private double speed = 120; // Movement speed in units per second
-	// List to store collision objects
-	private List<gameObjects.CollisionObject> collisionObjects = new CopyOnWriteArrayList<>();
-	private List<gameObjects.eventObject> eventObjects = new CopyOnWriteArrayList<>();
-	private ConcurrentHashMap<String, ImageView> playerSpriteCache = new ConcurrentHashMap<>();
-
-	private ConcurrentHashMap<String, ConcurrentLinkedQueue<CollisionObject>> spatialGrid;
+	// === Game State ===
+	private static boolean hasGameStarted;
 	private static boolean showCollision = false;
 	private static long lastCollisionChanged = 0;
 	private static long lastFpressed = 0;
-	private static boolean hasGameStarted;
-	private final int GRID_CELL_SIZE = 128; // Size of each grid cell, adjust based on game scale
 
-	// Player position tracking (now serving as camera position)
-	private double viewportX = 0;
-	private double viewportY = 0;
-
-	// Screen dimensions
-	private final double screenWidth = 1080;
-	private final double screenHeight = 720;
-
-	// Movement flags
-	private Set<KeyCode> pressedKeys = new HashSet<>();
-
-	// FPS tracking
-	private int frames = 0;
-	private long fpsUpdateTime = System.nanoTime();
-	private int fps = 0;
-
-	// Player size
-	private final double PLAYER_RADIUS = 10;
-	private final double CAMERA_ZOOM = 1.8; // 15% of screen (much closer than before)
+	// === Player Properties ===
+	private double playerX = 1010; // Starting Position
+	private double playerY = 3616; // Starting Position
+	private double speed = 120; // Movement speed in units per second
 	private ImageView playerIMG;
 	private Animation animation;
 
+	// === Player Rendering and Animation ===
 	private static final int FRAME_WIDTH = 48;
 	private static final int FRAME_HEIGHT = 75;
 	private static final int SPRITE_COLUMNS = 6;
 	private static final int ANIMATION_SPEED = 150; // milliseconds per frame
+
+	// === Camera & Viewport ===
+	private double viewportX = 0;
+	private double viewportY = 0;
+	private final double screenWidth = 1080;
+	private final double screenHeight = 720;
+	private final double CAMERA_ZOOM = 1.8; // 15% of screen (much closer than before)
+
+	// === Map & Rendering ===
+	private static final String MAP_FILE = "assets/map.tmx";
+	private Map map;
+	private MapRenderer renderer;
+	private long lastUpdate = 0; // Track the last update time
+
+	// === Collision & Events ===
+	private List<gameObjects.CollisionObject> collisionObjects = new CopyOnWriteArrayList<>();
+	private List<gameObjects.eventObject> eventObjects = new CopyOnWriteArrayList<>();
+
+	// === Spatial Grid System ===
+	private final int GRID_CELL_SIZE = 128; // Size of each grid cell, adjust based on game scale
+	private ConcurrentHashMap<String, ConcurrentLinkedQueue<CollisionObject>> spatialGrid;
+
+	// === Tile Caching ===
+	private static final int MAX_CACHE_SIZE = 2000; // Increased for complex maps
+	private ConcurrentHashMap<String, WritableImage> tileImageCache = new ConcurrentHashMap<>();
+	private ConcurrentLinkedDeque<String> tileCacheOrder = new ConcurrentLinkedDeque<>();
+
+	// === Player Sprite Caching ===
+	private ConcurrentHashMap<String, ImageView> playerSpriteCache = new ConcurrentHashMap<>();
+	private HashMap<String, Integer> cachedCharacterIDs = new HashMap<>();
+
+	// === Movement & Input ===
+	private Set<KeyCode> pressedKeys = new HashSet<>();
+
+	// === FPS Tracking ===
+	private int frames = 0;
+	private long fpsUpdateTime = System.nanoTime();
+	private int fps = 0;
+
+	// === Threading ===
+	private ExecutorService threadPool;
+
+	// === Animation Timer ===
+	private AnimationTimer timer;
+
+	// === Player Size ===
+	private final double PLAYER_RADIUS = 10;
 
 	private TaskGui activeTaskGui;
 
@@ -147,19 +163,18 @@ public class GameWindow {
 			renderer = createRenderer(map);
 			System.out.println("Map loaded successfully.");
 
-			//If server gen random player char
-			if (MainMenuPane.getState().equals(logic.State.SERVER)) {
+			// If server gen random player char
+//			if (MainMenuPane.getState().equals(logic.State.SERVER)) {
 				Random random = new Random();
 				int newChar = 0;
 				while (true) {
-					 newChar = random.nextInt(9);
+					newChar = random.nextInt(9);
 					boolean dup = false;
-					for (String key : GameLogic.playerList.keySet())
-					{
+					for (String key : GameLogic.playerList.keySet()) {
 						PlayerInfo info = GameLogic.playerList.get(key);
-						 if (info.getCharacterID() == newChar) {
-							 dup = true;
-						 }
+						if (info.getCharacterID() == newChar) {
+							dup = true;
+						}
 					}
 					if (!dup) {
 						break;
@@ -167,7 +182,7 @@ public class GameWindow {
 				}
 				System.out.println("CHAR = " + newChar);
 				PlayerLogic.setCharID(newChar);
-			}
+			//}
 			loadPlayerimg();
 			loadCollisionObjects();
 			loadEventObjects();
@@ -424,14 +439,9 @@ public class GameWindow {
 	}
 
 	private void renderPlayers() {
-		String OurKey = PlayerLogic.getLocalAddressPort();
-		// Render other players
-
 		for (String key : GameLogic.playerList.keySet()) {
-			if (!key.equals(OurKey)) {
-				PlayerInfo playerInfo = GameLogic.playerList.get(key);
-				renderOtherPlayer(playerInfo);
-			}
+			PlayerInfo playerInfo = GameLogic.playerList.get(key);
+			renderOtherPlayer(playerInfo);
 		}
 
 		// Render the local player
@@ -470,48 +480,62 @@ public class GameWindow {
 	}
 
 	private void renderOtherPlayer(PlayerInfo playerInfo) {
-		final int FOV_RADIUS = 1000; // Adjust this value as needed
-		double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
-		double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
-		double distance = Math.sqrt(distX * distX + distY * distY);
+	    final int FOV_RADIUS = 1000; // Adjust this value as needed
+	    double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
+	    double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
+	    double distance = Math.sqrt(distX * distX + distY * distY);
 
-		if (distance <= FOV_RADIUS) {
-			double playerScreenX = playerInfo.getX() - viewportX;
-			double playerScreenY = playerInfo.getY() - viewportY;
+	    if (distance <= FOV_RADIUS) {
+	        double playerScreenX = playerInfo.getX() - viewportX;
+	        double playerScreenY = playerInfo.getY() - viewportY;
 
-			// Get or create the player's ImageView
-			ImageView otherPlayerIMG = playerSpriteCache.computeIfAbsent(playerInfo.toString(), id -> {
-				ImageView imgView = new ImageView(new Image("/player/01.png")); // Replace with player-specific sprite
-																				// if needed
-				imgView.setViewport(new Rectangle2D(0, FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
-				return imgView;
-			});
+	        String playerID = playerInfo.toString();  // Unique key per player
 
-			// Set the sprite direction based on the player's last direction
-			int direction = playerInfo.isMoving() ? playerInfo.getDirection() : playerInfo.getDirection();
-			int frameIndex = playerInfo.isMoving()
-					? (int) ((System.currentTimeMillis() / ANIMATION_SPEED) % SPRITE_COLUMNS)
-					: 0; // Stop animation when not moving
+	        // Check if character ID has changed
+	        int char_id = playerInfo.getCharacterID();
+	        if (char_id == 99) char_id = 0; // Default to 0 if not set
 
-			if (direction == 1) { // Left
-				otherPlayerIMG.setViewport(
-						new Rectangle2D(frameIndex * FRAME_WIDTH, 1 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
-			} else if (direction == 2) { // Right
-				otherPlayerIMG.setViewport(
-						new Rectangle2D(frameIndex * FRAME_WIDTH, 0 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
-			}
+	        if (!playerSpriteCache.containsKey(playerID) || playerInfo.getCharacterID() != cachedCharacterIDs.getOrDefault(playerID, -1)) {
+	            String[] CHARACTER_IMAGES = { "/player/01.png", "/player/02.png",
+	                    "/player/03.png", "/player/04.png", "/player/05.png",
+	                    "/player/06.png", "/player/07.png", "/player/08.png",
+	                    "/player/09.png", "/player/10.png" };
 
-			// Configure snapshot parameters to support transparency
-			SnapshotParameters params = new SnapshotParameters();
-			params.setFill(Color.TRANSPARENT); // Set the background to transparent
+	            ImageView imgView = new ImageView(new Image(CHARACTER_IMAGES[char_id]));
+	            imgView.setViewport(new Rectangle2D(0, FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
 
-			// Take a snapshot of the playerIMG with transparency
-			Image playerImage = otherPlayerIMG.snapshot(params, null);
+	            playerSpriteCache.put(playerID, imgView);
+	            cachedCharacterIDs.put(playerID, char_id); // Store the latest character ID
+	        }
 
-			// Draw the player image
-			gc.drawImage(playerImage, playerScreenX - FRAME_WIDTH / 2, playerScreenY - FRAME_HEIGHT / 2 - 5);
-		}
+	        ImageView otherPlayerIMG = playerSpriteCache.get(playerID);
+
+	        // Set the sprite direction based on the player's last direction
+	        int direction = playerInfo.isMoving() ? playerInfo.getDirection() : playerInfo.getDirection();
+	        int frameIndex = playerInfo.isMoving()
+	                ? (int) ((System.currentTimeMillis() / ANIMATION_SPEED) % SPRITE_COLUMNS)
+	                : 0; // Stop animation when not moving
+
+	        if (direction == 1) { // Left
+	            otherPlayerIMG.setViewport(
+	                    new Rectangle2D(frameIndex * FRAME_WIDTH, 1 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+	        } else if (direction == 2) { // Right
+	            otherPlayerIMG.setViewport(
+	                    new Rectangle2D(frameIndex * FRAME_WIDTH, 0 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+	        }
+
+	        // Configure snapshot parameters to support transparency
+	        SnapshotParameters params = new SnapshotParameters();
+	        params.setFill(Color.TRANSPARENT); // Set the background to transparent
+
+	        // Take a snapshot of the playerIMG with transparency
+	        Image playerImage = otherPlayerIMG.snapshot(params, null);
+
+	        // Draw the player image
+	        gc.drawImage(playerImage, playerScreenX - FRAME_WIDTH / 2, playerScreenY - FRAME_HEIGHT / 2 - 5);
+	    }
 	}
+
 
 	private void handleKeyPress(KeyEvent event) {
 		pressedKeys.add(event.getCode());

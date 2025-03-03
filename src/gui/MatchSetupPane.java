@@ -100,7 +100,7 @@ public class MatchSetupPane extends VBox {
 
 		getChildren().add(vBox);
 
-		//startCharacterUpdateThread(); //this is just debug
+		startCharacterUpdateThread(); //this is just debug
 		updateCharacterPreview();
 	}
 
@@ -153,7 +153,7 @@ public class MatchSetupPane extends VBox {
 					System.out.println(info.getName() + " : " + info.getCharacterID());
 				}
 				try {
-					Thread.sleep(1000);
+					Thread.sleep(1500);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
