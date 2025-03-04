@@ -1,0 +1,20 @@
+.tlou2-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #ffffff;
+    -fx-font-family: "Helvetica";
+    -fx-font-size: 16px;
+    -fx-font-weight: 300;
+    -fx-padding: 10 15 10 15;
+    -fx-opacity: 0.8;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+}
+
+.tlou2-button:hover {
+    -fx-opacity: 1.0;
+    -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.3), 10, 0, 0, 0);
+}
+
+.tlou2-button:pressed {
+    -fx-opacity: 0.6;
+}
