@@ -305,8 +305,36 @@ public class GameWindow {
 
 	private void setupCharacterSelectButton() {
 		characterSelectButton = new Button("Select Character");
-		characterSelectButton.setStyle("-fx-background-color: #000000; -fx-text-fill: white; "
-		        + "-fx-font-size: 14px; -fx-padding: 5 15 5 15;");
+		characterSelectButton.setStyle("-fx-background-color: #1e90ff; " + // Bright blue to match the UI theme
+				"-fx-text-fill: white; " + // White text for contrast
+				"-fx-font-size: 14px; " + // Clear readable font size
+				"-fx-padding: 5 15 5 15; " + // Comfortable padding
+				"-fx-border-color: #87cefa; " + // Light blue border
+				"-fx-border-width: 2px; " + // Visible border width
+				"-fx-background-radius: 0; " + // Sharp corners for pixel art style
+				"-fx-border-radius: 0; " + // Sharp corners for border
+				"-fx-font-family: 'Monospace'; " + // Pixelated/game-like font
+				"-fx-font-weight: bold; " + // Bold text
+				"-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 5, 0, 0, 1);" // Subtle shadow
+		);
+
+		// To make it look more interactive, you could also add hover effects:
+		characterSelectButton.setOnMouseEntered(e -> characterSelectButton.setStyle("-fx-background-color: #00bfff; " + // Brighter
+																														// blue
+																														// on
+																														// hover
+				"-fx-text-fill: white; " + "-fx-font-size: 14px; " + "-fx-padding: 5 15 5 15; "
+				+ "-fx-border-color: #b0e2ff; " + // Lighter border on hover
+				"-fx-border-width: 2px; " + "-fx-background-radius: 0; " + "-fx-border-radius: 0; "
+				+ "-fx-font-family: 'Monospace'; " + "-fx-font-weight: bold; "
+				+ "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 8, 0, 0, 1);" // Enhanced shadow
+		));
+
+		characterSelectButton.setOnMouseExited(e -> characterSelectButton.setStyle("-fx-background-color: #1e90ff; "
+				+ "-fx-text-fill: white; " + "-fx-font-size: 14px; " + "-fx-padding: 5 15 5 15; "
+				+ "-fx-border-color: #87cefa; " + "-fx-border-width: 2px; " + "-fx-background-radius: 0; "
+				+ "-fx-border-radius: 0; " + "-fx-font-family: 'Monospace'; " + "-fx-font-weight: bold; "
+				+ "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 5, 0, 0, 1);"));
 		characterSelectButton.setLayoutX(10);
 		characterSelectButton.setLayoutY(28);
 
@@ -318,61 +346,104 @@ public class GameWindow {
 	}
 
 	private void showCharacterSelectGui() {
-		// Hide the button first
-		characterSelectButton.setVisible(false);
+	    // Hide the button first
+	    characterSelectButton.setVisible(false);
 
-		if (characterSelectGui == null) {
-			try {
-				characterSelectGui = new CharaterSelectgui(this::onCharacterSelected);
+	    if (characterSelectGui == null) {
+	        try {
+	            characterSelectGui = new CharaterSelectgui(this::onCharacterSelected);
 
-				// Set the initial position completely off-screen
-				// Don't use translateX here - we'll animate it later
-				characterSelectGui.setLayoutX(-300);
-				characterSelectGui.setLayoutY(50);
+	            // Set the initial position completely off-screen
+	            // Don't use translateX here - we'll animate it later
+	            characterSelectGui.setLayoutX(-300);
+	            characterSelectGui.setLayoutY(50);
 
-				characterSelectGui.setVisible(true);
+	            characterSelectGui.setVisible(true);
 
-				// Add a close button to the character selection GUI
-				Button closeButton = new Button("X");
-				closeButton.setStyle("-fx-background-color: #FF6347; -fx-text-fill: white; "
-						+ "-fx-font-size: 14px; -fx-padding: 2 8 2 8; -fx-background-radius: 15;");
-				closeButton.setOnAction(e -> hideCharacterSelectGui());
+	            // Add a close button to the character selection GUI
+	            Button closeButton = new Button("X");
+	            closeButton.setStyle(
+	                "-fx-background-color: #cc0000;" + 
+	                "-fx-text-fill: white;" + 
+	                "-fx-font-family: 'Monospace';" +
+	                "-fx-font-size: 12px;" + 
+	                "-fx-font-weight: bold;" + 
+	                "-fx-padding: 2 8 2 8;" + 
+	                "-fx-border-color: #ff6347;" + 
+	                "-fx-border-width: 2px;" + 
+	                "-fx-background-radius: 0;" + 
+	                "-fx-border-radius: 0;" + 
+	                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 3, 0, 0, 1);"
+	            );
+	            
+	            // Add hover effect for close button
+	            closeButton.setOnMouseEntered(e -> 
+	                closeButton.setStyle(
+	                    "-fx-background-color: #ff0000;" + 
+	                    "-fx-text-fill: white;" + 
+	                    "-fx-font-family: 'Monospace';" +
+	                    "-fx-font-size: 12px;" + 
+	                    "-fx-font-weight: bold;" + 
+	                    "-fx-padding: 2 8 2 8;" + 
+	                    "-fx-border-color: #ff6347;" + 
+	                    "-fx-border-width: 2px;" + 
+	                    "-fx-background-radius: 0;" + 
+	                    "-fx-border-radius: 0;" + 
+	                    "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 5, 0, 0, 1);"
+	                )
+	            );
+	            
+	            closeButton.setOnMouseExited(e -> 
+	                closeButton.setStyle(
+	                    "-fx-background-color: #cc0000;" + 
+	                    "-fx-text-fill: white;" + 
+	                    "-fx-font-family: 'Monospace';" +
+	                    "-fx-font-size: 12px;" + 
+	                    "-fx-font-weight: bold;" + 
+	                    "-fx-padding: 2 8 2 8;" + 
+	                    "-fx-border-color: #ff6347;" + 
+	                    "-fx-border-width: 2px;" + 
+	                    "-fx-background-radius: 0;" + 
+	                    "-fx-border-radius: 0;" + 
+	                    "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 3, 0, 0, 1);"
+	                )
+	            );
+	            closeButton.setOnAction(e -> hideCharacterSelectGui());
+	            
+	            closeButton.setLayoutX(260);
+	            closeButton.setLayoutY(10);
+	            characterSelectGui.getChildren().add(closeButton);
 
-				closeButton.setLayoutX(260);
-				closeButton.setLayoutY(10);
-				characterSelectGui.getChildren().add(closeButton);
+	            root.getChildren().add(characterSelectGui);
 
-				root.getChildren().add(characterSelectGui);
+	            characterSelectGui.toFront();
 
-				characterSelectGui.toFront();
+	        } catch (Exception e) {
+	            System.err.println("Error creating character select GUI:");
+	            e.printStackTrace();
+	            return;
+	        }
+	    } else {
+	        // If the GUI already exists, just make sure it's at the starting position
+	        characterSelectGui.setLayoutX(-300);
+	        characterSelectGui.setVisible(true);
+	        characterSelectGui.toFront();
+	    }
 
-			} catch (Exception e) {
-				System.err.println("Error creating character select GUI:");
-				e.printStackTrace();
-				return;
-			}
-		} else {
-			// If the GUI already exists, just make sure it's at the starting position
-			characterSelectGui.setLayoutX(-300);
-			characterSelectGui.setVisible(true);
-			characterSelectGui.toFront();
-		}
+	    try {
+	        TranslateTransition slideIn = new TranslateTransition(Duration.millis(350), characterSelectGui);
+	        slideIn.setFromX(0); // Start at current position (which is -300 due to layoutX)
+	        slideIn.setToX(300); // Move 300 pixels to the right
+	        slideIn.setOnFinished(event -> {
+	        });
+	        slideIn.play();
 
-		try {
-			TranslateTransition slideIn = new TranslateTransition(Duration.millis(350), characterSelectGui);
-			slideIn.setFromX(0); // Start at current position (which is -300 due to layoutX)
-			slideIn.setToX(300); // Move 300 pixels to the right
-			slideIn.setOnFinished(event -> {
-			});
-			slideIn.play();
-
-			characterSelectVisible = true;
-		} catch (Exception e) {
-			System.err.println("Error in slide animation:");
-			e.printStackTrace();
-		}
+	        characterSelectVisible = true;
+	    } catch (Exception e) {
+	        System.err.println("Error in slide animation:");
+	        e.printStackTrace();
+	    }
 	}
-
 	private void hideCharacterSelectGui() {
 		if (characterSelectGui != null && characterSelectGui.isVisible()) {
 			// Create and play the slide-out animation
