@@ -314,24 +314,26 @@ public class ServerLogic {
 		Platform.runLater(() -> logArea.appendText(message + "\n"));
 	}
 
-//	public static ConcurrentHashMap<String, PlayerInfo> getplayerList() {
-//		return playerList;
-//	}
-
 	// Method to get local address and port in the required format
 	public static DatagramSocket getServerSocket() {
 		return serverSocket;
 	}
 
 	private static void checkReadyPlayers() {
-		ReadyPlayers = (int) GameLogic.playerList.values().stream().filter(PlayerInfo::isReady).count();
-		System.out.println("Ready  = " + ReadyPlayers);
-		
-		if (ReadyPlayers == GameLogic.playerList.size()-1) 
-			PrepGui.setReadydisable(false);
-		else 
-			PrepGui.setReadydisable(true);
-
+		try {
+			long ReadyPlayers = (int) GameLogic.playerList.values().stream().filter(PlayerInfo::isReady).count();
+			Platform.runLater(() -> {
+				if (ReadyPlayers == GameLogic.playerList.size()) {
+					//System.out.println("All players are ready!");
+					PrepGui.setReadydisable(false);
+				} else {
+					PrepGui.setReadydisable(true);
+				}
+			});
+		} catch (Exception e) {
+			System.err.println("Error in checkReadyPlayers: " + e.getMessage());
+			e.printStackTrace();
+		}
 	}
 
 	private void BeginGame() {
@@ -340,7 +342,7 @@ public class ServerLogic {
 
 		}
 	}
-	
+
 	public static int GetReady() {
 		return ReadyPlayers;
 	}
