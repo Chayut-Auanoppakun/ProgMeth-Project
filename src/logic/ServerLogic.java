@@ -175,6 +175,8 @@ public class ServerLogic {
 						serverData.put("isMoving", PlayerLogic.getMoving());
 						serverData.put("status", "default Status");
 						serverData.put("charID", PlayerLogic.getCharID());
+						serverData.put("prepEnded", GameLogic.isPrepEnded());
+
 						json.put(serverKey, serverData);
 
 						// Add player positions send to all client
@@ -187,6 +189,8 @@ public class ServerLogic {
 							playerData.put("Direction", info.getDirection());
 							playerData.put("isMoving", info.isMoving());
 							playerData.put("charID", info.getCharacterID());
+							playerData.put("prepEnded", GameLogic.isPrepEnded());
+
 							json.put(key, playerData);
 						}
 

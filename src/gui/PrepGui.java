@@ -75,6 +75,7 @@ public class PrepGui extends VBox {
 
 		if (MainMenuPane.getState().equals(logic.State.SERVER)) {
 				readyButton.setDisable(true);
+				readyButton.setText("Start");
 		}
 
 		// Player icon and count
@@ -182,12 +183,9 @@ public class PrepGui extends VBox {
 
 	// add the ability to differencate server and client
 	private void toggleReady() {
-		if (MainMenuPane.getState().equals(logic.State.SERVER)) {
-//			if (ServerLogic.GetReady() == GameLogic.playerList.size() - 1) {
-//				readyButton.setDisable(false);
-//
-//			}
-		} else {
+		if (MainMenuPane.getState().equals(logic.State.SERVER)) { //Press to start game for server
+			GameLogic.setPrepEnded(true); 
+		} else { //for players
 			isReady = !isReady;
 			PlayerLogic.setPlayerReady(isReady);
 			if (isReady) {

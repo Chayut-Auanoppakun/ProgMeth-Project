@@ -15,6 +15,7 @@ import server.PlayerInfo;
 public class GameLogic {
 	static int  ImposterCount;
 	public static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
+	private static boolean prepEnded = false;
 	
     public static boolean gameStarted() {
     	return true;
@@ -23,7 +24,13 @@ public class GameLogic {
         System.out.println("GameLogic initialized.");
     }
 
-    public static void reportDeadBody(String playerName) {
+    public static boolean isPrepEnded() {
+		return prepEnded;
+	}
+	public static void setPrepEnded(boolean prepEnded) {
+		GameLogic.prepEnded = prepEnded;
+	}
+	public static void reportDeadBody(String playerName) {
     	//check first if there is a body near
         System.out.println("Dead body reported by: " + playerName);
         //meeting start

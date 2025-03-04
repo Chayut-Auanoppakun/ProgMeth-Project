@@ -247,12 +247,17 @@ public class ClientLogic {
 								String status = playerData.getString("status");
 								boolean isMoving = playerData.getBoolean("isMoving");
 								int charID = playerData.getInt("charID");
+								// === For ending Prep Phase ===
+								if (!GameLogic.isPrepEnded()) {
+									boolean prepEnded = playerData.getBoolean("prepEnded");
+									GameLogic.setPrepEnded(prepEnded);
+								}
+								// ================================
 								if (PlayerLogic.getLocalAddressPort().equals(key)) {
-									//PlayerLogic.setPosition(pos[0], pos[1]);
+									// PlayerLogic.setPosition(pos[0], pos[1]);
 									PlayerLogic.setCharID(charID);
 									PlayerLogic.setName(name);
-								}
-								else if (GameLogic.playerList.containsKey(key)) {
+								} else if (GameLogic.playerList.containsKey(key)) {
 									PlayerInfo existing = GameLogic.playerList.get(key);
 									existing.setX(pos[0]);
 									existing.setY(pos[1]);
@@ -369,12 +374,12 @@ public class ClientLogic {
 	public static DatagramSocket getClientSocket() {
 		return clientSocket;
 	}
-	
+
 	public static String getConnectedServerInfo() {
-	    if (connectedServerAddress != null && connectedServerPort != -1) {
-	        return connectedServerAddress.getHostAddress() + ":" + connectedServerPort;
-	    }
-	    return null;
+		if (connectedServerAddress != null && connectedServerPort != -1) {
+			return connectedServerAddress.getHostAddress() + ":" + connectedServerPort;
+		}
+		return null;
 	}
 
 }
