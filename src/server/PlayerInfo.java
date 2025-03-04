@@ -11,7 +11,8 @@ public class PlayerInfo extends ClientInfo {
 	private int Direction;
 	private boolean isMoving;
 	private int CharacterID;
-
+	boolean isReady = false;
+	
 	public PlayerInfo(InetAddress address, int port, String name, double x, double y, boolean isMoving, int Direction,
 			String status, int CharID) {
 		super(address, port, name);
@@ -22,6 +23,14 @@ public class PlayerInfo extends ClientInfo {
 		this.Direction = Direction;
 		this.status = status;
 		this.CharacterID = CharID;
+	}
+
+	public boolean isReady() {
+		return isReady;
+	}
+
+	public void setReady(boolean isReady) {
+		this.isReady = isReady;
 	}
 
 	public int getCharacterID() {

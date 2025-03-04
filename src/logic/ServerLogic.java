@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.json.JSONObject;
 
 import gui.MainMenuPane;
+import gui.PrepGui;
 import gui.ServerSelectGui;
 
 public class ServerLogic {
@@ -32,6 +33,7 @@ public class ServerLogic {
 	private static Set<ClientInfo> clientAddresses = new HashSet<>();
 	private static ConcurrentHashMap<ClientInfo, AtomicInteger> clientPingCount = new ConcurrentHashMap<>();
 	private static Timer pingCheckTimer;
+	private static int ReadyPlayers = 0;
 
 	public static void startBroadcasting(State state, TextArea logArea, String serverName, int serverPort) {
 		Thread thread = new Thread(() -> {
@@ -74,8 +76,8 @@ public class ServerLogic {
 				}, 0, 1000); // Ensure the period is positive and check every 1 second
 
 				// Schedule the task to print player locations every second
-				//ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-				//executor.scheduleAtFixedRate(() -> printPlayerLocations(), 0, 1, TimeUnit.SECONDS);
+				ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+				executor.scheduleAtFixedRate(() -> checkReadyPlayers(), 0, 1, TimeUnit.SECONDS);
 				while (state.equals(logic.State.SERVER)) {
 					byte[] buf = new byte[1024];
 					DatagramPacket packet = new DatagramPacket(buf, buf.length);
@@ -139,21 +141,25 @@ public class ServerLogic {
 						boolean isMoving = json.getBoolean("isMoving");
 						String name = json.getString("name");
 						int charID = json.getInt("charID");
+						boolean isReady = json.getBoolean("playerReady");
+
 						// Update the player's position in playerList map
 						String clientKey = packet.getAddress().getHostAddress() + ":" + packet.getPort();
-						
+
 						PlayerInfo playerInfo = GameLogic.playerList.get(clientKey);
 						if (playerInfo == null) { // new player
 							Random random = new Random();
 							int randomChar = random.nextInt(9);
-						    playerInfo = new PlayerInfo(packet.getAddress(), packet.getPort(), name, 0, 0, false, 0, "active", randomChar);
-						    GameLogic.playerList.put(clientKey, playerInfo);
+							playerInfo = new PlayerInfo(packet.getAddress(), packet.getPort(), name, 0, 0, false, 0,
+									"active", randomChar);
+							GameLogic.playerList.put(clientKey, playerInfo);
 						} else {
-						    playerInfo.setX(posX);
-						    playerInfo.setY(posY);
-						    playerInfo.setDirection(direction);
-						    playerInfo.setMoving(isMoving);
-						    playerInfo.setCharacterID(charID);
+							playerInfo.setX(posX);
+							playerInfo.setY(posY);
+							playerInfo.setDirection(direction);
+							playerInfo.setMoving(isMoving);
+							playerInfo.setCharacterID(charID);
+							playerInfo.setReady(isReady); // we can set it later after initial init
 						}
 
 						// Create JSON response
@@ -316,12 +322,27 @@ public class ServerLogic {
 	public static DatagramSocket getServerSocket() {
 		return serverSocket;
 	}
-	
+
+	private static void checkReadyPlayers() {
+		ReadyPlayers = (int) GameLogic.playerList.values().stream().filter(PlayerInfo::isReady).count();
+		System.out.println("Ready  = " + ReadyPlayers);
+		
+		if (ReadyPlayers == GameLogic.playerList.size()-1) 
+			PrepGui.setReadydisable(false);
+		else 
+			PrepGui.setReadydisable(true);
+
+	}
+
 	private void BeginGame() {
 		int ReadyPlayers = 0;
-		if (ReadyPlayers  == GameLogic.playerList.size()) { //if ppl pressing ready == size of players
-			
+		if (ReadyPlayers == GameLogic.playerList.size()) { // if ppl pressing ready == size of players
+
 		}
+	}
+	
+	public static int GetReady() {
+		return ReadyPlayers;
 	}
 
 }

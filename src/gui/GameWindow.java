@@ -1116,7 +1116,7 @@ public class GameWindow {
 		}
 	}
 	
-	//HELPER FOR TILESET LOADER
+	//HELPER FOR LOADER
 	private static class TileRenderTask {
 		public Tile tile;
 		public int x, y;

@@ -247,10 +247,6 @@ public class ClientLogic {
 								String status = playerData.getString("status");
 								boolean isMoving = playerData.getBoolean("isMoving");
 								int charID = playerData.getInt("charID");
-//								if (PlayerLogic.getLocalAddressPort().equals(key) && PlayerLogic.getCharID() == 99) {
-//									//System.out.println(name + " " + charID);
-//									PlayerLogic.setCharID(charID);
-//								}
 								if (PlayerLogic.getLocalAddressPort().equals(key)) {
 									//PlayerLogic.setPosition(pos[0], pos[1]);
 									PlayerLogic.setCharID(charID);
@@ -348,6 +344,7 @@ public class ClientLogic {
 						json.put("isMoving", PlayerLogic.getMoving());
 						json.put("name", PlayerLogic.getName());
 						json.put("charID", PlayerLogic.getCharID());
+						json.put("playerReady", PlayerLogic.isPlayerReady());
 						// System.out.println("charID = " + PlayerLogic.getCharID());
 
 						// TODO Add more data
