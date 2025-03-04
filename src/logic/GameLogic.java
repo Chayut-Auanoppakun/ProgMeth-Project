@@ -13,33 +13,51 @@ import gui.MainMenuPane;
 import server.PlayerInfo;
 
 public class GameLogic {
-	static int  ImposterCount;
+	private static int ImposterCount;
+
 	public static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 	private static boolean prepEnded = false;
-	
-    public static boolean gameStarted() {
-    	return true;
-    }
-	public GameLogic() {
-        System.out.println("GameLogic initialized.");
-    }
 
-    public static boolean isPrepEnded() {
+	public GameLogic() {
+		System.out.println("GameLogic initialized.");
+	}
+
+	public static boolean isPrepEnded() {
 		return prepEnded;
 	}
+
 	public static void setPrepEnded(boolean prepEnded) {
 		GameLogic.prepEnded = prepEnded;
 	}
-	public static void reportDeadBody(String playerName) {
-    	//check first if there is a body near
-        System.out.println("Dead body reported by: " + playerName);
-        //meeting start
-    }
-    public static void imposterVentEnter(String playerName) {
-        System.out.println(playerName+" Entered vent");
-        //imposter enter vent
-    }
-    
 
+	public static void reportDeadBody(String playerName) {
+		// check first if there is a body near
+		System.out.println("Dead body reported by: " + playerName);
+		// meeting start
+	}
+
+	public static void imposterVentEnter(String playerName) {
+		System.out.println(playerName + " Entered vent");
+		// imposter enter vent
+	}
+
+	public static void setImposterCount(int count) {
+		if (count < Math.floor(playerList.size() / 2)) { // imposter must not be more than 1/2 of player
+			ImposterCount = count;
+		}
+	}
+
+	public static int autoImposterCount() {
+		int count = playerList.size() / 4;
+		if (count < 1) {
+			count = 1;
+		}
+		setImposterCount(count);
+		return ImposterCount;
+	}
+
+	public static int getImposterCount() {
+		return ImposterCount;
+	}
 
 }

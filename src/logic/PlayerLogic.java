@@ -3,6 +3,7 @@ package logic;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Random;
 
 import gui.MainMenuPane;
 
@@ -10,13 +11,23 @@ import gui.MainMenuPane;
 //For our own Player
 public class PlayerLogic {
 	static boolean isMoving;
-	static int Direction; //1 left, 2 Right
+	static int Direction; // 1 left, 2 Right
 	private static String name;
 	private static double myPosX = 0;
 	private static double myPosY = 0;
-	private static int charID = 99; //99 is not initialized
+	private static int charID = 99; // 99 is not initialized
 	private static boolean isPlayerReady = false;
+	private static String status;
 	
+
+	public static String getStatus() {
+		return status;
+	}
+
+	public static void setStatus(String status) {
+		PlayerLogic.status = status;
+	}
+
 	public static boolean isPlayerReady() {
 		return isPlayerReady;
 	}
@@ -44,8 +55,8 @@ public class PlayerLogic {
 	public static void isMoving(boolean newMoving, int newDirection) {
 		isMoving = newMoving;
 		Direction = newDirection;
-	
-		if(isMoving) {
+
+		if (isMoving) {
 			SoundLogic.playWalkingSound();
 		}
 	}
@@ -58,28 +69,26 @@ public class PlayerLogic {
 		return myPosY;
 	}
 
-	public static void setPosition(double x,double y) {
+	public static void setPosition(double x, double y) {
 		myPosX = x;
 		myPosY = y;
 	}
-	
-	
+
 	public static int getDirection() {
 		return Direction;
 	}
-	
+
 	public static boolean getMoving() {
 		return isMoving;
 	}
-	
-    public static String getLocalAddressPort() {
-    	DatagramSocket socket;
-    	if (MainMenuPane.getState().equals(logic.State.SERVER)) {
-    		 socket = ServerLogic.getServerSocket();
-    	}
-    	else {
-   		 	socket = ClientLogic.getClientSocket();
-    	}
+
+	public static String getLocalAddressPort() {
+		DatagramSocket socket;
+		if (MainMenuPane.getState().equals(logic.State.SERVER)) {
+			socket = ServerLogic.getServerSocket();
+		} else {
+			socket = ClientLogic.getClientSocket();
+		}
 		if (socket == null) {
 			return "unknown:0";
 		}

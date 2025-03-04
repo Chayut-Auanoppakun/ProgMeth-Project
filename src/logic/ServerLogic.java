@@ -11,7 +11,10 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.Timer;
@@ -47,6 +50,7 @@ public class ServerLogic {
 
 				while (state.equals(logic.State.SERVER)) {
 					socket.send(packet);
+					// printPlayerLocations();
 					// log(logArea, "Broadcast sent.");
 					Thread.sleep(1000);
 				}
@@ -318,17 +322,12 @@ public class ServerLogic {
 		Platform.runLater(() -> logArea.appendText(message + "\n"));
 	}
 
-	// Method to get local address and port in the required format
-	public static DatagramSocket getServerSocket() {
-		return serverSocket;
-	}
-
 	private static void checkReadyPlayers() {
 		try {
 			long ReadyPlayers = (int) GameLogic.playerList.values().stream().filter(PlayerInfo::isReady).count();
 			Platform.runLater(() -> {
 				if (ReadyPlayers == GameLogic.playerList.size()) {
-					//System.out.println("All players are ready!");
+					// System.out.println("All players are ready!");
 					PrepGui.setReadydisable(false);
 				} else {
 					PrepGui.setReadydisable(true);
@@ -340,11 +339,50 @@ public class ServerLogic {
 		}
 	}
 
-	private void BeginGame() {
-		int ReadyPlayers = 0;
-		if (ReadyPlayers == GameLogic.playerList.size()) { // if ppl pressing ready == size of players
+	public static void randomizeImposters() {
+	    List<String> allPlayers = new ArrayList<>();
+	    String serverKey = PlayerLogic.getLocalAddressPort();
+	    allPlayers.add(serverKey);
+	    allPlayers.addAll(GameLogic.playerList.keySet());
+	    
+	    // Determine how many imposters to assign
+	    int imposterCount = GameLogic.getImposterCount();
+	    
+	    // Shuffle the player list for random selection
+	    Collections.shuffle(allPlayers);
+	    
+	    // Set all players as crewmates initially
+	    PlayerLogic.setStatus("crewmate");
+	    for (String key : GameLogic.playerList.keySet()) {
+	        PlayerInfo player = GameLogic.playerList.get(key);
+	        player.setStatus("crewmate");
+	    }
+	    
+	    // Select imposters from the shuffled list
+	    List<String> imposterKeys = allPlayers.subList(0, imposterCount);
+	    
+	    // Set selected players as imposters
+	    for (String key : imposterKeys) {
+	        if (key.equals(serverKey)) {
+	            // Local player (server/host) is an imposter
+	            PlayerLogic.setStatus("imposter");
+	            System.out.println("You are an imposter!");
+	        } else {
+	            // A client is an imposter
+	            PlayerInfo player = GameLogic.playerList.get(key);
+	            player.setStatus("imposter");
+	            System.out.println("Imposter assigned: " + player.getName());
+	        }
+	    }
+	    
+	    // Log info about the game configuration
+	    System.out.println("Game started with " + imposterCount + " imposter(s) and " 
+	                      + (allPlayers.size() - imposterCount) + " crewmate(s)");
+	}
 
-		}
+	// Method to get local address and port in the required format
+	public static DatagramSocket getServerSocket() {
+		return serverSocket;
 	}
 
 	public static int GetReady() {

@@ -35,12 +35,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import logic.ClientLogic;
-import logic.GameLogic;
-import logic.PlayerLogic;
-import logic.ServerLogic;
-import logic.SoundLogic;
-import logic.TaskLogic;
+import logic.*;
 
 import org.mapeditor.core.Map;
 import org.mapeditor.core.MapLayer;
@@ -73,15 +68,14 @@ public class GameWindow {
 	private PrepGui prepPhaseGui;
 
 	// === Game State ===
-	private boolean inPrepPhase = true; // Set to true initially
 	private static boolean showCollision = false;
 	private static long lastCollisionChanged = 0;
 	private static long lastFpressed = 0;
 
 	// === Player Properties ===
-	private double playerX = 980; // Starting Position
-	private double playerY = 3616; // Starting Position
-	private double speed = 120; // Movement speed in units per second
+	private static double playerX = 980; // Starting Position
+	private static double playerY = 3616; // Starting Position
+	private static double speed = 120; // Movement speed in units per second
 	private ImageView playerIMG;
 	private Animation animation;
 
@@ -92,17 +86,22 @@ public class GameWindow {
 	private static final int ANIMATION_SPEED = 150; // milliseconds per frame
 
 	// === Camera & Viewport ===
-	private double viewportX = 1010;
-	private double viewportY = 3616;
-	private final double screenWidth = 1080;
-	private final double screenHeight = 720;
-	private final double CAMERA_ZOOM = 1.8; // 15% of screen (much closer than before)
+	private static double viewportX = 1010;
+	private static double viewportY = 3616;
+	private static final double screenWidth = 1080 * 1.2;
+	private static final double screenHeight = 720 * 1.2;
+	private static final double CAMERA_ZOOM = 1.8 * 1.2; // 15% of screen (much closer than before)
 
 	// === Map & Rendering ===
 	private static final String MAP_FILE = "assets/map.tmx";
 	private Map map;
 	private MapRenderer renderer;
 	private long lastUpdate = 0; // Track the last update time
+	private static int PossibleSpawnsX[] = { 1681, 1711, 1742, 1774, 1774, 1809, 1809, 1840, 1840, 1840, 1840, 1807,
+			1807, 1777, 1777, 1744, 1711, 1679, 1679, 1646, 1646, 1615, 1615, 1615, 1615, 1646, 1646, 1679 };
+	private static int PossibleSpawnsY[] = { 1491, 1491, 1491, 1491, 1526, 1526, 1556, 1556, 1589, 1618, 1651, 1651,
+			1687, // 0-27
+			1686, 1714, 1714, 1714, 1714, 1684, 1684, 1652, 1652, 1621, 1590, 1557, 1557, 1526, 1526 };
 
 	// === Collision & Events ===
 	private List<gameObjects.CollisionObject> collisionObjects = new CopyOnWriteArrayList<>();
@@ -144,10 +143,10 @@ public class GameWindow {
 	private Button characterSelectButton;
 	private CharaterSelectgui characterSelectGui;
 	private boolean characterSelectVisible = false;
+	private boolean PrepEnd = false;
 
 	public void start(Stage stage) {
 		this.gameStage = stage;
-
 		canvas = new Canvas(screenWidth, screenHeight);
 		gc = canvas.getGraphicsContext2D();
 		threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -199,8 +198,20 @@ public class GameWindow {
 					frames = 0;
 					fpsUpdateTime = now;
 				}
-				if (inPrepPhase && prepPhaseGui != null) {
-				    updatePrepPhasePlayerCount();
+
+				if (GameLogic.isPrepEnded() != PrepEnd) { // RUN AFTER PREP END ONCE
+					System.out.println("HIDE PREP");
+					PrepEnd = GameLogic.isPrepEnded();
+					updateUIForPrepPhase();
+					GameLogic.autoImposterCount(); //For now, automatically set imposter count to be 1/4 of player size
+					if (MainMenuPane.getState().equals(logic.State.SERVER)) {
+						ServerLogic.randomizeImposters();
+					}
+					TeleportToStart();
+				}
+
+				if (!GameLogic.isPrepEnded() && prepPhaseGui != null) {
+					updatePrepPhasePlayerCount();
 				}
 				keylogger();
 				updateMovement(now);
@@ -228,7 +239,6 @@ public class GameWindow {
 		root.getChildren().add(canvas);
 		setupCharacterSelectButton();
 		initializePrepPhaseUI();
-
 
 		Scene scene = new Scene(root, screenWidth, screenHeight);
 		scene.setOnKeyPressed(this::handleKeyPress);
@@ -342,104 +352,77 @@ public class GameWindow {
 	}
 
 	private void showCharacterSelectGui() {
-	    // Hide the button first
-	    characterSelectButton.setVisible(false);
+		// Hide the button first
+		characterSelectButton.setVisible(false);
 
-	    if (characterSelectGui == null) {
-	        try {
-	            characterSelectGui = new CharaterSelectgui(this::onCharacterSelected);
+		if (characterSelectGui == null) {
+			try {
+				characterSelectGui = new CharaterSelectgui(this::onCharacterSelected);
 
-	            // Set the initial position completely off-screen
-	            // Don't use translateX here - we'll animate it later
-	            characterSelectGui.setLayoutX(-300);
-	            characterSelectGui.setLayoutY(50);
+				// Set the initial position completely off-screen
+				// Don't use translateX here - we'll animate it later
+				characterSelectGui.setLayoutX(-300);
+				characterSelectGui.setLayoutY(50);
 
-	            characterSelectGui.setVisible(true);
+				characterSelectGui.setVisible(true);
 
-	            // Add a close button to the character selection GUI
-	            Button closeButton = new Button("X");
-	            closeButton.setStyle(
-	                "-fx-background-color: #cc0000;" + 
-	                "-fx-text-fill: white;" + 
-	                "-fx-font-family: 'Monospace';" +
-	                "-fx-font-size: 12px;" + 
-	                "-fx-font-weight: bold;" + 
-	                "-fx-padding: 2 8 2 8;" + 
-	                "-fx-border-color: #ff6347;" + 
-	                "-fx-border-width: 2px;" + 
-	                "-fx-background-radius: 0;" + 
-	                "-fx-border-radius: 0;" + 
-	                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 3, 0, 0, 1);"
-	            );
-	            
-	            // Add hover effect for close button
-	            closeButton.setOnMouseEntered(e -> 
-	                closeButton.setStyle(
-	                    "-fx-background-color: #ff0000;" + 
-	                    "-fx-text-fill: white;" + 
-	                    "-fx-font-family: 'Monospace';" +
-	                    "-fx-font-size: 12px;" + 
-	                    "-fx-font-weight: bold;" + 
-	                    "-fx-padding: 2 8 2 8;" + 
-	                    "-fx-border-color: #ff6347;" + 
-	                    "-fx-border-width: 2px;" + 
-	                    "-fx-background-radius: 0;" + 
-	                    "-fx-border-radius: 0;" + 
-	                    "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 5, 0, 0, 1);"
-	                )
-	            );
-	            
-	            closeButton.setOnMouseExited(e -> 
-	                closeButton.setStyle(
-	                    "-fx-background-color: #cc0000;" + 
-	                    "-fx-text-fill: white;" + 
-	                    "-fx-font-family: 'Monospace';" +
-	                    "-fx-font-size: 12px;" + 
-	                    "-fx-font-weight: bold;" + 
-	                    "-fx-padding: 2 8 2 8;" + 
-	                    "-fx-border-color: #ff6347;" + 
-	                    "-fx-border-width: 2px;" + 
-	                    "-fx-background-radius: 0;" + 
-	                    "-fx-border-radius: 0;" + 
-	                    "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 3, 0, 0, 1);"
-	                )
-	            );
-	            closeButton.setOnAction(e -> hideCharacterSelectGui());
-	            
-	            closeButton.setLayoutX(260);
-	            closeButton.setLayoutY(10);
-	            characterSelectGui.getChildren().add(closeButton);
+				// Add a close button to the character selection GUI
+				Button closeButton = new Button("X");
+				closeButton.setStyle("-fx-background-color: #cc0000;" + "-fx-text-fill: white;"
+						+ "-fx-font-family: 'Monospace';" + "-fx-font-size: 12px;" + "-fx-font-weight: bold;"
+						+ "-fx-padding: 2 8 2 8;" + "-fx-border-color: #ff6347;" + "-fx-border-width: 2px;"
+						+ "-fx-background-radius: 0;" + "-fx-border-radius: 0;"
+						+ "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 3, 0, 0, 1);");
 
-	            root.getChildren().add(characterSelectGui);
+				// Add hover effect for close button
+				closeButton.setOnMouseEntered(e -> closeButton.setStyle("-fx-background-color: #ff0000;"
+						+ "-fx-text-fill: white;" + "-fx-font-family: 'Monospace';" + "-fx-font-size: 12px;"
+						+ "-fx-font-weight: bold;" + "-fx-padding: 2 8 2 8;" + "-fx-border-color: #ff6347;"
+						+ "-fx-border-width: 2px;" + "-fx-background-radius: 0;" + "-fx-border-radius: 0;"
+						+ "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 5, 0, 0, 1);"));
 
-	            characterSelectGui.toFront();
+				closeButton.setOnMouseExited(e -> closeButton.setStyle("-fx-background-color: #cc0000;"
+						+ "-fx-text-fill: white;" + "-fx-font-family: 'Monospace';" + "-fx-font-size: 12px;"
+						+ "-fx-font-weight: bold;" + "-fx-padding: 2 8 2 8;" + "-fx-border-color: #ff6347;"
+						+ "-fx-border-width: 2px;" + "-fx-background-radius: 0;" + "-fx-border-radius: 0;"
+						+ "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 3, 0, 0, 1);"));
+				closeButton.setOnAction(e -> hideCharacterSelectGui());
 
-	        } catch (Exception e) {
-	            System.err.println("Error creating character select GUI:");
-	            e.printStackTrace();
-	            return;
-	        }
-	    } else {
-	        // If the GUI already exists, just make sure it's at the starting position
-	        characterSelectGui.setLayoutX(-300);
-	        characterSelectGui.setVisible(true);
-	        characterSelectGui.toFront();
-	    }
+				closeButton.setLayoutX(260);
+				closeButton.setLayoutY(10);
+				characterSelectGui.getChildren().add(closeButton);
 
-	    try {
-	        TranslateTransition slideIn = new TranslateTransition(Duration.millis(350), characterSelectGui);
-	        slideIn.setFromX(0); // Start at current position (which is -300 due to layoutX)
-	        slideIn.setToX(300); // Move 300 pixels to the right
-	        slideIn.setOnFinished(event -> {
-	        });
-	        slideIn.play();
+				root.getChildren().add(characterSelectGui);
 
-	        characterSelectVisible = true;
-	    } catch (Exception e) {
-	        System.err.println("Error in slide animation:");
-	        e.printStackTrace();
-	    }
+				characterSelectGui.toFront();
+
+			} catch (Exception e) {
+				System.err.println("Error creating character select GUI:");
+				e.printStackTrace();
+				return;
+			}
+		} else {
+			// If the GUI already exists, just make sure it's at the starting position
+			characterSelectGui.setLayoutX(-300);
+			characterSelectGui.setVisible(true);
+			characterSelectGui.toFront();
+		}
+
+		try {
+			TranslateTransition slideIn = new TranslateTransition(Duration.millis(350), characterSelectGui);
+			slideIn.setFromX(0); // Start at current position (which is -300 due to layoutX)
+			slideIn.setToX(300); // Move 300 pixels to the right
+			slideIn.setOnFinished(event -> {
+			});
+			slideIn.play();
+
+			characterSelectVisible = true;
+		} catch (Exception e) {
+			System.err.println("Error in slide animation:");
+			e.printStackTrace();
+		}
 	}
+
 	private void hideCharacterSelectGui() {
 		if (characterSelectGui != null && characterSelectGui.isVisible()) {
 			// Create and play the slide-out animation
@@ -771,10 +754,10 @@ public class GameWindow {
 		}
 //		playerY += dy;
 //		playerX += dx;
-		//moved = true;
+		// moved = true;
 		// Send the updated position to the server or client
 		PlayerLogic.isMoving(moved, Direction);
-		sendPositionUpdate(playerX, playerY);
+		PlayerLogic.setPosition(playerX, playerY);
 
 		if (moved) {
 			if (animation.getStatus() != Animation.Status.RUNNING) {
@@ -810,14 +793,6 @@ public class GameWindow {
 	public void onCharacterSelected() {
 		System.out.println("Character selected! Updating game state...");
 		loadPlayerimg();
-	}
-
-	private void sendPositionUpdate(double x, double y) {
-		if (ServerSelectGui.getState().equals(logic.State.SERVER)) { // Server
-			PlayerLogic.setPosition(Math.floor(x), Math.floor(y));
-		} else if (ServerSelectGui.getState().equals(logic.State.CLIENT)) { // Client
-			PlayerLogic.setPosition(Math.floor(x), Math.floor(y));
-		}
 	}
 
 	// Optimized collision check using spatial grid
@@ -1115,8 +1090,8 @@ public class GameWindow {
 			return null;
 		}
 	}
-	
-	//HELPER FOR LOADER
+
+	// HELPER FOR LOADER
 	private static class TileRenderTask {
 		public Tile tile;
 		public int x, y;
@@ -1159,37 +1134,70 @@ public class GameWindow {
 			}
 		}
 	}
-	
+
 	private void initializePrepPhaseUI() {
-	    // Initialize the prep phase UI
-	    prepPhaseGui = new PrepGui(ServerSelectGui.getState());
-	    
-	    // Position it in the center of the screen
-	    prepPhaseGui.setLayoutX((screenWidth - 480) / 2); // Assuming 400px width for the UI
-	    prepPhaseGui.setLayoutY(screenHeight * 0.85); // Assuming 150px height for the UI
-	    
-	    // Add it to the root but keep it hidden initially
-	    root.getChildren().add(prepPhaseGui);
-	    
-	    // Show it if we're in prep phase
-	    if (inPrepPhase) {
-	        prepPhaseGui.show();
-	        updatePrepPhasePlayerCount(); // Update player count
-	    } else {
-	        prepPhaseGui.hide();
-	    }
+		// Initialize the prep phase UI
+		prepPhaseGui = new PrepGui(ServerSelectGui.getState());
+
+		// Position it in the center of the screen
+		prepPhaseGui.setLayoutX((screenWidth - 480) / 2); // Assuming 400px width for the UI
+		prepPhaseGui.setLayoutY(screenHeight * 0.85); // Assuming 150px height for the UI
+
+		// Add it to the root but keep it hidden initially
+		root.getChildren().add(prepPhaseGui);
+
+		// Show it if we're in prep phase
+		if (!GameLogic.isPrepEnded()) {
+			prepPhaseGui.show();
+			updatePrepPhasePlayerCount(); // Update player count
+		} else {
+			prepPhaseGui.hide();
+		}
 	}
-	
+
+	private void updateUIForPrepPhase() {
+		Platform.runLater(() -> {
+			if (!GameLogic.isPrepEnded()) {
+				if (prepPhaseGui != null) {
+					prepPhaseGui.show();
+				}
+				if (characterSelectButton != null) {
+					characterSelectButton.setVisible(true);
+				}
+			} else {
+				if (prepPhaseGui != null) {
+					prepPhaseGui.hide();
+				}
+				if (characterSelectButton != null) {
+					characterSelectButton.setVisible(false);
+				}
+				if (characterSelectGui != null && characterSelectVisible) {
+					hideCharacterSelectGui();
+				}
+			}
+		});
+	}
+
 	// Add this method to update player count
 	private void updatePrepPhasePlayerCount() {
-	    if (prepPhaseGui != null) {
-	        // Calculate total player count (including server)
-	        int playerCount = 1; // Server/local player
-	        if (GameLogic.playerList != null) {
-	            playerCount += GameLogic.playerList.size();
-	        }
-	        prepPhaseGui.updatePlayerCount(playerCount, 10); // 10 is max players
-	    }
+		if (prepPhaseGui != null) {
+			// Calculate total player count (including server)
+			int playerCount = 1; // Server/local player
+			if (GameLogic.playerList != null) {
+				playerCount += GameLogic.playerList.size();
+			}
+			prepPhaseGui.updatePlayerCount(playerCount, 10); // 10 is max players
+		}
+	}
+
+	public static void TeleportToStart() {
+		Random random = new Random();
+		int select = random.nextInt(27);
+		PlayerLogic.setPosition(PossibleSpawnsX[select], PossibleSpawnsY[select]);
+		playerX = PlayerLogic.getMyPosX();
+		playerY = PlayerLogic.getMyPosY();
+		viewportX = playerX - (screenWidth / 2) / CAMERA_ZOOM;
+		viewportY = playerY - (screenHeight / 2) / CAMERA_ZOOM;
 	}
 
 }

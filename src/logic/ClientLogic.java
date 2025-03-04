@@ -255,8 +255,8 @@ public class ClientLogic {
 								// ================================
 								if (PlayerLogic.getLocalAddressPort().equals(key)) {
 									// PlayerLogic.setPosition(pos[0], pos[1]);
-									PlayerLogic.setCharID(charID);
-									PlayerLogic.setName(name);
+									//PlayerLogic.setCharID(charID);
+									//PlayerLogic.setName(name);
 								} else if (GameLogic.playerList.containsKey(key)) {
 									PlayerInfo existing = GameLogic.playerList.get(key);
 									existing.setX(pos[0]);
