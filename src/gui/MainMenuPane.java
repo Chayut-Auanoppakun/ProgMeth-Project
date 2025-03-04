@@ -127,7 +127,7 @@ public class MainMenuPane extends Pane {
 			button.setOnAction(e -> task(Integer.parseInt(InputName.getText().isEmpty() ? "1" : InputName.getText())));
 		} else if (text.equals("Test Setup")) {
 			button.setOnAction(e -> {
-				MatchSetupPane setup = new MatchSetupPane(this::onCharacterSelected);
+				CharaterSelectgui setup = new CharaterSelectgui(this::onCharacterSelected);
 				this.getChildren().add(setup);
 			});
 

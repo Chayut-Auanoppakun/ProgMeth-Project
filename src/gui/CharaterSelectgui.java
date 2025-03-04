@@ -21,7 +21,7 @@ import logic.GameLogic;
 import logic.PlayerLogic;
 import server.PlayerInfo;
 
-public class MatchSetupPane extends VBox {
+public class CharaterSelectgui extends VBox {
 	private ImageView characterImageView;
 	private int curChar = 0;
 	private static final String[] CHARACTER_NAMES = { "Alex", "Casey", "Taylor", "Jordan", "Morgan", "Riley", "Avery",
@@ -32,15 +32,15 @@ public class MatchSetupPane extends VBox {
 	private Button selectButton;
 	private TextField name;
 
-	public MatchSetupPane(Runnable onCharacterSelectedCallback) {
+	public CharaterSelectgui(Runnable onCharacterSelectedCallback) {
 		setPadding(new Insets(10));
 		setSpacing(10);
 		setAlignment(Pos.CENTER);
 		setStyle("-fx-background-color: rgba(0, 0, 0, 0.5);"); // Semi-transparent background
 
 		// Create border
-		setBorder(new Border(new BorderStroke(Paint.valueOf("gray"), BorderStrokeStyle.SOLID, new CornerRadii(10),
-				new BorderWidths(2))));
+		setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, new CornerRadii(10),
+				new BorderWidths(3))));
 
 		Button LeftArrow = new Button("<");
 		Button RightArrow = new Button(">");

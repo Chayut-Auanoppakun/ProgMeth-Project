@@ -165,24 +165,24 @@ public class GameWindow {
 
 			// If server gen random player char
 //			if (MainMenuPane.getState().equals(logic.State.SERVER)) {
-				Random random = new Random();
-				int newChar = 0;
-				while (true) {
-					newChar = random.nextInt(9);
-					boolean dup = false;
-					for (String key : GameLogic.playerList.keySet()) {
-						PlayerInfo info = GameLogic.playerList.get(key);
-						if (info.getCharacterID() == newChar) {
-							dup = true;
-						}
-					}
-					if (!dup) {
-						break;
+			Random random = new Random();
+			int newChar = 0;
+			while (true) {
+				newChar = random.nextInt(9);
+				boolean dup = false;
+				for (String key : GameLogic.playerList.keySet()) {
+					PlayerInfo info = GameLogic.playerList.get(key);
+					if (info.getCharacterID() == newChar) {
+						dup = true;
 					}
 				}
-				System.out.println("CHAR = " + newChar);
-				PlayerLogic.setCharID(newChar);
-			//}
+				if (!dup) {
+					break;
+				}
+			}
+			System.out.println("CHAR = " + newChar);
+			PlayerLogic.setCharID(newChar);
+			// }
 			loadPlayerimg();
 			loadCollisionObjects();
 			loadEventObjects();
@@ -501,8 +501,9 @@ public class GameWindow {
 	                    "/player/06.png", "/player/07.png", "/player/08.png",
 	                    "/player/09.png", "/player/10.png" };
 
-	            ImageView imgView = new ImageView(new Image(CHARACTER_IMAGES[char_id]));
-	            imgView.setViewport(new Rectangle2D(0, FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+	            ImageView imgView = new ImageView(new Image(getClass().getResourceAsStream(CHARACTER_IMAGES[char_id])));
+	            // Explicitly initialize with frame 5 (idle frame)
+	            imgView.setViewport(new Rectangle2D(5 * FRAME_WIDTH, 0, FRAME_WIDTH, FRAME_HEIGHT));
 
 	            playerSpriteCache.put(playerID, imgView);
 	            cachedCharacterIDs.put(playerID, char_id); // Store the latest character ID
@@ -510,13 +511,18 @@ public class GameWindow {
 
 	        ImageView otherPlayerIMG = playerSpriteCache.get(playerID);
 
-	        // Set the sprite direction based on the player's last direction
-	        int direction = playerInfo.isMoving() ? playerInfo.getDirection() : playerInfo.getDirection();
-	        int frameIndex = playerInfo.isMoving() ? 
-	        	    (int) ((System.currentTimeMillis() / ANIMATION_SPEED) % SPRITE_COLUMNS) 
-	        	    : 5; // Set idle frame index when stationary
+	        // Set the frame based on movement state
+	        int direction = playerInfo.getDirection();
+	        int frameIndex;
+	        
+	        // Always use frame 5 (idle frame) when the player is not moving
+	        if (playerInfo.isMoving()) {
+	            frameIndex = (int) ((System.currentTimeMillis() / ANIMATION_SPEED) % SPRITE_COLUMNS);
+	        } else {
+	            frameIndex = 5; // Always use frame 5 for stationary players
+	        }
 
-
+	        // Update viewport based on direction and frame
 	        if (direction == 1) { // Left
 	            otherPlayerIMG.setViewport(
 	                    new Rectangle2D(frameIndex * FRAME_WIDTH, 1 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
@@ -536,7 +542,6 @@ public class GameWindow {
 	        gc.drawImage(playerImage, playerScreenX - FRAME_WIDTH / 2, playerScreenY - FRAME_HEIGHT / 2 - 5);
 	    }
 	}
-
 
 	private void handleKeyPress(KeyEvent event) {
 		pressedKeys.add(event.getCode());
@@ -639,7 +644,7 @@ public class GameWindow {
 			if (System.currentTimeMillis() - lastFpressed > 250) {
 				lastFpressed = System.currentTimeMillis();
 				System.out.println("V pressed");
-				MatchSetupPane setup = new MatchSetupPane(this::onCharacterSelected);
+				CharaterSelectgui setup = new CharaterSelectgui(this::onCharacterSelected);
 
 				root.getChildren().add(setup);
 			}
