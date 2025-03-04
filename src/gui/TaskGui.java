@@ -4,6 +4,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -75,7 +76,7 @@ public class TaskGui extends Pane{
 		case 7:
 			//task7();
 		case 8:
-			//task8();
+			task8();
 		case 9:
 			//task9();
 		case 10:
@@ -295,6 +296,47 @@ public class TaskGui extends Pane{
 	    this.getChildren().add(root);
 	}
 
+	private void task8() {
+		ImageView wireLeft = new ImageView(new Image("file:wire_left.png"));
+        wireLeft.setFitWidth(100);
+        wireLeft.setFitHeight(50);
+        wireLeft.setLayoutX(400);
+        wireLeft.setLayoutY(400);
+
+        ImageView wireRight = new ImageView(new Image("file:wire_right.png"));
+        wireRight.setFitWidth(100);
+        wireRight.setFitHeight(50);
+        wireRight.setLayoutX(600);
+        wireRight.setLayoutY(400);
+
+        ImageView solderingIron = new ImageView(new Image("file:soldering_iron.png"));
+        solderingIron.setFitWidth(100);
+        solderingIron.setFitHeight(100);
+        solderingIron.setLayoutX(300);
+        solderingIron.setLayoutY(500);
+
+        ImageView solderWire = new ImageView(new Image("file:solder_wire.png"));
+        solderWire.setFitWidth(50);
+        solderWire.setFitHeight(50);
+        solderWire.setLayoutX(700);
+        solderWire.setLayoutY(500);
+
+        solderingIron.setOnMousePressed(event -> {
+            PauseTransition solderTime = new PauseTransition(Duration.seconds(5));
+            solderTime.setOnFinished(e -> {
+                this.getChildren().removeAll(wireLeft, wireRight);
+                ImageView solderedWire = new ImageView(new Image("file:soldered_wire.png"));
+                solderedWire.setFitWidth(200);
+                solderedWire.setFitHeight(50);
+                solderedWire.setLayoutX(500);
+                solderedWire.setLayoutY(400);
+                this.getChildren().add(solderedWire);
+            });
+            solderTime.play();
+        });
+
+        this.getChildren().addAll(wireLeft, wireRight, solderingIron, solderWire);
+    }
 	
 	//TASK10 Cut Flower
 	private void task10() {
