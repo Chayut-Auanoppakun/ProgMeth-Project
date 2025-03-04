@@ -159,7 +159,7 @@ public class ServerSelectGui extends Pane {
 		MainMenuPane.setHostDisable(false); // Enable HOST
 		MainMenuPane.setJoinDisable(false); // Enable JOIN
 		typeArea.setPromptText("");
-
+		
 		if (CurState.equals(logic.State.SERVER)) {
 			CurState = logic.State.IDLE;
 			ServerLogic.stopServer();

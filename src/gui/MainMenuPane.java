@@ -37,9 +37,12 @@ public class MainMenuPane extends Pane {
 	private TaskGui activeTaskGui;
 	Scene Curscene;
 	Stage thisStage;
-	private static State thisState = logic.State.IDLE;
+	private static State thisState;
+	private static boolean ServerGuiloaded;
 
 	public MainMenuPane(Stage primaryStage, double width, double height) {
+		ServerGuiloaded = false;
+		thisState = logic.State.IDLE;
 		setPrefSize(width, height);
 		thisStage = primaryStage;
 		Background background;
@@ -116,11 +119,13 @@ public class MainMenuPane extends Pane {
 		} else if (text.equals("HOST")) {
 			button.setOnAction(e -> {
 				thisState = logic.State.SERVER;
+				ServerGuiloaded = true;
 				openServerGui(thisState);
 			});
 		} else if (text.equals("JOIN")) {
 			button.setOnAction(e -> {
 				thisState = logic.State.CLIENT;
+				ServerGuiloaded = true;
 				openServerGui(thisState);
 			});
 		} else if (text.equals("TEST TASK")) {
@@ -147,36 +152,31 @@ public class MainMenuPane extends Pane {
 
 		return button;
 	}
-	
+
 	public void onCharacterSelected() {
-	    System.out.println("Character selected! Updating game state...");
-	    // Perform actions such as updating the game UI or starting the game
+		System.out.println("Character selected! Updating game state...");
+		// Perform actions such as updating the game UI or starting the game
 	}
-	
+
 	private void applyInputNameStyle(TextField inputField) {
-	    // Combine all styles into one comprehensive style string
-	    String baseStyle = "-fx-background-color: transparent; " +
-	                      "-fx-border-color: white; " +
-	                      "-fx-border-width: 2px; " +
-	                      "-fx-text-fill: white; " +
-	                      "-fx-font-family: 'Helvetica'; " +
-	                      "-fx-font-size: 16px; " +
-	                      "-fx-font-weight: normal; " +
-	                      "-fx-opacity: 1.0; " +
-	                      "-fx-prompt-text-fill: rgba(255,255,255,0.6);";
-	    
-	    inputField.setStyle(baseStyle);
-	    
-	    // Apply hover effects programmatically instead of with setOnMouseEntered/Exited
-	    inputField.hoverProperty().addListener((observable, oldValue, newValue) -> {
-	        if (newValue) {
-	            // Mouse entered
-	            inputField.setStyle(baseStyle + "-fx-border-color: #cccccc;");
-	        } else {
-	            // Mouse exited
-	            inputField.setStyle(baseStyle);
-	        }
-	    });
+		// Combine all styles into one comprehensive style string
+		String baseStyle = "-fx-background-color: transparent; " + "-fx-border-color: white; "
+				+ "-fx-border-width: 2px; " + "-fx-text-fill: white; " + "-fx-font-family: 'Helvetica'; "
+				+ "-fx-font-size: 16px; " + "-fx-font-weight: normal; " + "-fx-opacity: 1.0; "
+				+ "-fx-prompt-text-fill: rgba(255,255,255,0.6);";
+
+		inputField.setStyle(baseStyle);
+
+		// Apply hover effects programmatically instead of with setOnMouseEntered/Exited
+		inputField.hoverProperty().addListener((observable, oldValue, newValue) -> {
+			if (newValue) {
+				// Mouse entered
+				inputField.setStyle(baseStyle + "-fx-border-color: #cccccc;");
+			} else {
+				// Mouse exited
+				inputField.setStyle(baseStyle);
+			}
+		});
 	}
 
 	private void showGameOptions() {
@@ -242,7 +242,9 @@ public class MainMenuPane extends Pane {
 
 			// Change BACK button to EXIT
 			exitButton.setText("EXIT");
-			ServerSelectGui.stopGame();
+			if (ServerGuiloaded) // prevents uninitialized error
+				ServerSelectGui.stopGame();
+			ServerGuiloaded = false;
 			for (int i = 0; i < this.getChildren().size(); i++) {
 				if (this.getChildren().get(i) instanceof ServerSelectGui) {
 					ServerSelectGui sgui = (ServerSelectGui) this.getChildren().get(i);
@@ -302,9 +304,6 @@ public class MainMenuPane extends Pane {
 
 		ServerSelectGui serverGui = new ServerSelectGui(state, thisStage);
 
-		// Set the width of the ServerGui (adjust as needed)
-
-		// Position it on the right side of the screen
 		serverGui.setLayoutX(this.getWidth() - 620);
 		serverGui.setLayoutY(100);
 
@@ -320,6 +319,7 @@ public class MainMenuPane extends Pane {
 		return InputName.getText().isEmpty() ? "Host" : InputName.getText();
 	}
 
+	// TODO for testing remove later
 	private void task(int taskId) {
 		if (activeTaskGui != null) {
 			this.getChildren().remove(activeTaskGui);
