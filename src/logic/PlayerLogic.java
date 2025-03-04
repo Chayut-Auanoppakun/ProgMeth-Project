@@ -3,7 +3,6 @@ package logic;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Random;
 
 import gui.MainMenuPane;
 

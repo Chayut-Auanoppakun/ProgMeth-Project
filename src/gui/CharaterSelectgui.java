@@ -23,7 +23,7 @@ import server.PlayerInfo;
 
 public class CharaterSelectgui extends VBox {
 	private ImageView characterImageView;
-	private int curChar = 0;
+	private int curChar = PlayerLogic.getCharID();
 	private static final String[] CHARACTER_NAMES = { "Alex", "Casey", "Taylor", "Jordan", "Morgan", "Riley", "Avery",
 			"Cameron", "Quinn", "Rowan" };
 	private static final String[] CHARACTER_IMAGES = { "/player/profile/01.png", "/player/profile/02.png",
@@ -31,10 +31,8 @@ public class CharaterSelectgui extends VBox {
 			"/player/profile/07.png", "/player/profile/08.png", "/player/profile/09.png", "/player/profile/10.png" };
 	private Button selectButton;
 	private TextField name;
-	private Runnable onCharacterSelectedCallback;
 
 	public CharaterSelectgui(Runnable onCharacterSelectedCallback) {
-		this.onCharacterSelectedCallback = onCharacterSelectedCallback;
 
 		// Set fixed size
 		setPrefWidth(300);

@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -52,7 +53,6 @@ import server.PlayerInfo;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -106,10 +106,6 @@ public class GameWindow {
 	// === Collision & Events ===
 	private List<gameObjects.CollisionObject> collisionObjects = new CopyOnWriteArrayList<>();
 	private List<gameObjects.eventObject> eventObjects = new CopyOnWriteArrayList<>();
-	private boolean lastMovementCollided = false;
-	private double lastCollisionX = 0;
-	private double lastCollisionY = 0;
-	private static final double COLLISION_CACHE_THRESHOLD = 2.0; // Distance in pixels to reuse collision result
 
 	// === Spatial Grid System ===
 	private int GRID_CELL_SIZE = 128; // Size of each grid cell, adjust based on game scale
@@ -592,14 +588,89 @@ public class GameWindow {
 	}
 
 	private void renderPlayers() {
+		// Create a list to store all players (including local player) for sorting by
+		// y-position
+		List<PlayerRenderInfo> playersToRender = new ArrayList<>();
+
+		// Add the local player to the list
+		playersToRender.add(new PlayerRenderInfo("local", PlayerLogic.getMyPosX(), PlayerLogic.getMyPosY(), null, // For
+																													// local
+																													// player,
+																													// we'll
+																													// use
+																													// playerIMG
+																													// directly
+				PlayerLogic.getCharID()));
+
+		// Add other players to the list
 		for (String key : GameLogic.playerList.keySet()) {
 			PlayerInfo playerInfo = GameLogic.playerList.get(key);
-			renderOtherPlayer(playerInfo);
+
+			// Check if player is within FOV radius before adding to render list
+			final int FOV_RADIUS = 1000; // Adjust as needed
+			double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
+			double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
+			double distance = Math.sqrt(distX * distX + distY * distY);
+
+			if (distance <= FOV_RADIUS) {
+				playersToRender.add(new PlayerRenderInfo(key, playerInfo.getX(), playerInfo.getY(), playerInfo,
+						playerInfo.getCharacterID()));
+			}
 		}
 
-		// Render the local player
-		double localPlayerScreenX = PlayerLogic.getMyPosX() - viewportX;
-		double localPlayerScreenY = PlayerLogic.getMyPosY() - viewportY;
+		// Sort players by Y position (higher Y values render on top/later)
+		Collections.sort(playersToRender, Comparator.comparingDouble(PlayerRenderInfo::getY));
+
+		// Render all players in sorted order
+		for (PlayerRenderInfo player : playersToRender) {
+			if (player.getKey().equals("local")) {
+				renderLocalPlayer(player.getX(), player.getY());
+			} else {
+				renderOtherPlayer(player.getInfo());
+			}
+		}
+	}
+
+	// Helper class to store player information for rendering
+	private class PlayerRenderInfo {
+		private String key;
+		private double x;
+		private double y;
+		private PlayerInfo info;
+		private int charID;
+
+		public PlayerRenderInfo(String key, double x, double y, PlayerInfo info, int charID) {
+			this.key = key;
+			this.x = x;
+			this.y = y;
+			this.info = info;
+			this.charID = charID;
+		}
+
+		public String getKey() {
+			return key;
+		}
+
+		public double getX() {
+			return x;
+		}
+
+		public double getY() {
+			return y;
+		}
+
+		public PlayerInfo getInfo() {
+			return info;
+		}
+
+		public int getCharID() {
+			return charID;
+		}
+	}
+
+	private void renderLocalPlayer(double x, double y) {
+		double localPlayerScreenX = x - viewportX;
+		double localPlayerScreenY = y - viewportY;
 
 		// Draw the local player using the playerIMG sprite
 		if (playerIMG != null) {
@@ -619,17 +690,19 @@ public class GameWindow {
 					PLAYER_RADIUS * 2);
 		}
 
-		// Draw collision bounding box for the local player
-		gc.setStroke(Color.YELLOW);
-		double collisionBoxX = localPlayerScreenX - 24; // Half of 48 (width)
-		double collisionBoxY = localPlayerScreenY - 32; // Half of 64 (height)
-		gc.strokeRect(collisionBoxX, collisionBoxY, 48, 64);
+		if (showCollision) {
+			// Draw collision bounding box for the local player
+			gc.setStroke(Color.YELLOW);
+			double collisionBoxX = localPlayerScreenX - 24; // Half of 48 (width)
+			double collisionBoxY = localPlayerScreenY - 32; // Half of 64 (height)
+			gc.strokeRect(collisionBoxX, collisionBoxY, 48, 64);
 
-		// Draw the bottom 20-pixel collision area for the local player
-		gc.setStroke(Color.CYAN);
-		double collisionAreaY = localPlayerScreenY + 12; // Bottom 20 pixels (64 - 20 = 44, 44 / 2 = 22, 32 - 22 = 10)
-		gc.strokeRect(collisionBoxX, collisionAreaY, 48, 20);
-
+			// Draw the bottom 20-pixel collision area for the local player
+			gc.setStroke(Color.CYAN);
+			double collisionAreaY = localPlayerScreenY + 12; // Bottom 20 pixels (64 - 20 = 44, 44 / 2 = 22, 32 - 22 =
+																// 10)
+			gc.strokeRect(collisionBoxX, collisionAreaY, 48, 20);
+		}
 	}
 
 	private void renderOtherPlayer(PlayerInfo playerInfo) {
@@ -826,7 +899,7 @@ public class GameWindow {
 						// Check for collision with the bottom 20 pixels of the player
 						if (playerRight > objLeft && playerLeft < objRight && playerBottom > objTop
 								&& playerFeetTop < objBottom) {
-							System.out.println("Collision with object at (" + obj.getX() + ", " + obj.getY() + ")");
+							//System.out.println("Collision with object at (" + obj.getX() + ", " + obj.getY() + ")");
 							return true; // Collision detected
 						}
 					}

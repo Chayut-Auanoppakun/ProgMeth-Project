@@ -6,8 +6,6 @@ import gameObjects.eventObject;
 import gui.MainMenuPane;
 import javafx.application.Platform;
 import javafx.scene.Parent;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.StackPane;
@@ -24,14 +22,29 @@ public class TaskLogic {
 	        double eventPosX = event.getX();
 	        double eventPosY = event.getY();
 	        
+	        // Define player collision box dimensions (same as in GameWindow)
+	        final double PLAYER_WIDTH = 48;  // Player collision box width
+	        final double PLAYER_HEIGHT = 64; // Player collision box height
+	        
+	        // Calculate player collision box coordinates
+	        // The player's position is at the center of the sprite, so we offset by half width/height
+	        double playerLeft = playerPosX - (PLAYER_WIDTH / 2);
+	        double playerRight = playerPosX + (PLAYER_WIDTH / 2);
+	        double playerTop = playerPosY - (PLAYER_HEIGHT / 2);
+	        double playerBottom = playerPosY + (PLAYER_HEIGHT / 2);
+	        
 	        System.out.println("Checking collision:");
 	        System.out.println("Player Position: (" + playerPosX + ", " + playerPosY + ")");
+	        System.out.println("Player Box: L=" + playerLeft + ", R=" + playerRight + 
+	                           ", T=" + playerTop + ", B=" + playerBottom);
 	        System.out.println("Event Position: (" + eventPosX + ", " + eventPosY + ")");
+	        System.out.println("Event Size: W=" + event.getWidth() + ", H=" + event.getHeight());
 	        
-	        if (playerPosX < eventPosX + event.getWidth() &&
-	            playerPosX + 48 > eventPosX &&
-	            playerPosY < eventPosY + event.getHeight() &&
-	            playerPosY + 64 > eventPosY) {
+	        // Standard rectangle collision detection
+	        if (playerRight > eventPosX && 
+	            playerLeft < eventPosX + event.getWidth() &&
+	            playerBottom > eventPosY && 
+	            playerTop < eventPosY + event.getHeight()) {
 	            return event.getEventID();
 	        }
 	    }

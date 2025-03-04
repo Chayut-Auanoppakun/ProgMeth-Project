@@ -29,7 +29,7 @@ public class ServerSelectGui extends Pane {
 	static State CurState;
 	private static boolean isGameWindow = false;
 	Stage thisStage;
-	
+
 	public ServerSelectGui(State state, Stage primaryStage) {
 		thisStage = primaryStage;
 		this.setStyle("-fx-background-color: #1e1e1e;"); // Dark background
@@ -70,7 +70,8 @@ public class ServerSelectGui extends Pane {
 		// set functions
 		// 1. The Start/Connect Button
 		// 2. The Send Button
-		// Should work as long as we gen a new ServerGui obj every time we open the Server Window
+		// Should work as long as we gen a new ServerGui obj every time we open the
+		// Server Window
 		if (CurState.equals(logic.State.SERVER)) {
 			startButton.setOnAction(event -> {
 				broadcastServer();
@@ -79,14 +80,17 @@ public class ServerSelectGui extends Pane {
 			});
 			sendButton.setOnAction(event -> {
 				ServerLogic.sendMessageToClients(typeArea.getText(), logArea);
-				logArea.clear();
+				typeArea.clear();
 			});
 
 		} else if (CurState.equals(logic.State.CLIENT)) {
 			startButton.setOnAction(event -> connectClient());
-			sendButton.setOnAction(event -> ClientLogic.sendMessage(typeArea.getText(), logArea));
+			sendButton.setOnAction(event -> {
+				ClientLogic.sendMessage(typeArea.getText(), logArea);
+				typeArea.clear();
+			});
 		}
-		
+
 		toGameButton.setOnAction(event -> {
 			startGame();
 		});
@@ -105,52 +109,52 @@ public class ServerSelectGui extends Pane {
 
 		// Add to the Pane
 		this.getChildren().add(chatBox);
-        primaryStage.setOnCloseRequest(this::handleWindowClose);
+		primaryStage.setOnCloseRequest(this::handleWindowClose);
 	}
 
 	public void broadcastServer() {
-			log("Starting broadcast...");
-			logArea.clear();
-			sendButton.setDisable(false);
-			startButton.setDisable(true);
-			
-			startButton.setDisable(true); // Disable Start BT
-			MainMenuPane.setNameDisable(true); // Disable nameField
-			MainMenuPane.setHostDisable(true); // Disable HOST
-			MainMenuPane.setJoinDisable(true); // Disable JOIN
-			typeArea.setPromptText("Send massage to connected clients...");
-			CurState = logic.State.SERVER;
-			ServerLogic.startBroadcasting(CurState, logArea, MainMenuPane.getServerName(), serverPort);
+		log("Starting broadcast...");
+		logArea.clear();
+		sendButton.setDisable(false);
+		startButton.setDisable(true);
+
+		startButton.setDisable(true); // Disable Start BT
+		MainMenuPane.setNameDisable(true); // Disable nameField
+		MainMenuPane.setHostDisable(true); // Disable HOST
+		MainMenuPane.setJoinDisable(true); // Disable JOIN
+		typeArea.setPromptText("Send massage to connected clients...");
+		CurState = logic.State.SERVER;
+		ServerLogic.startBroadcasting(CurState, logArea, MainMenuPane.getServerName(), serverPort);
 	}
 
 	public void connectClient() {
-			log("Connecting as client...");
-			logArea.clear();
-			MainMenuPane.setNameDisable(true); // Disable nameField
-			MainMenuPane.setHostDisable(true); // Disable HOST
-			MainMenuPane.setJoinDisable(true); // Disable JOIN
-			startButton.setText("Connect");
-			startButton.setOnAction(event -> {
-	            String message = typeArea.getText();
-	            try {
-	                int serverIndex = Integer.parseInt(message.trim()) - 1;
-	                boolean success = ClientLogic.connectToServer(serverIndex, logArea, MainMenuPane.getPlayerName());
-	                PlayerLogic.setName(MainMenuPane.getPlayerName());
-	                if (success) {
-	                toGameButton.setDisable(false);
-	                sendButton.setDisable(false);
-	                startButton.setDisable(true);
-	                typeArea.clear();
-	                typeArea.setPromptText("Type your message here...");
-	                }
-	            } catch (NumberFormatException e) {
-	                log("Invalid input. Please enter a number.");
-	            }
-	        });
-			//startButton.setDisable(true);
-			typeArea.setPromptText("Enter server number to connect first...");
-			CurState = logic.State.CLIENT;
-			ClientLogic.startClient(CurState, logArea);
+		log("Connecting as client...");
+		logArea.clear();
+		MainMenuPane.setNameDisable(true); // Disable nameField
+		MainMenuPane.setHostDisable(true); // Disable HOST
+		MainMenuPane.setJoinDisable(true); // Disable JOIN
+		startButton.setText("Connect");
+		startButton.setOnAction(event -> {
+			String message = typeArea.getText();
+			try {
+				int serverIndex = Integer.parseInt(message.trim()) - 1;
+				boolean success = ClientLogic.connectToServer(serverIndex, logArea, MainMenuPane.getPlayerName());
+				PlayerLogic.setName(MainMenuPane.getPlayerName());
+				if (success) {
+					toGameButton.setDisable(false);
+					sendButton.setDisable(false);
+					startButton.setDisable(true);
+					typeArea.clear();
+					typeArea.setPromptText("Type your message here...");
+				}
+			} catch (NumberFormatException e) {
+				log("Invalid input. Please enter a number.");
+			}
+		});
+		// startButton.setDisable(true);
+		typeArea.setPromptText("Enter server number to connect first...");
+		CurState = logic.State.CLIENT;
+		ClientLogic.startClient(CurState, logArea);
 	}
 
 	public static void stopGame() {
@@ -159,7 +163,7 @@ public class ServerSelectGui extends Pane {
 		MainMenuPane.setHostDisable(false); // Enable HOST
 		MainMenuPane.setJoinDisable(false); // Enable JOIN
 		typeArea.setPromptText("");
-		
+
 		if (CurState.equals(logic.State.SERVER)) {
 			CurState = logic.State.IDLE;
 			ServerLogic.stopServer();
@@ -198,8 +202,6 @@ public class ServerSelectGui extends Pane {
 			startButton.setDisable(false);
 		}
 	}
-
-	
 
 	public static void settoGamedisable(boolean set) {
 		toGameButton.setDisable(set);
