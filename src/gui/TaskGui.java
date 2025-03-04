@@ -85,7 +85,7 @@ public class TaskGui extends Pane{
 			task10();
 			break;
 		case 11:
-			//task11();
+			task11();
 		case 12:
 			task12();
 			break;
@@ -382,6 +382,10 @@ public class TaskGui extends Pane{
 		    
 		}
 	
+	//catch fish
+	private void task11() {
+		
+	}
 	
 	//clean mirror
 	private void task12() {
