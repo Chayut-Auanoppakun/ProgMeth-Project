@@ -22,126 +22,124 @@ import logic.PlayerLogic;
 import server.PlayerInfo;
 
 public class CharaterSelectgui extends VBox {
-	private ImageView characterImageView;
-	private int curChar = 0;
-	private static final String[] CHARACTER_NAMES = { "Alex", "Casey", "Taylor", "Jordan", "Morgan", "Riley", "Avery",
-			"Cameron", "Quinn", "Rowan" };
-	private static final String[] CHARACTER_IMAGES = { "/player/profile/01.png", "/player/profile/02.png",
-			"/player/profile/03.png", "/player/profile/04.png", "/player/profile/05.png", "/player/profile/06.png",
-			"/player/profile/07.png", "/player/profile/08.png", "/player/profile/09.png", "/player/profile/10.png" };
-	private Button selectButton;
-	private TextField name;
+    private ImageView characterImageView;
+    private int curChar = 0;
+    private static final String[] CHARACTER_NAMES = { "Alex", "Casey", "Taylor", "Jordan", "Morgan", "Riley", "Avery",
+            "Cameron", "Quinn", "Rowan" };
+    private static final String[] CHARACTER_IMAGES = { "/player/profile/01.png", "/player/profile/02.png",
+            "/player/profile/03.png", "/player/profile/04.png", "/player/profile/05.png", "/player/profile/06.png",
+            "/player/profile/07.png", "/player/profile/08.png", "/player/profile/09.png", "/player/profile/10.png" };
+    private Button selectButton;
+    private TextField name;
+    private Runnable onCharacterSelectedCallback;
 
-	public CharaterSelectgui(Runnable onCharacterSelectedCallback) {
-		setPadding(new Insets(10));
-		setSpacing(10);
-		setAlignment(Pos.CENTER);
-		setStyle("-fx-background-color: rgba(0, 0, 0, 0.5);"); // Semi-transparent background
+    public CharaterSelectgui(Runnable onCharacterSelectedCallback) {
+        this.onCharacterSelectedCallback = onCharacterSelectedCallback;
+        
+        // Set fixed size
+        setPrefWidth(300);
+        setPrefHeight(400);
+        setMaxWidth(300);
+        setMaxHeight(400);
+        
+        setPadding(new Insets(20));
+        setSpacing(15);
+        setAlignment(Pos.CENTER);
+        setStyle("-fx-background-color: rgba(0, 0, 0, 0.85);"); // More opaque background
 
-		// Create border
-		setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, new CornerRadii(10),
-				new BorderWidths(3))));
+        // Create border
+        setBorder(new Border(new BorderStroke(Paint.valueOf("white"), BorderStrokeStyle.SOLID, new CornerRadii(10),
+                new BorderWidths(3))));
 
-		Button LeftArrow = new Button("<");
-		Button RightArrow = new Button(">");
-		selectButton = new Button("Select");
-		name = new TextField();
-		Text title = new Text();
-		title.setText("Select Character");
-		title.setFill(Paint.valueOf("white")); // Set text color to white
-		title.setFont(Font.font("System", javafx.scene.text.FontWeight.BOLD, 20)); // Set text to bold
-		name.setPrefWidth(150); // Set preferred width
-		name.setEditable(false); // Make the text field uneditable
-		name.setAlignment(Pos.CENTER); // Center the text
-		selectButton.setPrefWidth(150);
+        Text title = new Text("Select Character");
+        title.setFill(Paint.valueOf("white")); // Set text color to white
+        title.setFont(Font.font("System", javafx.scene.text.FontWeight.BOLD, 20)); // Set text to bold
 
-		// Style buttons
-		String buttonStyle = "-fx-background-color: #007ACC; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 5 15 5 15;";
-		LeftArrow.setStyle(buttonStyle);
-		RightArrow.setStyle(buttonStyle);
-		selectButton.setStyle(buttonStyle);
+        characterImageView = new ImageView();
+        characterImageView.setFitHeight(200);
+        characterImageView.setFitWidth(150);
+        characterImageView.setPreserveRatio(true);
+        Image image = new Image(CHARACTER_IMAGES[curChar]);
+        characterImageView.setImage(image);
+        
+        Button leftArrow = new Button("<");
+        Button rightArrow = new Button(">");
+        selectButton = new Button("Select");
+        name = new TextField(CHARACTER_NAMES[curChar]);
+        
+        name.setPrefWidth(150); // Set preferred width
+        name.setEditable(false); // Make the text field uneditable
+        name.setAlignment(Pos.CENTER); // Center the text
+        selectButton.setPrefWidth(150);
 
-		LeftArrow.setOnAction(e -> {
-			curChar--;
-			if (curChar < 0)
-				curChar = 0;
-			updateCharacterPreview();
-			name.setText(CHARACTER_NAMES[curChar]);
-		});
+        // Style buttons
+        String buttonStyle = "-fx-background-color: #007ACC; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 5 15 5 15;";
+        leftArrow.setStyle(buttonStyle);
+        rightArrow.setStyle(buttonStyle);
+        selectButton.setStyle(buttonStyle);
 
-		RightArrow.setOnAction(e -> {
-			curChar++;
-			if (curChar > 9)
-				curChar = 9;
-			updateCharacterPreview();
-			name.setText(CHARACTER_NAMES[curChar]);
-		});
+        leftArrow.setOnAction(e -> {
+            curChar = (curChar > 0) ? curChar - 1 : 0;
+            updateCharacterPreview();
+        });
 
-		selectButton.setOnAction(e -> {
-			PlayerLogic.setCharID(curChar);
-			updateCharacterPreview();
-			if (onCharacterSelectedCallback != null) {
-				onCharacterSelectedCallback.run();
-			}
-		});
+        rightArrow.setOnAction(e -> {
+            curChar = (curChar < 9) ? curChar + 1 : 9;
+            updateCharacterPreview();
+        });
 
-		name.setText(CHARACTER_NAMES[curChar]);
-		HBox buttons = new HBox(10, LeftArrow, name, RightArrow);
-		buttons.setAlignment(Pos.CENTER);
+        selectButton.setOnAction(e -> {
+            PlayerLogic.setCharID(curChar);
+            if (onCharacterSelectedCallback != null) {
+                onCharacterSelectedCallback.run();
+            }
+        });
 
-		characterImageView = new ImageView();
-		characterImageView.setFitHeight(200);
-		characterImageView.setFitWidth(150);
-		Image image = new Image(CHARACTER_IMAGES[curChar]);
-		characterImageView.setImage(image);
+        HBox buttons = new HBox(10, leftArrow, name, rightArrow);
+        buttons.setAlignment(Pos.CENTER);
 
-		VBox vBox = new VBox(10, title, characterImageView, buttons, selectButton);
-		vBox.setAlignment(Pos.CENTER);
+        VBox vBox = new VBox(15);
+        vBox.setAlignment(Pos.CENTER);
+        vBox.getChildren().addAll(title, characterImageView, buttons, selectButton);
 
-		getChildren().add(vBox);
+        getChildren().add(vBox);
+        updateCharacterPreview();
+    }
 
-		startCharacterUpdateThread(); //this is just debug
-		updateCharacterPreview();
-	}
+    private void updateCharacterPreview() {
+        if (curChar >= 0 && curChar < CHARACTER_IMAGES.length) {
+            Image image = new Image(CHARACTER_IMAGES[curChar]);
+            characterImageView.setImage(image);
+            name.setText(CHARACTER_NAMES[curChar]);
+        }
 
-	private void updateCharacterPreview() {
-		if (curChar >= 0 && curChar < CHARACTER_IMAGES.length) {
-			Image image = new Image(CHARACTER_IMAGES[curChar]);
-			characterImageView.setImage(image);
-		}
+        boolean isDuplicate = false;
+        for (String key : GameLogic.playerList.keySet()) {
+            PlayerInfo info = GameLogic.playerList.get(key);
+            if (info.getCharacterID() == curChar) {
+                isDuplicate = true;
+                break;
+            }
+        }
 
-		boolean Dup = false;
-		for (String key : GameLogic.playerList.keySet()) {
-			if (key != PlayerLogic.getLocalAddressPort()) { //check for not ours
-				PlayerInfo info = GameLogic.playerList.get(key);
-				if (info.getCharacterID() == curChar) {
-					Dup = true;
-				}
-			}
-		}
-		if (Dup) {
-			selectButton.setDisable(true);
-			selectButton.setText("Taken");
-			selectButton.setStyle(
-					"-fx-background-color: #FF6347; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 5 15 5 15;");
-		} else {
-
-			if (PlayerLogic.getCharID() == curChar) {
-				selectButton.setDisable(true);
-				selectButton.setText("Selected");
-				selectButton.setStyle(
-						"-fx-background-color: #FF6347; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 5 15 5 15;");
-			} else {
-				selectButton.setText("Select");
-				selectButton.setDisable(false);
-
-				selectButton.setStyle(
-						"-fx-background-color: #007ACC; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 5 15 5 15;"); // style
-			}
-		}
-
-	}
-
+        if (isDuplicate) {
+            selectButton.setDisable(true);
+            selectButton.setText("Character Taken");
+            selectButton.setStyle(
+                    "-fx-background-color: #FF6347; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 5 15 5 15;");
+        } else if (PlayerLogic.getCharID() == curChar) {
+            selectButton.setDisable(true);
+            selectButton.setText("Currently Selected");
+            selectButton.setStyle(
+                    "-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 5 15 5 15;");
+        } else {
+            selectButton.setDisable(false);
+            selectButton.setText("Select");
+            selectButton.setStyle(
+                    "-fx-background-color: #007ACC; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 5 15 5 15;");
+        }
+    }
+    
 	private void startCharacterUpdateThread() {
 		Thread thread = new Thread(() -> {
 			while (true) {

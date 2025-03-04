@@ -152,6 +152,32 @@ public class MainMenuPane extends Pane {
 	    System.out.println("Character selected! Updating game state...");
 	    // Perform actions such as updating the game UI or starting the game
 	}
+	
+	private void applyInputNameStyle(TextField inputField) {
+	    // Combine all styles into one comprehensive style string
+	    String baseStyle = "-fx-background-color: transparent; " +
+	                      "-fx-border-color: white; " +
+	                      "-fx-border-width: 2px; " +
+	                      "-fx-text-fill: white; " +
+	                      "-fx-font-family: 'Helvetica'; " +
+	                      "-fx-font-size: 16px; " +
+	                      "-fx-font-weight: normal; " +
+	                      "-fx-opacity: 1.0; " +
+	                      "-fx-prompt-text-fill: rgba(255,255,255,0.6);";
+	    
+	    inputField.setStyle(baseStyle);
+	    
+	    // Apply hover effects programmatically instead of with setOnMouseEntered/Exited
+	    inputField.hoverProperty().addListener((observable, oldValue, newValue) -> {
+	        if (newValue) {
+	            // Mouse entered
+	            inputField.setStyle(baseStyle + "-fx-border-color: #cccccc;");
+	        } else {
+	            // Mouse exited
+	            inputField.setStyle(baseStyle);
+	        }
+	    });
+	}
 
 	private void showGameOptions() {
 		if (isGameOptionsVisible)
@@ -165,28 +191,13 @@ public class MainMenuPane extends Pane {
 		joinButton = createMenuButton("JOIN");
 		InputName = new TextField();
 		InputName.setPromptText("Enter your name");
-		InputName.setPrefSize(200, 40); // Adjust width to be smaller
-		InputName.setMaxWidth(200); // Ensure it doesn’t stretch
+		InputName.setPrefSize(200, 40);
+		InputName.setMaxWidth(200);
 		InputName.setAlignment(Pos.CENTER);
+		applyInputNameStyle(InputName);
 
-		// Adjust styles to ensure prompt text is visible
-		InputName.setStyle("-fx-background-color: transparent;" + "-fx-border-color: white;" + "-fx-border-width: 2px;"
-				+ "-fx-text-fill: white;" + "-fx-font-family: 'Helvetica';" + "-fx-font-size: 16px;"
-				+ "-fx-font-weight: normal;" + "-fx-opacity: 1.0;");
-
-		// Ensure prompt text is visible
-		InputName.setStyle("-fx-prompt-text-fill: rgba(255,255,255,0.6);");
-
-		// Add hover effect like buttons
-		InputName.setOnMouseEntered(e -> InputName
-				.setStyle("-fx-background-color: transparent;" + "-fx-border-color: white;" + "-fx-border-width: 2px;"
-						+ "-fx-text-fill: white;" + "-fx-font-family: 'Helvetica';" + "-fx-font-size: 16px;"
-						+ "-fx-font-weight: normal;" + "-fx-alignment: center;" + "-fx-opacity: 1.0;"));
-
-		InputName.setOnMouseExited(e -> InputName
-				.setStyle("-fx-background-color: transparent;" + "-fx-border-color: white;" + "-fx-border-width: 2px;"
-						+ "-fx-text-fill: white;" + "-fx-font-family: 'Helvetica';" + "-fx-font-size: 16px;"
-						+ "-fx-font-weight: normal;" + "-fx-alignment: center;" + "-fx-opacity: 0.8;"));
+		// This ensures consistent styling
+		Platform.runLater(() -> applyInputNameStyle(InputName));
 
 		// Initially set opacity to 0 for fade-in effect
 		hostButton.setOpacity(0);

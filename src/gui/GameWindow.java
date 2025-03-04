@@ -16,6 +16,7 @@ import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
 import javafx.animation.Interpolator;
 import javafx.animation.Transition;
+import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -23,6 +24,7 @@ import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelWriter;
@@ -146,6 +148,11 @@ public class GameWindow {
 
 	private TaskGui activeTaskGui;
 
+	// === Buttons and ui ===
+	private Button characterSelectButton;
+	private CharaterSelectgui characterSelectGui;
+	private boolean characterSelectVisible = false;
+
 	public void start(Stage stage) {
 		this.gameStage = stage;
 
@@ -163,8 +170,7 @@ public class GameWindow {
 			renderer = createRenderer(map);
 			System.out.println("Map loaded successfully.");
 
-			// If server gen random player char
-//			if (MainMenuPane.getState().equals(logic.State.SERVER)) {
+			// Gen char for own player
 			Random random = new Random();
 			int newChar = 0;
 			while (true) {
@@ -226,6 +232,8 @@ public class GameWindow {
 
 		root = new Group();
 		root.getChildren().add(canvas);
+		setupCharacterSelectButton();
+
 		Scene scene = new Scene(root, screenWidth, screenHeight);
 		scene.setOnKeyPressed(this::handleKeyPress);
 		scene.setOnKeyReleased(this::handleKeyRelease);
@@ -292,6 +300,97 @@ public class GameWindow {
 		} else {
 			animation.stop();
 			setPlayerIdleFrame();
+		}
+	}
+
+	private void setupCharacterSelectButton() {
+		characterSelectButton = new Button("Select Character");
+		characterSelectButton.setStyle("-fx-background-color: #000000; -fx-text-fill: white; "
+		        + "-fx-font-size: 14px; -fx-padding: 5 15 5 15;");
+		characterSelectButton.setLayoutX(10);
+		characterSelectButton.setLayoutY(28);
+
+		characterSelectButton.setOnAction(e -> {
+			showCharacterSelectGui();
+		});
+
+		root.getChildren().add(characterSelectButton);
+	}
+
+	private void showCharacterSelectGui() {
+		// Hide the button first
+		characterSelectButton.setVisible(false);
+
+		if (characterSelectGui == null) {
+			try {
+				characterSelectGui = new CharaterSelectgui(this::onCharacterSelected);
+
+				// Set the initial position completely off-screen
+				// Don't use translateX here - we'll animate it later
+				characterSelectGui.setLayoutX(-300);
+				characterSelectGui.setLayoutY(50);
+
+				characterSelectGui.setVisible(true);
+
+				// Add a close button to the character selection GUI
+				Button closeButton = new Button("X");
+				closeButton.setStyle("-fx-background-color: #FF6347; -fx-text-fill: white; "
+						+ "-fx-font-size: 14px; -fx-padding: 2 8 2 8; -fx-background-radius: 15;");
+				closeButton.setOnAction(e -> hideCharacterSelectGui());
+
+				closeButton.setLayoutX(260);
+				closeButton.setLayoutY(10);
+				characterSelectGui.getChildren().add(closeButton);
+
+				root.getChildren().add(characterSelectGui);
+
+				characterSelectGui.toFront();
+
+			} catch (Exception e) {
+				System.err.println("Error creating character select GUI:");
+				e.printStackTrace();
+				return;
+			}
+		} else {
+			// If the GUI already exists, just make sure it's at the starting position
+			characterSelectGui.setLayoutX(-300);
+			characterSelectGui.setVisible(true);
+			characterSelectGui.toFront();
+		}
+
+		try {
+			TranslateTransition slideIn = new TranslateTransition(Duration.millis(350), characterSelectGui);
+			slideIn.setFromX(0); // Start at current position (which is -300 due to layoutX)
+			slideIn.setToX(300); // Move 300 pixels to the right
+			slideIn.setOnFinished(event -> {
+			});
+			slideIn.play();
+
+			characterSelectVisible = true;
+		} catch (Exception e) {
+			System.err.println("Error in slide animation:");
+			e.printStackTrace();
+		}
+	}
+
+	private void hideCharacterSelectGui() {
+		if (characterSelectGui != null && characterSelectGui.isVisible()) {
+			// Create and play the slide-out animation
+			TranslateTransition slideOut = new TranslateTransition(Duration.millis(350), characterSelectGui);
+			slideOut.setFromX(300); // Start at current position (after sliding in)
+			slideOut.setToX(0); // Move back to initial position
+			slideOut.setOnFinished(e -> {
+				// Reset translateX and make the panel invisible
+				characterSelectGui.setTranslateX(0);
+				characterSelectGui.setVisible(false);
+				characterSelectButton.setVisible(true);
+			});
+			slideOut.play();
+
+			characterSelectVisible = false;
+		} else {
+			// If for some reason the GUI isn't visible, just show the button
+			characterSelectButton.setVisible(true);
 		}
 	}
 
@@ -480,67 +579,68 @@ public class GameWindow {
 	}
 
 	private void renderOtherPlayer(PlayerInfo playerInfo) {
-	    final int FOV_RADIUS = 1000; // Adjust this value as needed
-	    double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
-	    double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
-	    double distance = Math.sqrt(distX * distX + distY * distY);
+		final int FOV_RADIUS = 1000; // Adjust this value as needed
+		double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
+		double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
+		double distance = Math.sqrt(distX * distX + distY * distY);
 
-	    if (distance <= FOV_RADIUS) {
-	        double playerScreenX = playerInfo.getX() - viewportX;
-	        double playerScreenY = playerInfo.getY() - viewportY;
+		if (distance <= FOV_RADIUS) {
+			double playerScreenX = playerInfo.getX() - viewportX;
+			double playerScreenY = playerInfo.getY() - viewportY;
 
-	        String playerID = playerInfo.toString();  // Unique key per player
+			String playerID = playerInfo.toString(); // Unique key per player
 
-	        // Check if character ID has changed
-	        int char_id = playerInfo.getCharacterID();
-	        if (char_id == 99) char_id = 0; // Default to 0 if not set
+			// Check if character ID has changed
+			int char_id = playerInfo.getCharacterID();
+			if (char_id == 99)
+				char_id = 0; // Default to 0 if not set
 
-	        if (!playerSpriteCache.containsKey(playerID) || playerInfo.getCharacterID() != cachedCharacterIDs.getOrDefault(playerID, -1)) {
-	            String[] CHARACTER_IMAGES = { "/player/01.png", "/player/02.png",
-	                    "/player/03.png", "/player/04.png", "/player/05.png",
-	                    "/player/06.png", "/player/07.png", "/player/08.png",
-	                    "/player/09.png", "/player/10.png" };
+			if (!playerSpriteCache.containsKey(playerID)
+					|| playerInfo.getCharacterID() != cachedCharacterIDs.getOrDefault(playerID, -1)) {
+				String[] CHARACTER_IMAGES = { "/player/01.png", "/player/02.png", "/player/03.png", "/player/04.png",
+						"/player/05.png", "/player/06.png", "/player/07.png", "/player/08.png", "/player/09.png",
+						"/player/10.png" };
 
-	            ImageView imgView = new ImageView(new Image(getClass().getResourceAsStream(CHARACTER_IMAGES[char_id])));
-	            // Explicitly initialize with frame 5 (idle frame)
-	            imgView.setViewport(new Rectangle2D(5 * FRAME_WIDTH, 0, FRAME_WIDTH, FRAME_HEIGHT));
+				ImageView imgView = new ImageView(new Image(getClass().getResourceAsStream(CHARACTER_IMAGES[char_id])));
+				// Explicitly initialize with frame 5 (idle frame)
+				imgView.setViewport(new Rectangle2D(5 * FRAME_WIDTH, 0, FRAME_WIDTH, FRAME_HEIGHT));
 
-	            playerSpriteCache.put(playerID, imgView);
-	            cachedCharacterIDs.put(playerID, char_id); // Store the latest character ID
-	        }
+				playerSpriteCache.put(playerID, imgView);
+				cachedCharacterIDs.put(playerID, char_id); // Store the latest character ID
+			}
 
-	        ImageView otherPlayerIMG = playerSpriteCache.get(playerID);
+			ImageView otherPlayerIMG = playerSpriteCache.get(playerID);
 
-	        // Set the frame based on movement state
-	        int direction = playerInfo.getDirection();
-	        int frameIndex;
-	        
-	        // Always use frame 5 (idle frame) when the player is not moving
-	        if (playerInfo.isMoving()) {
-	            frameIndex = (int) ((System.currentTimeMillis() / ANIMATION_SPEED) % SPRITE_COLUMNS);
-	        } else {
-	            frameIndex = 5; // Always use frame 5 for stationary players
-	        }
+			// Set the frame based on movement state
+			int direction = playerInfo.getDirection();
+			int frameIndex;
 
-	        // Update viewport based on direction and frame
-	        if (direction == 1) { // Left
-	            otherPlayerIMG.setViewport(
-	                    new Rectangle2D(frameIndex * FRAME_WIDTH, 1 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
-	        } else if (direction == 2) { // Right
-	            otherPlayerIMG.setViewport(
-	                    new Rectangle2D(frameIndex * FRAME_WIDTH, 0 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
-	        }
+			// Always use frame 5 (idle frame) when the player is not moving
+			if (playerInfo.isMoving()) {
+				frameIndex = (int) ((System.currentTimeMillis() / ANIMATION_SPEED) % SPRITE_COLUMNS);
+			} else {
+				frameIndex = 5; // Always use frame 5 for stationary players
+			}
 
-	        // Configure snapshot parameters to support transparency
-	        SnapshotParameters params = new SnapshotParameters();
-	        params.setFill(Color.TRANSPARENT); // Set the background to transparent
+			// Update viewport based on direction and frame
+			if (direction == 1) { // Left
+				otherPlayerIMG.setViewport(
+						new Rectangle2D(frameIndex * FRAME_WIDTH, 1 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+			} else if (direction == 2) { // Right
+				otherPlayerIMG.setViewport(
+						new Rectangle2D(frameIndex * FRAME_WIDTH, 0 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+			}
 
-	        // Take a snapshot of the playerIMG with transparency
-	        Image playerImage = otherPlayerIMG.snapshot(params, null);
+			// Configure snapshot parameters to support transparency
+			SnapshotParameters params = new SnapshotParameters();
+			params.setFill(Color.TRANSPARENT); // Set the background to transparent
 
-	        // Draw the player image
-	        gc.drawImage(playerImage, playerScreenX - FRAME_WIDTH / 2, playerScreenY - FRAME_HEIGHT / 2 - 5);
-	    }
+			// Take a snapshot of the playerIMG with transparency
+			Image playerImage = otherPlayerIMG.snapshot(params, null);
+
+			// Draw the player image
+			gc.drawImage(playerImage, playerScreenX - FRAME_WIDTH / 2, playerScreenY - FRAME_HEIGHT / 2 - 5);
+		}
 	}
 
 	private void handleKeyPress(KeyEvent event) {
