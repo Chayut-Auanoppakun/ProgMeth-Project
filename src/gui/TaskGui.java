@@ -14,6 +14,7 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -89,7 +90,7 @@ public class TaskGui extends Pane{
 			task12();
 			break;
 		case 13:
-			//task13();
+			task13();
 		case 14:
 			//task14();
 		default:
@@ -424,6 +425,50 @@ public class TaskGui extends Pane{
 	    }
 	}
 	
-	
+	//TASK13 Cut Carrot
+		public void task13() {
+			// Background (Chopping board)
+		    ImageView board = new ImageView(new Image("/TaskAsset/CutCarrot/choppingboard.png"));
+		    board.setFitWidth(600);
+		    board.setFitHeight(400);
+		    board.setLayoutX(0);
+		    board.setLayoutY(0);
+		    
+		    // Carrot
+		    ImageView carrot = new ImageView(new Image("/TaskAsset/CutCarrot/carrot.png"));
+		    carrot.setFitWidth(200);
+		    carrot.setFitHeight(80);
+		    carrot.setLayoutX(300);
+		    carrot.setLayoutY(300);
+		    
+		    // Knife
+		    ImageView knife = new ImageView(new Image("/TaskAsset/CutCarrot/knife.png"));
+		    knife.setFitWidth(100);
+		    knife.setFitHeight(50);
+		    knife.setLayoutX(250);
+		    knife.setLayoutY(250);
+		    
+		    knife.setOnMouseDragged((MouseEvent event) -> {
+		        knife.setLayoutX(event.getSceneX() - knife.getFitWidth() / 2);
+		        knife.setLayoutY(event.getSceneY() - knife.getFitHeight() / 2);
+		    });
+		    //cut carrot into five pieces to finish task
+		    knife.setOnMouseReleased(event -> {
+		        if (knife.getBoundsInParent().intersects(carrot.getBoundsInParent())) {
+		            this.getChildren().remove(carrot);
+		            for (int i = 0; i < 5; i++) {
+		                ImageView carrotPiece = new ImageView(new Image("/TaskAsset/CutCarrot/choppedcarrot.png"));
+		                carrotPiece.setFitWidth(40);
+		                carrotPiece.setFitHeight(80);
+		                carrotPiece.setLayoutX(200 + i * 40);
+		                carrotPiece.setLayoutY(200);
+		                this.getChildren().add(carrotPiece);
+		            }
+		        }
+		    });
+		    
+		    this.getChildren().addAll(board, carrot, knife);
+		
+		}
 	
 }
