@@ -316,5 +316,12 @@ public class ServerLogic {
 	public static DatagramSocket getServerSocket() {
 		return serverSocket;
 	}
+	
+	private void BeginGame() {
+		int ReadyPlayers = 0;
+		if (ReadyPlayers  == GameLogic.playerList.size()) { //if ppl pressing ready == size of players
+			
+		}
+	}
 
 }

@@ -373,7 +373,6 @@ public class ClientLogic {
 		return clientSocket;
 	}
 	
-	// Add this method to your ClientLogic class to expose the connected server information
 	public static String getConnectedServerInfo() {
 	    if (connectedServerAddress != null && connectedServerPort != -1) {
 	        return connectedServerAddress.getHostAddress() + ":" + connectedServerPort;

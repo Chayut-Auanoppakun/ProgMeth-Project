@@ -79,7 +79,7 @@ public class GameWindow {
 	private static long lastFpressed = 0;
 
 	// === Player Properties ===
-	private double playerX = 1010; // Starting Position
+	private double playerX = 980; // Starting Position
 	private double playerY = 3616; // Starting Position
 	private double speed = 120; // Movement speed in units per second
 	private ImageView playerIMG;
@@ -92,8 +92,8 @@ public class GameWindow {
 	private static final int ANIMATION_SPEED = 150; // milliseconds per frame
 
 	// === Camera & Viewport ===
-	private double viewportX = 0;
-	private double viewportY = 0;
+	private double viewportX = 1010;
+	private double viewportY = 3616;
 	private final double screenWidth = 1080;
 	private final double screenHeight = 720;
 	private final double CAMERA_ZOOM = 1.8; // 15% of screen (much closer than before)
@@ -748,7 +748,6 @@ public class GameWindow {
 		if (pressedKeys.contains(KeyCode.A)) {
 			dx -= speed * deltaTime; // Move left
 			Direction = 1;
-
 		}
 		if (pressedKeys.contains(KeyCode.D)) {
 			dx += speed * deltaTime; // Move right
@@ -772,7 +771,7 @@ public class GameWindow {
 		}
 //		playerY += dy;
 //		playerX += dx;
-//		moved = true;
+		//moved = true;
 		// Send the updated position to the server or client
 		PlayerLogic.isMoving(moved, Direction);
 		sendPositionUpdate(playerX, playerY);
@@ -1116,7 +1115,8 @@ public class GameWindow {
 			return null;
 		}
 	}
-
+	
+	//HELPER FOR TILESET LOADER
 	private static class TileRenderTask {
 		public Tile tile;
 		public int x, y;
@@ -1165,7 +1165,7 @@ public class GameWindow {
 	    prepPhaseGui = new PrepGui(ServerSelectGui.getState());
 	    
 	    // Position it in the center of the screen
-	    prepPhaseGui.setLayoutX((screenWidth - 350) / 2); // Assuming 400px width for the UI
+	    prepPhaseGui.setLayoutX((screenWidth - 480) / 2); // Assuming 400px width for the UI
 	    prepPhaseGui.setLayoutY(screenHeight * 0.85); // Assuming 150px height for the UI
 	    
 	    // Add it to the root but keep it hidden initially

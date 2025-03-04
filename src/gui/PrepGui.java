@@ -6,21 +6,15 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Border;
-import javafx.scene.layout.BorderStroke;
-import javafx.scene.layout.BorderStrokeStyle;
-import javafx.scene.layout.BorderWidths;
-import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
 import javafx.animation.FadeTransition;
 import javafx.util.Duration;
 import logic.ServerLogic;
@@ -54,33 +48,21 @@ public class PrepGui extends VBox {
         this.setEffect(new DropShadow(5, Color.rgb(0, 0, 0, 0.7)));
         
         // IP label
-        codeLabel = new Label("IP");
+        codeLabel = new Label("Server Address");
         codeLabel.setTextFill(Color.BLACK);
         codeLabel.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
         
         // Server info (IP:Port)
         serverInfoLabel = new Label("Loading...");
         serverInfoLabel.setTextFill(Color.BLACK);
-    	serverInfoLabel.setFont(Font.font("Monospace", FontWeight.LIGHT, 10));
+        serverInfoLabel.setFont(Font.font("Monospace", FontWeight.LIGHT, 14));
         
-        // Player count container (right side)
-        HBox playerCountContainer = new HBox();
-        playerCountContainer.setAlignment(Pos.CENTER);
-        playerCountContainer.setSpacing(5);
+        // IP section on left
+        VBox ipSection = new VBox(2);
+        ipSection.setAlignment(Pos.CENTER_LEFT);
+        ipSection.getChildren().addAll(codeLabel, serverInfoLabel);
         
-        // Player icon
-        Label playerIcon = new Label("\uD83D\uDC64"); // Person icon
-        playerIcon.setTextFill(Color.BLACK);
-        playerIcon.setFont(Font.font("Arial", 16));
-        
-        // Player count with bright green color
-        playerCountLabel = new Label("2...");
-        playerCountLabel.setTextFill(Color.rgb(0, 100, 0));
-        playerCountLabel.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
-        
-        playerCountContainer.getChildren().addAll(playerIcon, playerCountLabel);
-        
-        // Ready button (now in the middle) with a pixelated game style
+        // Ready button
         readyButton = new Button("READY");
         readyButton.setStyle(
             "-fx-background-color: #333333; " +
@@ -96,38 +78,70 @@ public class PrepGui extends VBox {
         readyButton.setFont(Font.font("Monospace", FontWeight.BOLD, 12));
         readyButton.setOnAction(e -> toggleReady());
         
-        // IP section (now on the left)
-        VBox ipSection = new VBox(2);
-        ipSection.setAlignment(Pos.CENTER_LEFT);
-        ipSection.getChildren().addAll(codeLabel, serverInfoLabel);
+        // Player icon and count
+        Label playerIcon = new Label("\uD83D\uDC64"); // Person icon
+        playerIcon.setTextFill(Color.BLACK);
+        playerIcon.setFont(Font.font("Arial", 16));
         
-        // Main container with less spacing to match screenshot
-        HBox mainContainer = new HBox(25);
-        mainContainer.setAlignment(Pos.CENTER);
-        mainContainer.setPadding(new Insets(5, 20, 5, 20));
-        mainContainer.getChildren().addAll(ipSection, readyButton, playerCountContainer);
+        playerCountLabel = new Label("0/10");
+        playerCountLabel.setTextFill(Color.rgb(0, 100, 0));
+        playerCountLabel.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
         
-        // Add a light blue backdrop with rounded edges
-        StackPane backdrop = new StackPane();
+        HBox playerCountContainer = new HBox(5);
+        playerCountContainer.setAlignment(Pos.CENTER);
+        playerCountContainer.getChildren().addAll(playerIcon, playerCountLabel);
+        
+        // Create the main container with a 3-column grid-like layout
+        HBox mainContainer = new HBox();
+        mainContainer.setPadding(new Insets(10));
+        
+        // Left region (IP) - takes more width now
+        StackPane leftRegion = new StackPane(ipSection);
+        leftRegion.setAlignment(Pos.CENTER_LEFT);
+        leftRegion.setPrefWidth(180);  // Increased from 180 to 250
+        leftRegion.setMinWidth(180);
+        
+        // Center region (Ready button) - takes less width
+        StackPane centerRegion = new StackPane(readyButton);
+        centerRegion.setAlignment(Pos.CENTER);
+        centerRegion.setPrefWidth(100);  // Explicitly set width
+        
+        // Right region (Player count) - takes standard width
+        StackPane rightRegion = new StackPane(playerCountContainer);
+        rightRegion.setAlignment(Pos.CENTER_RIGHT);
+        rightRegion.setPrefWidth(100);  // Explicitly set width
+        
+        // Add spacers to force correct positioning
+        Region leftSpacer = new Region();
+        leftSpacer.setMinWidth(25);
+        Region rightSpacer = new Region();
+        rightSpacer.setMinWidth(55);
+        
+        // Add all elements to the container in the correct order
+        mainContainer.getChildren().addAll(leftRegion, leftSpacer, centerRegion, rightSpacer, rightRegion);
+        
+        // Create the background rectangle
         Rectangle backdropRect = new Rectangle();
-        backdropRect.setWidth(400);  // Make it longer
+        backdropRect.setWidth(500);  // Increased width to accommodate more IP space
         backdropRect.setHeight(70);
-        backdropRect.setArcWidth(35); // More circular edges
-        backdropRect.setArcHeight(35); // More circular edges
-        
-        backdropRect.setFill(Color.rgb(173, 216, 230, 0.85)); // Light blue, semi-transparent
-        backdropRect.setStroke(Color.rgb(135, 206, 235, 0.9)); // Slightly darker blue for border
+        backdropRect.setArcWidth(35);
+        backdropRect.setArcHeight(35);
+        backdropRect.setFill(Color.rgb(173, 216, 230, 0.85));
+        backdropRect.setStroke(Color.rgb(135, 206, 235, 0.9));
         backdropRect.setStrokeWidth(5);
         
+        // Stack the container on top of the background
+        StackPane backdrop = new StackPane();
         backdrop.getChildren().addAll(backdropRect, mainContainer);
         
+        // Add the backdrop to the main VBox
         this.getChildren().add(backdrop);
         
         // Load server info based on state
         loadServerInfo(state);
         
-        // Set size to accommodate the wider panel
-        this.setMaxWidth(600);
+        // Set size for the panel
+        this.setMaxWidth(500);  // Increased to match backdrop width
         this.setMaxHeight(80);
     }
     
@@ -138,23 +152,11 @@ public class PrepGui extends VBox {
                 // Get local server info for hosts
                 String serverAddress = InetAddress.getLocalHost().getHostAddress();
                 int serverPort = ServerLogic.getServerSocket().getLocalPort();
-                
-                // Format like "192.168.1.39:1..."
-                String displayAddress = serverAddress + ":" + serverPort;
-                if (displayAddress.length() > 16) {
-                    // Truncate with "..." if too long
-                    displayAddress = displayAddress.substring(0, 13) + "...";
-                }
-                
-                serverInfoLabel.setText(displayAddress);
+                serverInfoLabel.setText(serverAddress + ":" + serverPort);
             } else if (state == State.CLIENT) {
                 // For clients, retrieve connected server info
                 String serverInfo = ClientLogic.getConnectedServerInfo();
                 if (serverInfo != null) {
-                    // Format and truncate if needed
-                    if (serverInfo.length() > 16) {
-                        serverInfo = serverInfo.substring(0, 13) + "...";
-                    }
                     serverInfoLabel.setText(serverInfo);
                 } else {
                     serverInfoLabel.setText("Not connected");
@@ -210,11 +212,6 @@ public class PrepGui extends VBox {
         // Notify game logic that the player is ready/unready
         try {
             PlayerLogic.setPlayerReady(isReady);
-            
-            // If using client/server model
-//            if (MainMenuPane.getState() == State.CLIENT) {
-//                ClientLogic.setPlayerReady(isReady);
-//            }
         } catch (Exception e) {
             System.err.println("Error setting ready status: " + e.getMessage());
         }
