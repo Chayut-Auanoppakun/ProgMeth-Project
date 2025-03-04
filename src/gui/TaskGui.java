@@ -77,6 +77,7 @@ public class TaskGui extends Pane{
 			//task7();
 		case 8:
 			task8();
+			break;
 		case 9:
 			//task9();
 		case 10:
@@ -297,46 +298,50 @@ public class TaskGui extends Pane{
 	}
 
 	private void task8() {
-		ImageView wireLeft = new ImageView(new Image("file:wire_left.png"));
-        wireLeft.setFitWidth(100);
-        wireLeft.setFitHeight(50);
-        wireLeft.setLayoutX(400);
-        wireLeft.setLayoutY(400);
+	    ImageView wireLeft = new ImageView(new Image("TaskAsset/Soldering/leftwire.png"));
+	    wireLeft.setFitWidth(200);
+	    wireLeft.setFitHeight(100);
+	    wireLeft.setLayoutX(0);
+	    wireLeft.setLayoutY(200);
 
-        ImageView wireRight = new ImageView(new Image("file:wire_right.png"));
-        wireRight.setFitWidth(100);
-        wireRight.setFitHeight(50);
-        wireRight.setLayoutX(600);
-        wireRight.setLayoutY(400);
+	    ImageView wireRight = new ImageView(new Image("TaskAsset/Soldering/rightwire.png"));
+	    wireRight.setFitWidth(200);
+	    wireRight.setFitHeight(100);
+	    wireRight.setLayoutX(400);
+	    wireRight.setLayoutY(200);
 
-        ImageView solderingIron = new ImageView(new Image("file:soldering_iron.png"));
-        solderingIron.setFitWidth(100);
-        solderingIron.setFitHeight(100);
-        solderingIron.setLayoutX(300);
-        solderingIron.setLayoutY(500);
+	    ImageView solderingIron = new ImageView(new Image("TaskAsset/Soldering/solderingmat.png"));
+	    solderingIron.setFitWidth(100);
+	    solderingIron.setFitHeight(100);
+	    solderingIron.setLayoutX(230);
+	    solderingIron.setLayoutY(100);
 
-        ImageView solderWire = new ImageView(new Image("file:solder_wire.png"));
-        solderWire.setFitWidth(50);
-        solderWire.setFitHeight(50);
-        solderWire.setLayoutX(700);
-        solderWire.setLayoutY(500);
+	    ImageView solderWire = new ImageView(new Image("TaskAsset/Soldering/finishsoldering.png"));
+	    solderWire.setFitWidth(50);
+	    solderWire.setFitHeight(50);
+	    solderWire.setLayoutX(700);
+	    solderWire.setLayoutY(500);
 
-        solderingIron.setOnMousePressed(event -> {
-            PauseTransition solderTime = new PauseTransition(Duration.seconds(5));
-            solderTime.setOnFinished(e -> {
-                this.getChildren().removeAll(wireLeft, wireRight);
-                ImageView solderedWire = new ImageView(new Image("file:soldered_wire.png"));
-                solderedWire.setFitWidth(200);
-                solderedWire.setFitHeight(50);
-                solderedWire.setLayoutX(500);
-                solderedWire.setLayoutY(400);
-                this.getChildren().add(solderedWire);
-            });
-            solderTime.play();
-        });
+	    solderingIron.setOnMousePressed(event -> {
+	        PauseTransition solderTime = new PauseTransition(Duration.seconds(2));
+	        solderTime.setOnFinished(e -> {
+	            // Remove wireLeft, wireRight, solderingIron, and solderWire
+	            this.getChildren().removeAll(wireLeft, wireRight, solderingIron, solderWire);
 
-        this.getChildren().addAll(wireLeft, wireRight, solderingIron, solderWire);
-    }
+	            // Add the final soldered wire
+	            ImageView solderedWire = new ImageView(new Image("TaskAsset/Soldering/finishsoldering.png"));
+	            solderedWire.setFitWidth(680);
+	            solderedWire.setFitHeight(150);
+	            solderedWire.setLayoutX(0);  // Centered properly
+	            solderedWire.setLayoutY(200);
+	            this.getChildren().add(solderedWire);
+	        });
+	        solderTime.play();
+	    });
+
+	    this.getChildren().addAll(wireLeft, wireRight, solderingIron, solderWire);
+	}
+
 	
 	//TASK10 Cut Flower
 	private void task10() {
