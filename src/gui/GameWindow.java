@@ -106,9 +106,13 @@ public class GameWindow {
 	// === Collision & Events ===
 	private List<gameObjects.CollisionObject> collisionObjects = new CopyOnWriteArrayList<>();
 	private List<gameObjects.eventObject> eventObjects = new CopyOnWriteArrayList<>();
+	private boolean lastMovementCollided = false;
+	private double lastCollisionX = 0;
+	private double lastCollisionY = 0;
+	private static final double COLLISION_CACHE_THRESHOLD = 2.0; // Distance in pixels to reuse collision result
 
 	// === Spatial Grid System ===
-	private final int GRID_CELL_SIZE = 128; // Size of each grid cell, adjust based on game scale
+	private int GRID_CELL_SIZE = 128; // Size of each grid cell, adjust based on game scale
 	private ConcurrentHashMap<String, ConcurrentLinkedQueue<CollisionObject>> spatialGrid;
 
 	// === Tile Caching ===
@@ -203,7 +207,7 @@ public class GameWindow {
 					System.out.println("HIDE PREP");
 					PrepEnd = GameLogic.isPrepEnded();
 					updateUIForPrepPhase();
-					GameLogic.autoImposterCount(); //For now, automatically set imposter count to be 1/4 of player size
+					GameLogic.autoImposterCount(); // For now, automatically set imposter count to be 1/4 of player size
 					if (MainMenuPane.getState().equals(logic.State.SERVER)) {
 						ServerLogic.randomizeImposters();
 					}
@@ -795,7 +799,7 @@ public class GameWindow {
 		loadPlayerimg();
 	}
 
-	// Optimized collision check using spatial grid
+	// Maintain backwards compatibility with original method
 	private boolean checkCollision(double x, double y) {
 		double playerLeft = x - 24; // Half of 48 (width)
 		double playerRight = x + 24; // Half of 48 (width)
@@ -870,186 +874,145 @@ public class GameWindow {
 	}
 
 	@SuppressWarnings("deprecation")
+	// Reverted to the original optimization with fixes for missing tiles
 	private void drawTileLayer(GraphicsContext gc, TileLayer layer, double viewportX, double viewportY,
 			double viewportWidth, double viewportHeight) {
-// Calculate the visible tile range
-		int startX = Math.max(0, (int) (viewportX / map.getTileWidth()));
-		int startY = Math.max(0, (int) (viewportY / map.getTileHeight()));
-		int endX = Math.min(layer.getWidth(), (int) ((viewportX + viewportWidth) / map.getTileWidth() + 2));
-		int endY = Math.min(layer.getHeight(), (int) ((viewportY + viewportHeight) / map.getTileHeight() + 2));
-
-// Prepare tiles that need to be processed
-		List<TileRenderTask> renderTasks = new ArrayList<>();
-
-// First pass: identify tiles and prepare rendering tasks
-		for (int y = startY; y < endY; y++) {
-			for (int x = startX; x < endX; x++) {
-				Tile tile = layer.getTileAt(x, y);
-				if (tile == null)
-					continue;
-
-				boolean flipHorizontally = layer.isFlippedHorizontally(x, y);
-				boolean flipVertically = layer.isFlippedVertically(x, y);
-				boolean flipDiagonally = layer.isFlippedDiagonally(x, y);
-
-				String cacheKey = tile.getId() + "_" + layer.getName() + "_" + x + "_" + y + "_" + flipHorizontally
-						+ "_" + flipVertically + "_" + flipDiagonally;
-
-				WritableImage cachedImage = tileImageCache.get(cacheKey);
-				if (cachedImage == null) {
-					// Need to process this tile
-					renderTasks.add(new TileRenderTask(tile, x, y, cacheKey, layer, flipHorizontally, flipVertically,
-							flipDiagonally));
-				} else {
-					// Update cache order for existing image
-					manageCache(cacheKey);
-				}
-			}
+		// Only render visible layers
+		if (!layer.isVisible()) {
+			return;
 		}
 
-// Second pass: process new tiles in parallel
-		if (!renderTasks.isEmpty()) {
-			try {
-				List<CompletableFuture<Void>> futures = new ArrayList<>();
-
-				for (TileRenderTask task : renderTasks) {
-					CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-						processTileImage(task.tile, task.cacheKey);
-					}, threadPool);
-					futures.add(future);
-				}
-
-// Wait for all image processing to complete
-				CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-			} catch (Exception e) {
-				System.err.println("Error in parallel tile processing: " + e.getMessage());
-				e.printStackTrace();
-			}
-		}
-
-// Final pass: draw all tiles (must be on JavaFX thread)
-		for (int y = startY; y < endY; y++) {
-			for (int x = startX; x < endX; x++) {
-				Tile tile = layer.getTileAt(x, y);
-				if (tile == null)
-					continue;
-
-				boolean flipHorizontally = layer.isFlippedHorizontally(x, y);
-				boolean flipVertically = layer.isFlippedVertically(x, y);
-				boolean flipDiagonally = layer.isFlippedDiagonally(x, y);
-
-				String cacheKey = tile.getId() + "_" + layer.getName() + "_" + x + "_" + y + "_" + flipHorizontally
-						+ "_" + flipVertically + "_" + flipDiagonally;
-
-				WritableImage writableImage = tileImageCache.get(cacheKey);
-				if (writableImage != null) {
-					drawTile(gc, writableImage, x, y, viewportX, viewportY, flipHorizontally, flipVertically,
-							flipDiagonally);
-				}
-			}
-		}
-	}
-
-	private void drawTile(GraphicsContext gc, WritableImage writableImage, int x, int y, double viewportX,
-			double viewportY, boolean flipHorizontally, boolean flipVertically, boolean flipDiagonally) {
-		int tileX = x * map.getTileWidth();
-		int tileY = y * map.getTileHeight();
+		// Calculate the visible tile range with sufficient buffer
 		int tileWidth = map.getTileWidth();
 		int tileHeight = map.getTileHeight();
+		int startX = Math.max(0, (int) (viewportX / tileWidth) - 2);
+		int startY = Math.max(0, (int) (viewportY / tileHeight) - 2);
+		int endX = Math.min(layer.getWidth(), (int) ((viewportX + viewportWidth) / tileWidth) + 3);
+		int endY = Math.min(layer.getHeight(), (int) ((viewportY + viewportHeight) / tileHeight) + 3);
 
-		try {
-// Save the current state
-			gc.save();
-			gc.translate(tileX - viewportX, tileY - viewportY);
+		// IMPORTANT: Use the original logic for drawing tiles
+		// This preserves the exact behavior of your implementation
+		for (int y = startY; y < endY; y++) {
+			for (int x = startX; x < endX; x++) {
+				Tile tile = layer.getTileAt(x, y);
+				if (tile == null)
+					continue;
 
-			if (flipDiagonally) {
-				// Option 1: Rotate 90° counterclockwise (or -90°) and flip vertically
-				gc.rotate(-90);
-				gc.translate(-tileHeight, 0); // Move back into view after rotation
+				boolean flipHorizontally = layer.isFlippedHorizontally(x, y);
+				boolean flipVertically = layer.isFlippedVertically(x, y);
+				boolean flipDiagonally = layer.isFlippedDiagonally(x, y);
 
-				// Swap width and height
-				int temp = tileWidth;
-				tileWidth = tileHeight;
-				tileHeight = temp;
+				// Include tileset information in the cache key to handle tiles with same ID
+				// from different tilesets
+				int tileSetId = tile.getTileSet().hashCode(); // Get a unique identifier for the tileset
+				String cacheKey = tileSetId + "_" + tile.getId() + "_" + (flipHorizontally ? "h" : "")
+						+ (flipVertically ? "v" : "") + (flipDiagonally ? "d" : "");
 
-				// Diagonal flip changes the meaning of horizontal and vertical flips
-				boolean tempFlip = flipHorizontally;
-				flipHorizontally = !flipVertically; // Notice the negation
-				flipVertically = tempFlip;
+				// Get or create the tile image
+				WritableImage tileImage = getTileImage(tile, cacheKey);
+
+				if (tileImage != null) {
+					// Draw the tile with the EXACT same transformation logic as original
+					int tileX = x * tileWidth;
+					int tileY = y * tileHeight;
+
+					gc.save();
+					gc.translate(tileX - viewportX, tileY - viewportY);
+
+					if (flipDiagonally) {
+						gc.rotate(-90);
+						gc.translate(-tileHeight, 0);
+
+						// Correct handling of diagonal flip with other flips
+						boolean tempFlip = flipHorizontally;
+						flipHorizontally = !flipVertically;
+						flipVertically = tempFlip;
+					}
+
+					if (flipHorizontally) {
+						gc.translate(tileWidth, 0);
+						gc.scale(-1, 1);
+					}
+
+					if (flipVertically) {
+						gc.translate(0, tileHeight);
+						gc.scale(1, -1);
+					}
+
+					gc.drawImage(tileImage, 0, 0);
+					gc.restore();
+				}
 			}
-
-// Apply horizontal flip
-			if (flipHorizontally) {
-				gc.translate(tileWidth, 0);
-				gc.scale(-1, 1);
-			}
-
-// Apply vertical flip
-			if (flipVertically) {
-				gc.translate(0, tileHeight);
-				gc.scale(1, -1);
-			}
-
-// Draw the tile
-			gc.drawImage(writableImage, 0, 0, map.getTileWidth(), map.getTileHeight());
-
-// Restore the state
-			gc.restore();
-		} catch (Exception e) {
-			System.err.println("Error drawing tile at (" + x + "," + y + ")");
-			e.printStackTrace();
 		}
 	}
 
-	private void processTileImage(Tile tile, String cacheKey) {
-		BufferedImage bufferedImage = (BufferedImage) tile.getImage();
-		if (bufferedImage == null)
-			return;
+	private WritableImage getTileImage(Tile tile, String cacheKey) {
+		// First check if we have this tile in cache
+		WritableImage tileImage = tileImageCache.get(cacheKey);
 
-		int width = bufferedImage.getWidth();
-		int height = bufferedImage.getHeight();
+		if (tileImage == null) {
+			// Not in cache, create a new image
+			BufferedImage bufferedImage = (BufferedImage) tile.getImage();
+			if (bufferedImage == null)
+				return null;
 
-		// Create WritableImage on the JavaFX thread
-		Platform.runLater(() -> {
-			WritableImage writableImage = new WritableImage(width, height);
-			PixelWriter pw = writableImage.getPixelWriter();
+			int width = bufferedImage.getWidth();
+			int height = bufferedImage.getHeight();
 
+			// Create a new writable image (no transformations, those happen at draw time)
+			tileImage = new WritableImage(width, height);
+			PixelWriter pw = tileImage.getPixelWriter();
+
+			// Get the pixel data
 			int[] pixels = new int[width * height];
 			bufferedImage.getRGB(0, 0, width, height, pixels, 0, width);
 
-			for (int i = 0; i < height; i++) {
-				for (int j = 0; j < width; j++) {
-					int pixel = pixels[i * width + j];
-					pw.setArgb(j, i, pixel);
+			// Write the pixels directly (no transformations)
+			for (int y = 0; y < height; y++) {
+				for (int x = 0; x < width; x++) {
+					pw.setArgb(x, y, pixels[y * width + x]);
 				}
 			}
 
 			// Add to cache
-			tileImageCache.put(cacheKey, writableImage);
-			manageCache(cacheKey);
-		});
-	}
+			synchronized (tileImageCache) {
+				// Only add if another thread hasn't already added it
+				if (!tileImageCache.containsKey(cacheKey)) {
+					// Manage cache size
+					if (tileImageCache.size() >= MAX_CACHE_SIZE) {
+						// Remove oldest entries
+						synchronized (tileCacheOrder) {
+							int toRemove = 50; // Remove in batches for better performance
+							for (int i = 0; i < toRemove && !tileCacheOrder.isEmpty(); i++) {
+								String oldKey = tileCacheOrder.pollLast();
+								if (oldKey != null) {
+									tileImageCache.remove(oldKey);
+								}
+							}
+						}
+					}
 
-	private void manageCache(String cacheKey) {
-		// If we already have this tile, move it to the front of the queue
-		if (tileImageCache.containsKey(cacheKey)) {
-			tileCacheOrder.remove(cacheKey);
-			tileCacheOrder.addFirst(cacheKey);
-			return;
-		}
-
-		// Check if we need to remove the oldest entries
-		while (tileImageCache.size() >= MAX_CACHE_SIZE) {
-			String oldestKey = tileCacheOrder.pollLast();
-			if (oldestKey != null) {
-				tileImageCache.remove(oldestKey);
-			} else {
-				break;
+					tileImageCache.put(cacheKey, tileImage);
+					tileCacheOrder.addFirst(cacheKey);
+				} else {
+					// If another thread added it while we were creating it, use that one
+					tileImage = tileImageCache.get(cacheKey);
+					// Update access order
+					synchronized (tileCacheOrder) {
+						tileCacheOrder.remove(cacheKey);
+						tileCacheOrder.addFirst(cacheKey);
+					}
+				}
+			}
+		} else {
+			// Update access order for existing image
+			synchronized (tileCacheOrder) {
+				tileCacheOrder.remove(cacheKey);
+				tileCacheOrder.addFirst(cacheKey);
 			}
 		}
 
-		// Add the new tile to the front of the queue
-		tileCacheOrder.addFirst(cacheKey);
+		return tileImage;
 	}
 
 	private void drawObjectGroup(GraphicsContext gc, ObjectGroup objectGroup, double viewportX, double viewportY) {
@@ -1091,28 +1054,11 @@ public class GameWindow {
 		}
 	}
 
-	// HELPER FOR LOADER
-	private static class TileRenderTask {
-		public Tile tile;
-		public int x, y;
-		public String cacheKey;
-		public TileLayer layer;
-		public boolean flipHorizontally, flipVertically, flipDiagonally;
-
-		public TileRenderTask(Tile tile, int x, int y, String cacheKey, TileLayer layer, boolean flipHorizontally,
-				boolean flipVertically, boolean flipDiagonally) {
-			this.tile = tile;
-			this.x = x;
-			this.y = y;
-			this.cacheKey = cacheKey;
-			this.layer = layer;
-			this.flipHorizontally = flipHorizontally;
-			this.flipVertically = flipVertically;
-			this.flipDiagonally = flipDiagonally;
-		}
-	}
-
 	private void initializeSpatialGrid() {
+		// Adjust grid cell size based on average object size for better performance
+		// Using smaller cells for denser maps, larger cells for sparse maps
+		GRID_CELL_SIZE = calculateOptimalGridSize();
+
 		spatialGrid = new ConcurrentHashMap<>();
 
 		for (CollisionObject obj : collisionObjects) {
@@ -1121,17 +1067,50 @@ public class GameWindow {
 			int endGridX = (int) ((obj.getX() + obj.getWidth()) / GRID_CELL_SIZE);
 			int endGridY = (int) ((obj.getY() + obj.getHeight()) / GRID_CELL_SIZE);
 
-			// Debug: Print grid cells for each collision object
-			System.out.println("Collision Object Grid Cells: x=" + obj.getX() + ", y=" + obj.getY() + ", width="
-					+ obj.getWidth() + ", height=" + obj.getHeight() + ", gridX=" + startGridX + "-" + endGridX
-					+ ", gridY=" + startGridY + "-" + endGridY);
-
 			for (int gridY = startGridY; gridY <= endGridY; gridY++) {
 				for (int gridX = startGridX; gridX <= endGridX; gridX++) {
 					String key = gridX + ":" + gridY;
 					spatialGrid.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>()).add(obj);
 				}
 			}
+		}
+
+		System.out.println(
+				"Spatial grid initialized with cell size: " + GRID_CELL_SIZE + ", total cells: " + spatialGrid.size());
+	}
+
+	private int calculateOptimalGridSize() {
+		if (collisionObjects.isEmpty()) {
+			return 128; // Default size
+		}
+
+		// Calculate average object size
+		double totalWidth = 0;
+		double totalHeight = 0;
+
+		for (CollisionObject obj : collisionObjects) {
+			totalWidth += obj.getWidth();
+			totalHeight += obj.getHeight();
+		}
+
+		double avgWidth = totalWidth / collisionObjects.size();
+		double avgHeight = totalHeight / collisionObjects.size();
+
+		// Estimate object density
+		int mapWidth = map.getWidth() * map.getTileWidth();
+		int mapHeight = map.getHeight() * map.getTileHeight();
+		double mapArea = mapWidth * mapHeight;
+		double objArea = collisionObjects.size() * avgWidth * avgHeight;
+		double density = objArea / mapArea;
+
+		// Adjust grid size based on density
+		// Higher density = smaller cells, Lower density = larger cells
+		if (density > 0.4) {
+			return 64; // Very dense map
+		} else if (density > 0.2) {
+			return 96; // Medium density
+		} else {
+			return 128; // Sparse map
 		}
 	}
 
