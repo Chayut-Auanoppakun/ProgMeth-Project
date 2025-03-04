@@ -32,13 +32,7 @@ public class ClientLogic {
 	private static Timer timer;
 	private static int missedPings = 0;
 	private static boolean wasDiscon = false;
-	private static int sendPingCount = 0;
-	private static long lastPositionUpdate = 0;
-	private static final long POSITION_UPDATE_INTERVAL = 100; // Only send position updates every 100ms
-	private static double lastSentX = 0;
-	private static double lastSentY = 0;
-	private static boolean lastSentMoving = false;
-	private static int lastSentDirection = 0;
+	
 
 	public static void startClient(State state, TextArea logArea) {
 		try {
@@ -205,117 +199,97 @@ public class ClientLogic {
 	}
 
 	public static void receiveMessagesFromServer(TextArea logArea) {
-	    Thread receiveThread = new Thread(() -> {
-	        try {
-	            byte[] buf = new byte[1024];
-	            DatagramPacket packet = new DatagramPacket(buf, buf.length);
+		Thread receiveThread = new Thread(() -> {
+			try {
+				byte[] buf = new byte[1024];
+				DatagramPacket packet = new DatagramPacket(buf, buf.length);
 
-	            while (true) {
-	                try {
-	                    clientSocket.receive(packet);
-	                    String received = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
-	                    
-	                    if (received.startsWith("/sys/")) {
-	                        if ("/sys/PONG".equals(received)) {
-	                            missedPings = 0; // Reset missed ping count
-	                        } else if ("/sys/ACK".equals(received)) {
-	                            System.out.println("Handshake Test Complete");
-	                        }
-	                    } else if (received.startsWith("/data/")) {
-	                        // Process data updates more efficiently
-	                        processDataUpdate(received);
-	                    } else if (received.startsWith("/r/")) {
-	                        String msg = received.substring(3);
-	                        log(logArea, msg);
-	                    } else if (received.startsWith("/sname/")) {
-	                        String output = received.substring(7);
-	                        log(logArea, output);
-	                    } else if (received.startsWith("/ls/")) {
-	                        String list = received.substring(4);
-	                        log(logArea, list);
-	                    } else {
-	                        log(logArea, received);
-	                    }
-	                } catch (SocketTimeoutException e) {
-	                    // Just continue trying
-	                }
-	            }
-	        } catch (IOException e) {
-	            if (!e.getMessage().contains("Socket closed")) {
-	                log(logArea, "Error receiving message from server: " + e.getMessage());
-	            }
-	        }
-	    });
-	    receiveThread.setDaemon(true); // Make this a daemon thread
-	    receiveThread.start();
+				while (true) {
+					try {
+						clientSocket.receive(packet);
+						String received = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
+						// System.out.println(received);
+						if (received.startsWith("/sys/")) {
+							if ("/sys/PONG".equals(received)) {
+								missedPings = 0; // Reset missed ping count
+								// System.out.println("Received PONG from server"); // Print to terminal for
+								// debugging
+							} else if ("/sys/ACK".equals(received)) {
+								System.out.println("Handshake Test Complete"); // Print to terminal for debugging
+							}
+						} else if (received.startsWith("/data/")) {
+							// put here to prevent cout to log area
+						} else if (received.startsWith("/r/")) {
+							String msg = received.substring(3);
+							log(logArea, msg);
+						} else if (received.startsWith("/sname/")) {
+							String output = received.substring(7);
+							log(logArea, output);
+						} else if (received.startsWith("/ls/")) {
+							String list = received.substring(4);
+							log(logArea, list);
+						} else {
+							log(logArea, received);
+						}
+
+						if (received.startsWith("/data/")) {
+							String jsonStr = received.substring(6);
+							JSONObject json = new JSONObject(jsonStr);
+							// System.out.println(received);
+
+							// Update positions and additional fields
+							for (String key : json.keySet()) {
+								JSONObject playerData = json.getJSONObject(key);
+								double[] pos = playerData.getJSONArray("position").toList().stream()
+										.mapToDouble(o -> ((Number) o).doubleValue()).toArray();
+
+								String name = playerData.getString("name");
+								int direction = playerData.getInt("Direction");
+								String status = playerData.getString("status");
+								boolean isMoving = playerData.getBoolean("isMoving");
+								int charID = playerData.getInt("charID");
+								// === For ending Prep Phase ===
+								if (!GameLogic.isPrepEnded()) {
+									boolean prepEnded = playerData.getBoolean("prepEnded");
+									GameLogic.setPrepEnded(prepEnded);
+								}
+								// ================================
+								if (PlayerLogic.getLocalAddressPort().equals(key)) {
+									// PlayerLogic.setPosition(pos[0], pos[1]);
+									//PlayerLogic.setCharID(charID);
+									//PlayerLogic.setName(name);
+								} else if (GameLogic.playerList.containsKey(key)) {
+									PlayerInfo existing = GameLogic.playerList.get(key);
+									existing.setX(pos[0]);
+									existing.setY(pos[1]);
+									existing.setMoving(isMoving);
+									existing.setDirection(direction);
+									existing.setStatus(status);
+									existing.setCharacterID(charID);
+								} else {
+									GameLogic.playerList.put(key,
+											new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
+													Integer.parseInt(key.split(":")[1]), name, pos[0], pos[1], isMoving,
+													direction, status, charID));
+								}
+							}
+
+						}
+					} catch (SocketTimeoutException e) {
+						// log(logArea, "No message received. Waiting...");
+					}
+				}
+			} catch (IOException e) {
+				if (!e.getMessage().contains("Socket closed")) {
+					log(logArea, "Error receiving message from server: " + e.getMessage());
+				} else {
+					// log(logArea, "Socket closed while receiving messages.");
+				}
+			}
+		});
+		receiveThread.start();
 	}
-	
-	private static void processDataUpdate(String dataMessage) {
-	    try {
-	        String jsonStr = dataMessage.substring(6);
-	        JSONObject json = new JSONObject(jsonStr);
-	        
-	        // Process only keys that exist in the JSON
-	        for (String key : json.keySet()) {
-	            JSONObject playerData = json.getJSONObject(key);
-	            
-	            // Only access fields that exist in this update
-	            double[] pos = null;
-	            if (playerData.has("position")) {
-	                pos = playerData.getJSONArray("position").toList().stream()
-	                      .mapToDouble(o -> ((Number) o).doubleValue()).toArray();
-	            }
-	            
-	            String name = playerData.optString("name", null);
-	            Integer direction = playerData.has("Direction") ? playerData.getInt("Direction") : null;
-	            String status = playerData.optString("status", null);
-	            Boolean isMoving = playerData.has("isMoving") ? playerData.getBoolean("isMoving") : null;
-	            Integer charID = playerData.has("charID") ? playerData.getInt("charID") : null;
-	            
-	            // Check for prep phase end flag
-	            if (!GameLogic.isPrepEnded() && playerData.has("prepEnded")) {
-	                boolean prepEnded = playerData.getBoolean("prepEnded");
-	                GameLogic.setPrepEnded(prepEnded);
-	            }
-	            
-	            // Update player data efficiently
-	            if (PlayerLogic.getLocalAddressPort().equals(key)) {
-	                // This is data about our local player - typically don't need to update
-	            } else if (GameLogic.playerList.containsKey(key)) {
-	                // Update existing player
-	                PlayerInfo existing = GameLogic.playerList.get(key);
-	                
-	                // Only update fields that were included in the message
-	                if (pos != null) {
-	                    existing.setX(pos[0]);
-	                    existing.setY(pos[1]);
-	                }
-	                if (isMoving != null) existing.setMoving(isMoving);
-	                if (direction != null) existing.setDirection(direction);
-	                if (status != null) existing.setStatus(status);
-	                if (charID != null) existing.setCharacterID(charID);
-	            } else if (pos != null && name != null) {
-	                // Add new player
-	                try {
-	                    GameLogic.playerList.put(key,
-	                        new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
-	                                       Integer.parseInt(key.split(":")[1]), 
-	                                       name, 
-	                                       pos[0], pos[1], 
-	                                       isMoving != null ? isMoving : false,
-	                                       direction != null ? direction : 0,
-	                                       status != null ? status : "active", 
-	                                       charID != null ? charID : 0));
-	                } catch (UnknownHostException e) {
-	                    System.err.println("Error creating PlayerInfo: " + e.getMessage());
-	                }
-	            }
-	        }
-	    } catch (Exception e) {
-	        System.err.println("Error processing data update: " + e.getMessage());
-	    }
-	}
-	
+
 	private static void startPingThread(TextArea logArea) {
 		Thread pingThread = new Thread(() -> {
 			while (connectedServerAddress != null && connectedServerPort != -1) {
@@ -332,105 +306,70 @@ public class ClientLogic {
 		pingThread.start();
 	}
 
-	private static void sendPing(TextArea logArea) {
-	    long currentTime = System.currentTimeMillis();
-	    
-	    if (connectedServerAddress != null && connectedServerPort != -1) {
-	        try {
-	            // Send server availability ping less frequently (every ~400ms)
-	            if (sendPingCount > 8) {
-	                sendPingCount = 0;
+	private static int sendPingCount = 0;
 
-	                if (missedPings > 5) {
-	                    wasDiscon = true;
-	                    if (missedPings == 11) { // run once on disconnect
-	                        log(logArea, "Server disconnected.");
-	                        System.out.println("Server disconnected.");
-	                        log(logArea, "Attempting Reconnection ...");
-	                    }
-	                } else {
-	                    if (wasDiscon) {
-	                        sendMessage("/name/" + MainMenuPane.getPlayerName(), logArea);
-	                        log(logArea, "Server Reconnect Successful");
-	                        wasDiscon = false;
-	                    }
-	                }
+	private static void sendPing(TextArea logArea) { /// send ping and also information to server run every 100ms
+		if (connectedServerAddress != null && connectedServerPort != -1) {
+			try {
+				if (sendPingCount > 8) { // run to check if server avail
+					sendPingCount = 0;
 
-	                String pingMessage = "/sys/PING";
-	                byte[] buf = pingMessage.getBytes(StandardCharsets.UTF_8);
-	                DatagramPacket packet = new DatagramPacket(buf, buf.length, connectedServerAddress,
-	                        connectedServerPort);
-	                clientSocket.send(packet);
-	                missedPings += 1;
-	            } else {
-	                sendPingCount++;
-	            }
+					if (missedPings > 5) {
+						wasDiscon = true;
+						if (missedPings == 11) { // run once on disconnect
+							log(logArea, "Server disconnected.");
+							System.out.println("Server disconnected."); // Print to terminal for debugging
+							log(logArea, "Attempting Reconnection ...");
+						}
+					} else {
+						if (wasDiscon) {
+							sendMessage("/name/" + MainMenuPane.getPlayerName(), logArea);
+							log(logArea, "Server Reconnect Succesful");
+							wasDiscon = false;
+						}
+					}
 
-	            // Send Player Position ONLY when needed (position changed or on interval)
-	            if (ServerSelectGui.isGameWindow()) {
-	                // Check if it's time to send an update
-	                boolean shouldUpdate = false;
-	                
-	                // Check if position actually changed enough to warrant an update
-	                double currentX = PlayerLogic.getMyPosX();
-	                double currentY = PlayerLogic.getMyPosY();
-	                boolean currentMoving = PlayerLogic.getMoving();
-	                int currentDirection = PlayerLogic.getDirection();
-	                
-	                // Send update if significant position change (more than 1 pixel)
-	                double positionDelta = Math.sqrt(Math.pow(currentX - lastSentX, 2) + 
-	                                               Math.pow(currentY - lastSentY, 2));
-	                
-	                if (positionDelta > 1.0 || 
-	                    currentMoving != lastSentMoving || 
-	                    currentDirection != lastSentDirection) {
-	                    
-	                    // Only send if we haven't sent too recently
-	                    if (currentTime - lastPositionUpdate >= POSITION_UPDATE_INTERVAL) {
-	                        shouldUpdate = true;
-	                    }
-	                }
-	                
-	                // Always send periodic updates even without movement (every ~300ms)
-	                if (currentTime - lastPositionUpdate >= 300) {
-	                    shouldUpdate = true;
-	                }
-	                
-	                if (shouldUpdate) {
-	                    try {
-	                        // Send more compact position update with only changed values
-	                        JSONObject json = new JSONObject();
-	                        json.put("name", PlayerLogic.getName());
-	                        json.put("PosX", currentX);
-	                        json.put("PosY", currentY);
-	                        json.put("Direction", currentDirection);
-	                        json.put("isMoving", currentMoving);
-	                        json.put("charID", PlayerLogic.getCharID());
-	                        json.put("playerReady", PlayerLogic.isPlayerReady());
+					String pingMessage = "/sys/PING";
+					byte[] buf = pingMessage.getBytes(StandardCharsets.UTF_8);
+					DatagramPacket packet = new DatagramPacket(buf, buf.length, connectedServerAddress,
+							connectedServerPort);
+					clientSocket.send(packet);
+					missedPings += 1;
+				} else {
+					sendPingCount++;
+				}
 
-	                        String message = "/data/" + json.toString();
-	                        byte[] buf = message.getBytes(StandardCharsets.UTF_8);
-	                        DatagramPacket packet = new DatagramPacket(buf, buf.length, connectedServerAddress,
-	                                connectedServerPort);
-	                        clientSocket.send(packet);
-	                        
-	                        // Update last sent values
-	                        lastSentX = currentX;
-	                        lastSentY = currentY;
-	                        lastSentMoving = currentMoving;
-	                        lastSentDirection = currentDirection;
-	                        lastPositionUpdate = currentTime;
-	                    } catch (IOException ex) {
-	                        System.err.println("Error sending position update: " + ex.getMessage());
-	                    }
-	                }
-	            }
-	        } catch (IOException e) {
-	            log(logArea, "Error communicating with server: " + e.getMessage());
-	        }
-	    } else {
-	        log(logArea, "Server connection not established. Cannot send PING.");
-	    }
+				// Send Player Information (Not Ping)
+				if (ServerSelectGui.isGameWindow()) {
+					try {
+						JSONObject json = new JSONObject();
+						json.put("name", ""); // where do we keep our own name bruh
+						json.put("PosX", PlayerLogic.getMyPosX());
+						json.put("PosY", PlayerLogic.getMyPosY());
+						json.put("Direction", PlayerLogic.getDirection());
+						json.put("isMoving", PlayerLogic.getMoving());
+						json.put("name", PlayerLogic.getName());
+						json.put("charID", PlayerLogic.getCharID());
+						json.put("playerReady", PlayerLogic.isPlayerReady());
+						// System.out.println("charID = " + PlayerLogic.getCharID());
+
+						// TODO Add more data
+						String message = "/data/" + json.toString();
+						byte[] buf = message.getBytes(StandardCharsets.UTF_8);
+						DatagramPacket packet = new DatagramPacket(buf, buf.length, connectedServerAddress,
+								connectedServerPort);
+						clientSocket.send(packet);
+						// System.out.println("Sent information to server: " + message);
+					} catch (IOException ex) {
+						ex.printStackTrace();
+					}
+				}
+			} catch (IOException e) {
+				log(logArea, "Error sending PING to server: " + e.getMessage());
+			}
+		} else {
+			log(logArea, "Server connection not established. Cannot send PING.");
+		}
 	}
 
 	public static DatagramSocket getClientSocket() {
