@@ -15,7 +15,16 @@ public class PlayerLogic {
 	private static double myPosX = 0;
 	private static double myPosY = 0;
 	private static int charID = 99; //99 is not initialized
+	private static boolean isPlayerReady = false;
 	
+	public static boolean isPlayerReady() {
+		return isPlayerReady;
+	}
+
+	public static void setPlayerReady(boolean isPlayerReady) {
+		PlayerLogic.isPlayerReady = isPlayerReady;
+	}
+
 	public static String getName() {
 		return name;
 	}

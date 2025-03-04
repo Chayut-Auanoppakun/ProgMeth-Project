@@ -64,24 +64,16 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import gameObjects.*;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-
-import application.Main;
-
-import org.w3c.dom.Element;
-
 public class GameWindow {
 	// === JavaFX Components ===
 	private Stage gameStage;
 	private Group root;
 	private Canvas canvas;
 	private GraphicsContext gc;
+	private PrepGui prepPhaseGui;
 
 	// === Game State ===
-	private static boolean hasGameStarted;
+	private boolean inPrepPhase = true; // Set to true initially
 	private static boolean showCollision = false;
 	private static long lastCollisionChanged = 0;
 	private static long lastFpressed = 0;
@@ -188,7 +180,6 @@ public class GameWindow {
 			}
 			System.out.println("CHAR = " + newChar);
 			PlayerLogic.setCharID(newChar);
-			// }
 			loadPlayerimg();
 			loadCollisionObjects();
 			loadEventObjects();
@@ -207,6 +198,9 @@ public class GameWindow {
 					fps = frames;
 					frames = 0;
 					fpsUpdateTime = now;
+				}
+				if (inPrepPhase && prepPhaseGui != null) {
+				    updatePrepPhasePlayerCount();
 				}
 				keylogger();
 				updateMovement(now);
@@ -233,6 +227,8 @@ public class GameWindow {
 		root = new Group();
 		root.getChildren().add(canvas);
 		setupCharacterSelectButton();
+		initializePrepPhaseUI();
+
 
 		Scene scene = new Scene(root, screenWidth, screenHeight);
 		scene.setOnKeyPressed(this::handleKeyPress);
@@ -810,17 +806,6 @@ public class GameWindow {
 				System.out.println(TaskLogic.isPlayerCollidingWithEvent(eventObjects));
 			}
 		}
-
-		if (pressedKeys.contains(KeyCode.V)) {
-			if (System.currentTimeMillis() - lastFpressed > 250) {
-				lastFpressed = System.currentTimeMillis();
-				System.out.println("V pressed");
-				CharaterSelectgui setup = new CharaterSelectgui(this::onCharacterSelected);
-
-				root.getChildren().add(setup);
-			}
-		}
-
 	}
 
 	public void onCharacterSelected() {
@@ -1174,4 +1159,37 @@ public class GameWindow {
 			}
 		}
 	}
+	
+	private void initializePrepPhaseUI() {
+	    // Initialize the prep phase UI
+	    prepPhaseGui = new PrepGui(ServerSelectGui.getState());
+	    
+	    // Position it in the center of the screen
+	    prepPhaseGui.setLayoutX((screenWidth - 350) / 2); // Assuming 400px width for the UI
+	    prepPhaseGui.setLayoutY(screenHeight * 0.85); // Assuming 150px height for the UI
+	    
+	    // Add it to the root but keep it hidden initially
+	    root.getChildren().add(prepPhaseGui);
+	    
+	    // Show it if we're in prep phase
+	    if (inPrepPhase) {
+	        prepPhaseGui.show();
+	        updatePrepPhasePlayerCount(); // Update player count
+	    } else {
+	        prepPhaseGui.hide();
+	    }
+	}
+	
+	// Add this method to update player count
+	private void updatePrepPhasePlayerCount() {
+	    if (prepPhaseGui != null) {
+	        // Calculate total player count (including server)
+	        int playerCount = 1; // Server/local player
+	        if (GameLogic.playerList != null) {
+	            playerCount += GameLogic.playerList.size();
+	        }
+	        prepPhaseGui.updatePlayerCount(playerCount, 10); // 10 is max players
+	    }
+	}
+
 }
