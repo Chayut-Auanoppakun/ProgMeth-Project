@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.json.JSONObject;
 
 import gameObjects.Corpse;
+import gui.GameWindow;
 import gui.MainMenuPane;
 import gui.PrepGui;
 import gui.ServerSelectGui;
@@ -156,8 +157,10 @@ public class ServerLogic {
 		} else if (received.startsWith("/data/")) {
 			handlePlayerData(received, packet);
 		} else if (received.startsWith("/kill/")) {
-			// Add dedicated handler for kill messages
 			handleKillMessage(received, clientAddress, clientPort, logArea);
+		} else if (received.startsWith("/report/")) {
+			handleReportMessage(received, clientAddress, clientPort, logArea);
+
 		} else {
 			handleChatMessage(received, clientAddress, clientPort, logArea);
 		}
@@ -220,6 +223,30 @@ public class ServerLogic {
 		default:
 			System.out.println("Received unknown system message: " + received);
 			break;
+		}
+	}
+
+	private static void handleReportMessage(String received, InetAddress clientAddress, int clientPort,
+			TextArea logArea) {
+		try {
+			// Extract the JSON data from the message
+			String jsonStr = received.substring(8); // Remove "/report/" prefix
+			JSONObject reportData = new JSONObject(jsonStr);
+
+			// Extract report details
+			String reporterKey = reportData.getString("reporter");
+			String corpseKey = reportData.getString("corpse");
+
+			System.out.println("SERVER: Received body report from " + clientAddress + ":" + clientPort);
+			System.out.println("SERVER: Report details - Reporter: " + reporterKey + ", Corpse: " + corpseKey);
+
+			// Call the existing handleBodyReport method
+			handleBodyReport(reporterKey, corpseKey, logArea);
+
+		} catch (Exception e) {
+			System.err.println("ERROR: Failed to process report message: " + e.getMessage());
+			e.printStackTrace();
+			log(logArea, "Error processing body report: " + e.getMessage());
 		}
 	}
 
@@ -682,6 +709,9 @@ public class ServerLogic {
 
 			// Broadcast body report to all clients
 			broadcastBodyReport(reporterKey, corpsePlayerKey);
+
+			// Additionally, broadcast emergency meeting to all clients
+			broadcastEmergencyMeeting(reporterKey, corpse.getPlayerName(), corpse.getCharacterID());
 		}
 	}
 
@@ -709,23 +739,50 @@ public class ServerLogic {
 		}
 	}
 
-	// Method to check if a body can be reported at a given location
-	public static String findReportableBodyNearby(double x, double y, double maxDistance) {
-		for (String key : GameLogic.playerList.keySet()) {
-			PlayerInfo player = GameLogic.playerList.get(key);
+	private static void broadcastEmergencyMeeting(String reporterKey, String reportedPlayerName, int reportedCharId) {
+		try {
+			// Create meeting data
+			JSONObject meetingData = new JSONObject();
+			meetingData.put("reporter", reporterKey);
+			meetingData.put("reportedPlayer", reportedPlayerName);
+			meetingData.put("reportedCharId", reportedCharId);
+			meetingData.put("time", System.currentTimeMillis());
 
-			// Check for dead players that haven't been found yet
-			if (player.getStatus().equals("dead") && !player.isFound()) {
-				double dx = player.getX() - x;
-				double dy = player.getY() - y;
-				double distance = Math.sqrt(dx * dx + dy * dy);
+			String meetingMessage = "/meeting/" + meetingData.toString();
+			byte[] buf = meetingMessage.getBytes(StandardCharsets.UTF_8);
 
-				if (distance <= maxDistance) {
-					return key;
+			// Send to all connected clients
+			for (ClientInfo clientInfo : clientAddresses) {
+				try {
+					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
+							clientInfo.getPort());
+					serverSocket.send(packet);
+
+					// Send multiple times to reduce chance of packet loss
+					for (int i = 0; i < 2; i++) {
+						Thread.sleep(50); // Short delay between retransmissions
+						serverSocket.send(packet);
+					}
+
+					System.out.println(
+							"Emergency meeting broadcast to " + clientInfo.getAddress() + ":" + clientInfo.getPort());
+				} catch (Exception e) {
+					System.err.println("Error sending meeting message to " + clientInfo.getAddress() + ":"
+							+ clientInfo.getPort() + ": " + e.getMessage());
 				}
 			}
+
+			// Also trigger meeting locally on the server
+			if (GameWindow.getGameWindowInstance() != null) {
+				Platform.runLater(() -> {
+					GameWindow.getGameWindowInstance().startEmergencyMeeting(reportedPlayerName, reportedCharId);
+				});
+			}
+
+		} catch (Exception e) {
+			System.err.println("Error in broadcastEmergencyMeeting: " + e.getMessage());
+			e.printStackTrace();
 		}
-		return null;
 	}
 
 	public static DatagramSocket getServerSocket() {
@@ -734,5 +791,9 @@ public class ServerLogic {
 
 	public static int getReadyPlayerCount() {
 		return readyPlayers;
+	}
+
+	public static Set<ClientInfo> getConnectedClients() {
+		return new HashSet<>(clientAddresses);
 	}
 }

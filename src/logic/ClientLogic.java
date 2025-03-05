@@ -20,6 +20,8 @@ import gameObjects.Corpse;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+
+import gui.GameWindow;
 import gui.MainMenuPane;
 import gui.ServerSelectGui;
 
@@ -379,26 +381,45 @@ public class ClientLogic {
 							}
 						}
 
-						// Handle report messages (currently commented out in your code)
-						/*
-						 * else if (received.startsWith("/report/")) { try { String jsonStr =
-						 * received.substring(8); // Remove "/report/" prefix JSONObject reportJSON =
-						 * new JSONObject(jsonStr);
-						 * 
-						 * String reporterKey = reportJSON.getString("reporter"); String deadBodyKey =
-						 * reportJSON.getString("deadBody");
-						 * 
-						 * // Find the reporter and dead body PlayerInfo reporter =
-						 * GameLogic.playerList.get(reporterKey); Corpse corpse =
-						 * GameLogic.getCorpse(deadBodyKey);
-						 * 
-						 * if (reporter != null && corpse != null) { // Mark body as found
-						 * corpse.setFound(true); System.out.println("REPORT PLAYER : " +
-						 * corpse.getPlayerName()); // TODO // Trigger emergency meeting //
-						 * GameLogic.startEmergencyMeeting(corpse.getPlayerName(), reporter.getName());
-						 * } } catch (Exception e) { System.err.println("Error processing body report: "
-						 * + e.getMessage()); } }
-						 */
+						else if (received.startsWith("/meeting/")) {
+							try {
+								// Extract and parse JSON data for the emergency meeting
+								String jsonStr = received.substring(9); // Remove "/meeting/" prefix
+								JSONObject meetingData = new JSONObject(jsonStr);
+
+								String reporterKey = meetingData.getString("reporter");
+								String reportedPlayerName = meetingData.getString("reportedPlayer");
+								int reportedCharId = meetingData.getInt("reportedCharId");
+
+								System.out.println("Emergency meeting received from server: " + reportedPlayerName
+										+ " reported by " + reporterKey);
+
+								// Call the meeting UI for all players (even if they're ghosts)
+								Platform.runLater(() -> {
+									// Find the GameWindow instance
+									if (GameWindow.getGameWindowInstance() != null) {
+										GameWindow.getGameWindowInstance().startEmergencyMeeting(reportedPlayerName,
+												reportedCharId);
+									}
+								});
+
+								// Mark the associated corpse as found to hide it
+								for (String corpseKey : GameLogic.corpseList.keySet()) {
+									Corpse corpse = GameLogic.corpseList.get(corpseKey);
+									if (corpse.getPlayerName().equals(reportedPlayerName)) {
+										corpse.setFound(true);
+										System.out.println("Marked corpse as found: " + reportedPlayerName);
+										break;
+									}
+								}
+
+								// Play the report sound
+								SoundLogic.playSound("assets/sounds/report.wav", 0);
+							} catch (Exception e) {
+								System.err.println("Error processing meeting message: " + e.getMessage());
+								e.printStackTrace();
+							}
+						}
 						// Handle relay messages
 						else if (received.startsWith("/r/")) {
 							String msg = received.substring(3);
