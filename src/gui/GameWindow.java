@@ -32,6 +32,7 @@ import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelWriter;
@@ -886,32 +887,40 @@ public class GameWindow {
 		if (pressedKeys.contains(KeyCode.F)) {
 			if (System.currentTimeMillis() - lastFpressed > 250) {
 				lastFpressed = System.currentTimeMillis();
-				System.out.println("F pressed - checking for interactive objects");
+				if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("crewmate")) {
+					System.out.println("F pressed - checking for interactive objects");
 
-				// Check for event collisions
-				String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
+					// Check for event collisions
+					String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
 
-				// If we're colliding with an event object
-				if (!eventId.isEmpty()) {
-					System.out.println("Interacting with event: " + eventId);
+					// If we're colliding with an event object
+					if (!eventId.isEmpty()) {
+						System.out.println("Interacting with event: " + eventId);
 
-					// Attempt to open the task
-					boolean taskOpened = TaskLogic.openTask(eventId, taskContainer);
+						// Attempt to open the task
+						boolean taskOpened = TaskLogic.openTask(eventId, taskContainer);
 
-					if (taskOpened) {
-						System.out.println("Task opened: " + eventId);
-						// You might want to disable player movement here or add other effects
-						// PlayerLogic.setMovementEnabled(false);
+						if (taskOpened) {
+							System.out.println("Task opened: " + eventId);
+							// You might want to disable player movement here or add other effects
+							// PlayerLogic.setMovementEnabled(false);
+						} else {
+							System.out.println("Failed to open task: " + eventId);
+							// Maybe show a notification that this task is already completed
+							if (TaskLogic.isTaskCompleted(eventId)) {
+								showTaskCompletedMessage();
+							}
+						}
 					} else {
-						System.out.println("Failed to open task: " + eventId);
-						// Maybe show a notification that this task is already completed
-						if (TaskLogic.isTaskCompleted(eventId)) {
-							showTaskCompletedMessage();
+						System.out.println("No interactive object nearby");
+						// Maybe show a hint message that there's nothing to interact with
+					}
+				} else { // For Imposter cannot Do tasks
+					for (String key : GameLogic.playerList.keySet()) {
+						PlayerInfo playerInfo = GameLogic.playerList.get(key);
+						if ("imposter".equals(playerInfo.getStatus())) {
 						}
 					}
-				} else {
-					System.out.println("No interactive object nearby");
-					// Maybe show a hint message that there's nothing to interact with
 				}
 			}
 		}
@@ -1342,10 +1351,31 @@ public class GameWindow {
 	}
 
 	private void showGameStartTransition() {
-		// Create a black overlay
+		// Create a gradient overlay instead of pure black
 		Rectangle blackOverlay = new Rectangle(0, 0, screenWidth, screenHeight);
-		blackOverlay.setFill(Color.BLACK);
-		blackOverlay.setOpacity(0); // Start transparent
+		RadialGradient gradient = new RadialGradient(0, 0, screenWidth / 2, screenHeight / 2,
+				Math.max(screenWidth, screenHeight) / 2, false, CycleMethod.NO_CYCLE,
+				new Stop(0, Color.rgb(20, 20, 40, 0.9)), // Dark blue-black center
+				new Stop(1, Color.rgb(10, 10, 20, 0.95)) // Even darker edges
+		);
+		blackOverlay.setFill(gradient);
+		blackOverlay.setOpacity(0);
+
+		// Create a stylized frame for the content
+		StackPane frameContainer = new StackPane();
+		frameContainer.setPrefSize(screenWidth * 0.8, screenHeight * 0.7);
+		frameContainer.setMaxSize(screenWidth * 0.8, screenHeight * 0.7);
+		frameContainer.setAlignment(Pos.CENTER);
+
+		Rectangle frame = new Rectangle(screenWidth * 0.8, screenHeight * 0.7);
+		frame.setArcWidth(30);
+		frame.setArcHeight(30);
+		frame.setFill(Color.rgb(30, 30, 50, 0.9)); // Dark blue-gray
+		frame.setStroke(Color.rgb(70, 130, 180, 0.7)); // Steel blue border
+		frame.setStrokeWidth(3);
+		frame.setOpacity(0);
+
+		frameContainer.getChildren().add(frame);
 
 		// Create the role text
 		Text roleText = new Text();
@@ -1353,27 +1383,19 @@ public class GameWindow {
 		// Set text and color based on role
 		boolean isImposter = "imposter".equals(PlayerLogic.getStatus());
 		if (isImposter) {
-			//System.out.println("I AM IMPOSTER");
 			roleText.setText("IMPOSTOR");
-			roleText.setFill(Color.rgb(255, 0, 0)); // Bright red text for impostor
+			roleText.setFill(Color.rgb(255, 80, 80)); // Slightly softer red
 		} else {
 			roleText.setText("CREWMATE");
-			roleText.setFill(Color.rgb(40, 122, 255)); // Bright blue text for crewmate
+			roleText.setFill(Color.rgb(80, 150, 255)); // Softer blue
 		}
 
-		// Style text with pixelated font
-		roleText.setFont(Font.font("Impact", FontWeight.BOLD, 64));
-		roleText.setStyle("-fx-stroke: black; -fx-stroke-width: 2;");
+		// Stylized pixel-like font
+		roleText.setFont(Font.font("Monospace", FontWeight.BOLD, 64));
+		roleText.setEffect(new DropShadow(10, Color.BLACK)); // Add shadow for depth
 		roleText.setTextAlignment(TextAlignment.CENTER);
 
-		// Container for the role text positioned at the top
-		StackPane textContainer = new StackPane(roleText);
-		textContainer.setAlignment(Pos.TOP_CENTER);
-		textContainer.setPadding(new Insets(50, 0, 0, 0));
-		textContainer.setPrefSize(screenWidth, screenHeight);
-		textContainer.setOpacity(0);
-
-		// Create a subtitle text describing the role
+		// Subtitle describing the role
 		Text subtitleText = new Text();
 		if (isImposter) {
 			subtitleText.setText("Sabotage and eliminate the crew!");
@@ -1384,16 +1406,85 @@ public class GameWindow {
 				subtitleText.setText("There are " + GameLogic.getImposterCount() + " imposters among us");
 			}
 		}
-		subtitleText.setFont(Font.font("Arial", FontWeight.BOLD, 24));
-		subtitleText.setFill(Color.WHITE);
+		subtitleText.setFont(Font.font("Monospace", FontWeight.BOLD, 24));
+		subtitleText.setFill(Color.LIGHTGRAY);
 		subtitleText.setTextAlignment(TextAlignment.CENTER);
 
-		// Create a horizontal container for all players
-		HBox playersContainer = new HBox(20); // 20 pixels spacing between players
-		playersContainer.setAlignment(Pos.CENTER);
-		playersContainer.setPrefWidth(screenWidth);
-		playersContainer.setLayoutY(screenHeight / 2 - 80); // Position in middle of screen
-		playersContainer.setOpacity(0);
+		// Player display setup (similar to previous implementation)
+		HBox playerRow = createPlayerRowDisplay(isImposter);
+
+		// Combine elements into a VBox
+		VBox contentBox = new VBox(20);
+		contentBox.setAlignment(Pos.CENTER);
+		contentBox.getChildren().addAll(roleText, subtitleText, playerRow);
+		contentBox.setOpacity(0);
+
+		// Create a StackPane to center everything perfectly
+		StackPane mainContainer = new StackPane(frameContainer, contentBox);
+		mainContainer.setAlignment(Pos.CENTER);
+		mainContainer.setPrefSize(screenWidth, screenHeight);
+		mainContainer.setLayoutX(0);
+		mainContainer.setLayoutY(0);
+
+		// Add everything to root
+		root.getChildren().addAll(blackOverlay, mainContainer);
+
+		// Animations (similar to previous implementation)
+		FadeTransition fadeInOverlay = new FadeTransition(Duration.millis(400), blackOverlay);
+		fadeInOverlay.setFromValue(0);
+		fadeInOverlay.setToValue(1);
+
+		FadeTransition fadeInFrame = new FadeTransition(Duration.millis(500), frame);
+		fadeInFrame.setFromValue(0);
+		fadeInFrame.setToValue(1);
+		fadeInFrame.setDelay(Duration.millis(300));
+
+		FadeTransition fadeInContent = new FadeTransition(Duration.millis(600), contentBox);
+		fadeInContent.setFromValue(0);
+		fadeInContent.setToValue(1);
+		fadeInContent.setDelay(Duration.millis(600));
+
+		// Fade out animations
+		FadeTransition fadeOutContent = new FadeTransition(Duration.millis(400), contentBox);
+		fadeOutContent.setFromValue(1);
+		fadeOutContent.setToValue(0);
+		fadeOutContent.setDelay(Duration.seconds(6.0));
+
+		FadeTransition fadeOutFrame = new FadeTransition(Duration.millis(400), frame);
+		fadeOutFrame.setFromValue(1);
+		fadeOutFrame.setToValue(0);
+		fadeOutFrame.setDelay(Duration.seconds(6.2));
+
+		FadeTransition fadeOutOverlay = new FadeTransition(Duration.millis(400), blackOverlay);
+		fadeOutOverlay.setFromValue(1);
+		fadeOutOverlay.setToValue(0);
+		fadeOutOverlay.setDelay(Duration.seconds(6.6));
+
+		// Remove everything when done
+		fadeOutOverlay.setOnFinished(e -> {
+			root.getChildren().removeAll(blackOverlay, frame, contentBox);
+		});
+
+		// Play the animations
+		fadeInOverlay.play();
+		fadeInFrame.play();
+		fadeInContent.play();
+		fadeOutContent.play();
+		fadeOutFrame.play();
+		fadeOutOverlay.play();
+
+		// Play appropriate sound effect
+		String soundFile = "assets/sounds/Roundstart_MAIN.wav";
+		SoundLogic.playSound(soundFile, 0); // Using 0 for full volume
+
+		// Background operations: teleport the player during the black screen
+		TeleportToStart();
+	}
+
+	// Helper method to create player row display
+	private HBox createPlayerRowDisplay(boolean isImposter) {
+		HBox playerRow = new HBox(30); // 30 pixels spacing
+		playerRow.setAlignment(Pos.CENTER);
 
 		// Collection to hold players to display
 		List<PlayerInfo> playersToShow = new ArrayList<>();
@@ -1415,230 +1506,70 @@ public class GameWindow {
 			}
 		}
 
-		// Create a title for the player display
-		Text playersTitle = new Text();
-		if (isImposter) {
-			playersTitle.setText("IMPOSTORS");
-			playersTitle.setFill(Color.RED);
-		} else {
-			playersTitle.setText("CREWMATES");
-			playersTitle.setFill(Color.LIGHTBLUE);
+		// Add main player (you)
+		playerRow.getChildren().add(createPlayerBox(null, isImposter));
+
+		// Add other players
+		for (PlayerInfo playerInfo : playersToShow) {
+			playerRow.getChildren().add(createPlayerBox(playerInfo, isImposter));
 		}
-		playersTitle.setFont(Font.font("Arial", FontWeight.BOLD, 24));
 
-		// Create title container
-		StackPane titleContainer = new StackPane(playersTitle);
-		titleContainer.setAlignment(Pos.CENTER);
-		titleContainer.setPrefWidth(screenWidth);
-		titleContainer.setLayoutY(screenHeight / 2 - 150);
+		return playerRow;
+	}
 
-		// Create a Pane to hold the player icons and title
-		Pane playerDisplayPane = new Pane();
-		playerDisplayPane.getChildren().add(titleContainer);
-
-		// Calculate player size
-		final int PLAYER_SIZE = 150;
-
-		// Create box for main player (you)
-		VBox mainPlayerBox = new VBox(5);
-		mainPlayerBox.setAlignment(Pos.CENTER);
+	// Helper method to create individual player boxes
+	private VBox createPlayerBox(PlayerInfo playerInfo, boolean isImposter) {
+		VBox playerBox = new VBox(10);
+		playerBox.setAlignment(Pos.CENTER);
+		playerBox.setStyle(
+				"-fx-background-color: rgba(50, 50, 70, 0.6);" + "-fx-background-radius: 15;" + "-fx-padding: 10px;");
 
 		try {
-			// Get player character image
-			int charImageIndex = PlayerLogic.getCharID() + 1;
+			// Determine character image
+			int charImageIndex = playerInfo != null ? playerInfo.getCharacterID() + 1 : PlayerLogic.getCharID() + 1;
 			String profilePath = charImageIndex == 10 ? "/player/profile/10.png"
 					: "/player/profile/0" + charImageIndex + ".png";
 
 			ImageView playerImage = new ImageView(new Image(getClass().getResourceAsStream(profilePath)));
-			playerImage.setFitWidth(48 * 2);
-			playerImage.setFitHeight(75 * 2);
+			playerImage.setFitWidth(96); // Slightly larger
+			playerImage.setFitHeight(150);
+			playerImage.setPreserveRatio(true);
 
-			// Add red background for imposters
-			if (isImposter) {
-//				// Create background with gradient
-//				Rectangle bg = new Rectangle(PLAYER_SIZE + 10, PLAYER_SIZE + 10);
-//				bg.setArcWidth(15);
-//				bg.setArcHeight(15);
-//
-//				// Create gradient from dark red to black
-//				Stop[] stops = new Stop[] { new Stop(0, Color.rgb(100, 0, 0)), new Stop(1, Color.rgb(50, 0, 0)) };
-//				LinearGradient gradient = new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, stops);
-//				bg.setFill(gradient);
-//
-//				// Create stack pane with background and image
-//				StackPane imageWithBg = new StackPane(bg, playerImage);
-//				imageWithBg.setAlignment(Pos.CENTER);
-//				mainPlayerBox.getChildren().add(imageWithBg);
-				mainPlayerBox.getChildren().add(playerImage);
-			} else {
-				mainPlayerBox.getChildren().add(playerImage);
-			}
+			// Add player image
+			playerBox.getChildren().add(playerImage);
 
 			// Add player name
-			Text nameText = new Text(PlayerLogic.getName());
-			nameText.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+			Text nameText = new Text(playerInfo != null ? playerInfo.getName() : PlayerLogic.getName());
+			nameText.setFont(Font.font("Monospace", FontWeight.BOLD, 18));
 
+			// Color coding for roles
 			if (isImposter) {
-				nameText.setFill(Color.RED);
+				nameText.setFill(Color.rgb(255, 100, 100)); // Bright red for imposters
 			} else {
-				nameText.setFill(Color.BLUE);
+				nameText.setFill(Color.rgb(100, 200, 255)); // Bright blue for crewmates
 			}
 
-			mainPlayerBox.getChildren().add(nameText);
+			playerBox.getChildren().add(nameText);
+
+			// Highlight for imposters if the player is an imposter
+			if (isImposter && (playerInfo == null || "imposter".equals(playerInfo.getStatus()))) {
+				Rectangle highlight = new Rectangle(playerBox.getPrefWidth(), 5);
+				highlight.setFill(Color.rgb(255, 50, 50)); // Red highlight
+				playerBox.getChildren().add(highlight);
+			}
+
 		} catch (Exception e) {
 			System.err.println("Error creating player image: " + e.getMessage());
+
 			// Fallback text
-			Text fallbackText = new Text("YOU");
-			fallbackText.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+			Text fallbackText = new Text(playerInfo != null ? playerInfo.getName() : PlayerLogic.getName());
+			fallbackText.setFont(Font.font("Monospace", FontWeight.BOLD, 18));
 			fallbackText.setFill(Color.WHITE);
-			mainPlayerBox.getChildren().add(fallbackText);
+
+			playerBox.getChildren().add(fallbackText);
 		}
 
-		// Create a row to hold all the players
-		HBox playerRow = new HBox(30); // 30 pixels spacing
-		playerRow.setAlignment(Pos.CENTER);
-
-		// Add main player
-		playerRow.getChildren().add(mainPlayerBox);
-
-		// Add other players (imposters only if player is imposter)
-		for (PlayerInfo playerInfo : playersToShow) {
-			VBox playerBox = new VBox(5);
-			playerBox.setAlignment(Pos.CENTER);
-
-			try {
-				// Get player character image
-				int charImageIndex = playerInfo.getCharacterID() + 1;
-				String profilePath = charImageIndex == 10 ? "/player/profile/10.png"
-						: "/player/profile/0" + charImageIndex + ".png";
-
-				ImageView playerImage = new ImageView(new Image(getClass().getResourceAsStream(profilePath)));
-				playerImage.setFitWidth(48 * 2);
-				playerImage.setFitHeight(75 * 2);
-
-				// Add red background for imposters if player is impostor
-				if (isImposter) {
-					// Create background with gradient
-					Rectangle bg = new Rectangle(PLAYER_SIZE + 10, PLAYER_SIZE + 10);
-					bg.setArcWidth(15);
-					bg.setArcHeight(15);
-
-					// Create gradient from dark red to black
-					Stop[] stops = new Stop[] { new Stop(0, Color.rgb(100, 0, 0)), new Stop(1, Color.rgb(50, 0, 0)) };
-					LinearGradient gradient = new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, stops);
-					bg.setFill(gradient);
-
-					// Create stack pane with background and image
-					StackPane imageWithBg = new StackPane(bg, playerImage);
-					imageWithBg.setAlignment(Pos.CENTER);
-					playerBox.getChildren().add(imageWithBg);
-				} else {
-					playerBox.getChildren().add(playerImage);
-				}
-
-				// Add player name
-				Text nameText = new Text(playerInfo.getName());
-				nameText.setFont(Font.font("Arial", FontWeight.BOLD, 18));
-				nameText.setFill(Color.WHITE);
-
-				playerBox.getChildren().add(nameText);
-			} catch (Exception e) {
-				System.err.println("Error creating player image: " + e.getMessage());
-
-				// Fallback text
-				Text fallbackText = new Text(playerInfo.getName());
-				fallbackText.setFont(Font.font("Arial", FontWeight.BOLD, 18));
-				fallbackText.setFill(Color.WHITE);
-
-				playerBox.getChildren().add(fallbackText);
-			}
-
-			playerRow.getChildren().add(playerBox);
-		}
-
-		// Add player row to container
-		StackPane rowContainer = new StackPane(playerRow);
-		rowContainer.setAlignment(Pos.CENTER);
-		rowContainer.setPrefWidth(screenWidth);
-		rowContainer.setLayoutY(screenHeight / 2 - 40);
-
-		playerDisplayPane.getChildren().add(rowContainer);
-		playerDisplayPane.setOpacity(0);
-
-		// Create container for role description and player's info
-		VBox infoContainer = new VBox(15);
-		infoContainer.getChildren().addAll(subtitleText);
-		infoContainer.setPrefWidth(screenWidth);
-		infoContainer.setAlignment(Pos.CENTER);
-		infoContainer.setLayoutX(0);
-		infoContainer.setLayoutY(150);
-		infoContainer.setOpacity(0);
-
-		// Add everything to root (order matters for layering)
-		root.getChildren().addAll(blackOverlay, textContainer, playerDisplayPane, infoContainer);
-
-		// Animate fade in
-		FadeTransition fadeInOverlay = new FadeTransition(Duration.millis(400), blackOverlay);
-		fadeInOverlay.setFromValue(0);
-		fadeInOverlay.setToValue(1);
-
-		FadeTransition fadeInText = new FadeTransition(Duration.millis(600), textContainer);
-		fadeInText.setFromValue(0);
-		fadeInText.setToValue(1);
-		fadeInText.setDelay(Duration.millis(400));
-
-		FadeTransition fadeInInfo = new FadeTransition(Duration.millis(600), infoContainer);
-		fadeInInfo.setFromValue(0);
-		fadeInInfo.setToValue(1);
-		fadeInInfo.setDelay(Duration.millis(600));
-
-		FadeTransition fadeInPlayers = new FadeTransition(Duration.millis(800), playerDisplayPane);
-		fadeInPlayers.setFromValue(0);
-		fadeInPlayers.setToValue(1);
-		fadeInPlayers.setDelay(Duration.millis(800));
-
-		// Animate fade out
-		FadeTransition fadeOutPlayers = new FadeTransition(Duration.millis(400), playerDisplayPane);
-		fadeOutPlayers.setFromValue(1);
-		fadeOutPlayers.setToValue(0);
-		fadeOutPlayers.setDelay(Duration.seconds(6.0));
-
-		FadeTransition fadeOutInfo = new FadeTransition(Duration.millis(400), infoContainer);
-		fadeOutInfo.setFromValue(1);
-		fadeOutInfo.setToValue(0);
-		fadeOutInfo.setDelay(Duration.seconds(6.2));
-
-		FadeTransition fadeOutText = new FadeTransition(Duration.millis(400), textContainer);
-		fadeOutText.setFromValue(1);
-		fadeOutText.setToValue(0);
-		fadeOutText.setDelay(Duration.seconds(6.4));
-
-		FadeTransition fadeOutOverlay = new FadeTransition(Duration.millis(400), blackOverlay);
-		fadeOutOverlay.setFromValue(1);
-		fadeOutOverlay.setToValue(0);
-		fadeOutOverlay.setDelay(Duration.seconds(6.8));
-
-		// Remove everything when done
-		fadeOutOverlay.setOnFinished(e -> {
-			root.getChildren().removeAll(blackOverlay, textContainer, playerDisplayPane, infoContainer);
-		});
-
-		// Play the animations
-		fadeInOverlay.play();
-		fadeInText.play();
-		fadeInInfo.play();
-		fadeInPlayers.play();
-		fadeOutPlayers.play();
-		fadeOutInfo.play();
-		fadeOutText.play();
-		fadeOutOverlay.play();
-
-		// Play appropriate sound effect
-		String soundFile = "assets/sounds/Roundstart_MAIN.wav";
-		SoundLogic.playSound(soundFile, 0); // Using 0 for full volume
-
-		// Background operations: teleport the player during the black screen
-		TeleportToStart();
+		return playerBox;
 	}
 
 	// Add this method to GameWindow class to make it callable from other classes
