@@ -31,7 +31,6 @@ public class ClientLogic {
 	private static Timer timer;
 	private static int missedPings = 0;
 	private static boolean wasDiscon = false;
-	
 
 	public static void startClient(State state, TextArea logArea) {
 		try {
@@ -244,32 +243,35 @@ public class ClientLogic {
 
 								String name = playerData.getString("name");
 								int direction = playerData.getInt("Direction");
-								String status = playerData.getString("status");
 								boolean isMoving = playerData.getBoolean("isMoving");
 								int charID = playerData.getInt("charID");
+								String Status = playerData.optString("Status", "Unknown");
+
 								// === For ending Prep Phase ===
 								if (!GameLogic.isPrepEnded()) {
 									boolean prepEnded = playerData.getBoolean("prepEnded");
 									GameLogic.setPrepEnded(prepEnded);
 								}
+								if (getConnectedServerInfo().equals(key)) { // this is the servers data
+
+								}
 								// ================================
-								if (PlayerLogic.getLocalAddressPort().equals(key)) {
-									// PlayerLogic.setPosition(pos[0], pos[1]);
-									//PlayerLogic.setCharID(charID);
-									//PlayerLogic.setName(name);
+								if (PlayerLogic.getLocalAddressPort().equals(key)) { // our own
+									PlayerLogic.setStatus(Status);
 								} else if (GameLogic.playerList.containsKey(key)) {
 									PlayerInfo existing = GameLogic.playerList.get(key);
 									existing.setX(pos[0]);
 									existing.setY(pos[1]);
 									existing.setMoving(isMoving);
 									existing.setDirection(direction);
-									existing.setStatus(status);
+									existing.setStatus(Status);
 									existing.setCharacterID(charID);
+									existing.setStatus(Status);
 								} else {
 									GameLogic.playerList.put(key,
 											new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
 													Integer.parseInt(key.split(":")[1]), name, pos[0], pos[1], isMoving,
-													direction, status, charID));
+													direction, Status, charID));
 								}
 							}
 
@@ -342,15 +344,13 @@ public class ClientLogic {
 				if (ServerSelectGui.isGameWindow()) {
 					try {
 						JSONObject json = new JSONObject();
-						json.put("name", ""); // where do we keep our own name bruh
+						json.put("name", PlayerLogic.getName());
 						json.put("PosX", PlayerLogic.getMyPosX());
 						json.put("PosY", PlayerLogic.getMyPosY());
 						json.put("Direction", PlayerLogic.getDirection());
 						json.put("isMoving", PlayerLogic.getMoving());
-						json.put("name", PlayerLogic.getName());
 						json.put("charID", PlayerLogic.getCharID());
 						json.put("playerReady", PlayerLogic.isPlayerReady());
-						// System.out.println("charID = " + PlayerLogic.getCharID());
 
 						// TODO Add more data
 						String message = "/data/" + json.toString();

@@ -15,10 +15,14 @@ import java.util.Random;
 
 import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
+import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
+import javafx.animation.ScaleTransition;
 import javafx.animation.Transition;
 import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -32,8 +36,16 @@ import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.paint.Stop;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import logic.*;
@@ -66,6 +78,7 @@ public class GameWindow {
 	private Canvas canvas;
 	private GraphicsContext gc;
 	private PrepGui prepPhaseGui;
+	private static GameWindow gameWindowInstance;
 
 	// === Game State ===
 	private static boolean showCollision = false;
@@ -147,6 +160,7 @@ public class GameWindow {
 
 	public void start(Stage stage) {
 		this.gameStage = stage;
+		gameWindowInstance = this;
 		canvas = new Canvas(screenWidth, screenHeight);
 		gc = canvas.getGraphicsContext2D();
 		threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -207,7 +221,7 @@ public class GameWindow {
 					if (MainMenuPane.getState().equals(logic.State.SERVER)) {
 						ServerLogic.randomizeImposters();
 					}
-					TeleportToStart();
+					triggerGameStartTransition(); // this auto teleports us
 				}
 
 				if (!GameLogic.isPrepEnded() && prepPhaseGui != null) {
@@ -899,7 +913,8 @@ public class GameWindow {
 						// Check for collision with the bottom 20 pixels of the player
 						if (playerRight > objLeft && playerLeft < objRight && playerBottom > objTop
 								&& playerFeetTop < objBottom) {
-							//System.out.println("Collision with object at (" + obj.getX() + ", " + obj.getY() + ")");
+							// System.out.println("Collision with object at (" + obj.getX() + ", " +
+							// obj.getY() + ")");
 							return true; // Collision detected
 						}
 					}
@@ -1230,7 +1245,6 @@ public class GameWindow {
 		});
 	}
 
-	// Add this method to update player count
 	private void updatePrepPhasePlayerCount() {
 		if (prepPhaseGui != null) {
 			// Calculate total player count (including server)
@@ -1250,6 +1264,145 @@ public class GameWindow {
 		playerY = PlayerLogic.getMyPosY();
 		viewportX = playerX - (screenWidth / 2) / CAMERA_ZOOM;
 		viewportY = playerY - (screenHeight / 2) / CAMERA_ZOOM;
+	}
+
+	private void showGameStartTransition(boolean isGameStarting) {
+	    // Create a black overlay
+	    Rectangle blackOverlay = new Rectangle(0, 0, screenWidth, screenHeight);
+	    blackOverlay.setFill(Color.BLACK);
+	    blackOverlay.setOpacity(0); // Start transparent
+	    
+	    // Create the role text
+	    Text roleText = new Text();
+	    
+	    // Set text and color based on role
+	    if (isGameStarting) {
+	        if ("imposter".equals(PlayerLogic.getStatus())) {
+	            roleText.setText("IMPOSTOR");
+	            roleText.setFill(Color.rgb(255, 0, 0)); // Bright red text for impostor
+	        } else {
+	            roleText.setText("CREWMATE");
+	            roleText.setFill(Color.rgb(40, 122, 255)); // Bright blue text for crewmate
+	        }
+	    } else {
+	        roleText.setText("EMERGENCT MEETING!");
+	        roleText.setFill(Color.WHITE);
+	    }
+	    
+	    // Style text with pixelated font
+	    roleText.setFont(Font.font("Impact", FontWeight.BOLD, 64)); //impact font lmao
+	    roleText.setStyle("-fx-stroke: black; -fx-stroke-width: 2;");
+	    roleText.setTextAlignment(TextAlignment.CENTER);
+	    
+	    //container for the role text positioned at the top
+	    StackPane textContainer = new StackPane(roleText);
+	    textContainer.setAlignment(Pos.TOP_CENTER);
+	    textContainer.setPadding(new Insets(50, 0, 0, 0));
+	    textContainer.setPrefSize(screenWidth, screenHeight);
+	    textContainer.setOpacity(0);
+	    
+	    // Create a player model display in the center
+	    // This is where you would add the player character sprite
+	    ImageView playerSprite = null;
+	    
+	    try {
+	        // Get the appropriate sprite based on character ID
+	        String[] CHARACTER_IMAGES = { "/player/01.png", "/player/02.png", "/player/03.png", "/player/04.png",
+	            "/player/05.png", "/player/06.png", "/player/07.png", "/player/08.png", "/player/09.png",
+	            "/player/10.png" };
+	        
+	        Image spriteSheet = new Image(getClass().getResourceAsStream(CHARACTER_IMAGES[PlayerLogic.getCharID()]));
+	        playerSprite = new ImageView(spriteSheet);
+	        
+	        // Display the idle frame
+	        playerSprite.setViewport(new Rectangle2D(5 * FRAME_WIDTH, 0, FRAME_WIDTH, FRAME_HEIGHT));
+	        
+	        // Make the sprite larger for display
+	        playerSprite.setScaleX(3.0);
+	        playerSprite.setScaleY(3.0);
+	        
+	        // Add a slight bounce animation
+	        TranslateTransition bounce = new TranslateTransition(Duration.millis(800), playerSprite);
+	        bounce.setFromY(0);
+	        bounce.setToY(-20);
+	        bounce.setCycleCount(Animation.INDEFINITE);
+	        bounce.setAutoReverse(true);
+	        bounce.play();
+	    } catch (Exception e) {
+	        System.err.println("Error loading player sprite: " + e.getMessage());
+	    }
+	    
+	    // Container for the player sprite
+	    StackPane playerContainer = new StackPane();
+	    if (playerSprite != null) {
+	        playerContainer.getChildren().add(playerSprite);
+	    }
+	    playerContainer.setAlignment(Pos.CENTER);
+	    playerContainer.setPrefSize(screenWidth, screenHeight);
+	    playerContainer.setOpacity(0);
+	    
+	    // Add everything to root (order matters for layering)
+	    root.getChildren().addAll(blackOverlay, textContainer, playerContainer);
+	    
+	    // Animate fade in
+	    FadeTransition fadeInOverlay = new FadeTransition(Duration.millis(400), blackOverlay);
+	    fadeInOverlay.setFromValue(0);
+	    fadeInOverlay.setToValue(1);
+	    
+	    FadeTransition fadeInText = new FadeTransition(Duration.millis(600), textContainer);
+	    fadeInText.setFromValue(0);
+	    fadeInText.setToValue(1);
+	    fadeInText.setDelay(Duration.millis(400));
+	    
+	    FadeTransition fadeInPlayer = new FadeTransition(Duration.millis(600), playerContainer);
+	    fadeInPlayer.setFromValue(0);
+	    fadeInPlayer.setToValue(1);
+	    fadeInPlayer.setDelay(Duration.millis(800));
+	    
+	    // Animate fade out
+	    FadeTransition fadeOutPlayer = new FadeTransition(Duration.millis(400), playerContainer);
+	    fadeOutPlayer.setFromValue(1);
+	    fadeOutPlayer.setToValue(0);
+	    fadeOutPlayer.setDelay(Duration.seconds(3.2));
+	    
+	    FadeTransition fadeOutText = new FadeTransition(Duration.millis(400), textContainer);
+	    fadeOutText.setFromValue(1);
+	    fadeOutText.setToValue(0);
+	    fadeOutText.setDelay(Duration.seconds(3.4));
+	    
+	    FadeTransition fadeOutOverlay = new FadeTransition(Duration.millis(400), blackOverlay);
+	    fadeOutOverlay.setFromValue(1);
+	    fadeOutOverlay.setToValue(0);
+	    fadeOutOverlay.setDelay(Duration.seconds(3.6));
+	    
+	    // Remove everything when done
+	    fadeOutOverlay.setOnFinished(e -> {
+	        root.getChildren().removeAll(blackOverlay, textContainer, playerContainer);
+	    });
+	    
+	    // Play the animations
+	    fadeInOverlay.play();
+	    fadeInText.play();
+	    fadeInPlayer.play();
+	    fadeOutPlayer.play();
+	    fadeOutText.play();
+	    fadeOutOverlay.play();
+	    
+	    // Play appropriate sound effect
+	    String soundFile = "assets/sounds/Roundstart_MAIN.wav";
+	    SoundLogic.playSound(soundFile, 0); // Using 0 for full volume
+	    
+	    // Background operations: teleport the player during the black screen
+	    if (isGameStarting) {
+	        TeleportToStart();
+	    }
+	}
+
+	// Add this method to GameWindow class to make it callable from other classes
+	public static void triggerGameStartTransition() {
+		if (gameWindowInstance != null) {
+			Platform.runLater(() -> gameWindowInstance.showGameStartTransition(true));
+		}
 	}
 
 }

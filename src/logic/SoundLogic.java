@@ -121,7 +121,12 @@ public class SoundLogic {
         }
     }
 
-    private static void playSound(String soundFile, float loudness) {
+    /**
+     * Plays a game sound effect at specified volume
+     * @param soundFile Path to the sound file
+     * @param volumeDb Volume in decibels (0 = full volume, negative values = quieter)
+     */
+    public static void playSound(String soundFile, float volumeDb) {
         soundThreadPool.submit(() -> {
             try {
                 // Try to reuse an existing clip for better performance
@@ -130,6 +135,11 @@ public class SoundLogic {
                 // If no cached clip or it's currently playing, create a new one
                 if (clip == null || clip.isRunning()) {
                     File file = new File(soundFile);
+                    if (!file.exists()) {
+                        System.err.println("Sound file not found: " + soundFile);
+                        return;
+                    }
+                    
                     AudioInputStream audioStream = AudioSystem.getAudioInputStream(file);
                     clip = AudioSystem.getClip();
                     clip.open(audioStream);
@@ -146,14 +156,16 @@ public class SoundLogic {
                     clip.setFramePosition(0);
                 }
                 
-                // Set the loudness
-                FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-                gainControl.setValue(loudness);
+                // Set the volume
+                if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                    FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+                    gainControl.setValue(volumeDb);
+                }
                 
                 // Play the sound
                 clip.start();
             } catch (Exception e) {
-                System.err.println("Error playing sound: " + e.getMessage());
+                System.err.println("Error playing sound '" + soundFile + "': " + e.getMessage());
             }
         });
     }

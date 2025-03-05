@@ -292,7 +292,7 @@ public class ServerLogic {
             Random random = new Random();
             int randomChar = random.nextInt(9);
             playerInfo = new PlayerInfo(packet.getAddress(), packet.getPort(), 
-                         name, 0, 0, false, 0, "active", randomChar);
+                         name, 0, 0, false, 0, "crewmate", randomChar);
             GameLogic.playerList.put(clientKey, playerInfo);
         } else {
             // Existing player - update data
@@ -319,10 +319,10 @@ public class ServerLogic {
             serverData.put("name", MainMenuPane.getServerName());
             serverData.put("Direction", PlayerLogic.getDirection());
             serverData.put("isMoving", PlayerLogic.getMoving());
-            serverData.put("status", "default Status");
             serverData.put("charID", PlayerLogic.getCharID());
             serverData.put("prepEnded", GameLogic.isPrepEnded());
-    
+            serverData.put("Status", PlayerLogic.getStatus());
+
             responseJson.put(serverKey, serverData);
     
             // Add all other players' data
@@ -336,7 +336,7 @@ public class ServerLogic {
                 playerData.put("isMoving", info.isMoving());
                 playerData.put("charID", info.getCharacterID());
                 playerData.put("prepEnded", GameLogic.isPrepEnded());
-    
+                playerData.put("Status", info.getStatus());
                 responseJson.put(key, playerData);
             }
     
