@@ -296,6 +296,9 @@ public class ClientLogic {
 								// Find the killed player
 								PlayerInfo killedPlayer = GameLogic.playerList.get(killedPlayerKey);
 								if (killedPlayer != null) {
+									if (killedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+										System.out.println("WE GOT KILLED");
+									}
 									// Mark player as dead
 									killedPlayer.setStatus("dead");
 

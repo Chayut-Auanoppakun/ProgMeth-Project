@@ -17,7 +17,6 @@ public class PlayerLogic {
 	private static int charID = 99; // 99 is not initialized
 	private static boolean isPlayerReady = false;
 	private static String status;
-	
 
 	public static String getStatus() {
 		return status;
@@ -98,6 +97,15 @@ public class PlayerLogic {
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			return "unknown:0";
+		}
+	}
+
+	// For Imposters
+	public void KillPlayer() {
+		if (MainMenuPane.getState().equals(logic.State.SERVER)) {
+
+		} else {
+
 		}
 	}
 }
