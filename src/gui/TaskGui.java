@@ -59,40 +59,21 @@ public class TaskGui extends Pane{
 		
 		
 		switch(taskId) {
-		case 1:
-			task1();
-			break;
-		case 2:
-			task2();
-			break;
-		case 3:
-			task3();
-			break;
+		case 1: task1(); break;
+		case 2: task2(); break;
+		case 3: task3(); break;
 		case 4:
 			//task4();
 		case 5:
 			//task5();
-		case 6:
-			task6();
-			break;
-		case 7:
-			task7();
-			break;
-		case 8:
-			task8();
-			break;
-		case 9:
-			//task9();
-		case 10:
-			task10();
-			break;
-		case 11:
-			task11();
-		case 12:
-			task12();
-			break;
-		case 13:
-			task13();
+		case 6: task6(); break;
+		case 7: task7(); break;
+		case 8: task8(); break;
+		case 9: task9(); break;
+		case 10: task10(); break;
+		case 11: task11(); break;
+		case 12: task12(); break;
+		case 13: task13(); break;
 		case 14:
 			//task14();
 		default:
@@ -439,8 +420,95 @@ public class TaskGui extends Pane{
 
 	    this.getChildren().addAll(wireLeft, wireRight, solderingIron, solderWire);
 	}
-
 	
+	// tidy bookshelf
+	private void task9() {
+	    ImageView bookshelf = new ImageView(new Image("/TaskAsset/TidyBookshelf/bookshelf.png")); 
+	    bookshelf.setFitWidth(800); // Adjust as needed
+	    bookshelf.setFitHeight(500); // Adjust as needed
+
+	    int bookCount = 3; // Number of books to place
+	    AtomicInteger remainingBooks = new AtomicInteger(bookCount);
+	    this.getChildren().add(bookshelf);
+
+	    // Define the empty shelf positions
+	    ImageView emptyShelf1 = new ImageView(new Image("/TaskAsset/TidyBookshelf/emptyshelf.png"));
+	    emptyShelf1.setFitWidth(100);
+	    emptyShelf1.setFitHeight(100);
+	    emptyShelf1.setLayoutX(150); // Position of empty shelf 1 on the bookshelf
+	    emptyShelf1.setLayoutY(150);
+	    this.getChildren().add(emptyShelf1);
+
+	    ImageView emptyShelf2 = new ImageView(new Image("/TaskAsset/TidyBookshelf/emptyshelf.png"));
+	    emptyShelf2.setFitWidth(100);
+	    emptyShelf2.setFitHeight(100);
+	    emptyShelf2.setLayoutX(300); // Position of empty shelf 2 on the bookshelf
+	    emptyShelf2.setLayoutY(150);
+	    this.getChildren().add(emptyShelf2);
+
+	    ImageView emptyShelf3 = new ImageView(new Image("/TaskAsset/TidyBookshelf/emptyshelf.png"));
+	    emptyShelf3.setFitWidth(100);
+	    emptyShelf3.setFitHeight(100);
+	    emptyShelf3.setLayoutX(450); // Position of empty shelf 3 on the bookshelf
+	    emptyShelf3.setLayoutY(150);
+	    this.getChildren().add(emptyShelf3);
+
+	    for (int i = 0; i < bookCount; i++) {
+	        ImageView book = new ImageView(new Image("/TaskAsset/TidyBookshelf/book.png")); 
+	        book.setFitWidth(60);
+	        book.setFitHeight(100);
+
+	        // Initial position for the books
+	        double x = 100 + (i * 70);
+	        double y = 400; // Starting position for the books
+	        book.setLayoutX(x);
+	        book.setLayoutY(y);
+
+	        book.setOnMouseDragged(e -> {
+	            book.setLayoutX(e.getSceneX() - book.getFitWidth() / 2);
+	            book.setLayoutY(e.getSceneY() - book.getFitHeight() / 2);
+	        });
+
+	        book.setOnMouseReleased(e -> {
+	            if (book.getBoundsInParent().intersects(emptyShelf1.getBoundsInParent()) ||
+	                book.getBoundsInParent().intersects(emptyShelf2.getBoundsInParent()) ||
+	                book.getBoundsInParent().intersects(emptyShelf3.getBoundsInParent())) {
+
+	                // Snap the book to the empty shelf
+	                ImageView targetShelf = null;
+	                if (book.getBoundsInParent().intersects(emptyShelf1.getBoundsInParent())) {
+	                    targetShelf = emptyShelf1;
+	                } else if (book.getBoundsInParent().intersects(emptyShelf2.getBoundsInParent())) {
+	                    targetShelf = emptyShelf2;
+	                } else if (book.getBoundsInParent().intersects(emptyShelf3.getBoundsInParent())) {
+	                    targetShelf = emptyShelf3;
+	                }
+
+	                if (targetShelf != null) {
+	                    double shelfX = targetShelf.getLayoutX() + (targetShelf.getFitWidth() - book.getFitWidth()) / 2;
+	                    double shelfY = targetShelf.getLayoutY() + (targetShelf.getFitHeight() - book.getFitHeight()) / 2;
+	                    book.setLayoutX(shelfX);
+	                    book.setLayoutY(shelfY);
+	                }
+
+	                if (remainingBooks.decrementAndGet() == 0) {
+	                    // Close the pane when all books are placed on the empty shelves
+	                    Pane parent = (Pane) this.getParent();
+	                    if (parent != null) {
+	                        parent.getChildren().remove(this);
+	                    }
+	                }
+	            } else {
+	                // Return the book to its original position if not placed on an empty shelf
+	                book.setLayoutX(x);
+	                book.setLayoutY(y);
+	            }
+	        });
+
+	        this.getChildren().add(book);
+	    }
+	}
+
 	//TASK10 Cut Flower
 	private void task10() {
 		    ImageView ground = new ImageView(new Image("/TaskAsset/CutFlower/background.png")); 
