@@ -32,9 +32,7 @@ public class MainMenuPane extends Pane {
 	private static TextField InputName;
 	private static Button hostButton;
 	private static Button joinButton;
-	private static Button testButton;
-	private static Button testButton2;
-	private TaskGui activeTaskGui;
+
 	Scene Curscene;
 	Stage thisStage;
 	private static State thisState;
@@ -67,11 +65,8 @@ public class MainMenuPane extends Pane {
 		loadGameButton = createMenuButton("ABOUT");
 		helpButton = createMenuButton("HELP");
 		exitButton = createMenuButton("EXIT");
-		testButton = createMenuButton("TEST TASK");
-		testButton2 = createMenuButton("Test Setup");
 
-		menuVBox = new VBox(10, titleText, newGameButton, optionButton, loadGameButton, helpButton, testButton,
-				testButton2);
+		menuVBox = new VBox(10, titleText, newGameButton, optionButton, loadGameButton, helpButton);
 		menuVBox.setAlignment(Pos.TOP_LEFT);
 		menuVBox.setPadding(new Insets(40, 10, 10, 40));
 
@@ -128,14 +123,6 @@ public class MainMenuPane extends Pane {
 				ServerGuiloaded = true;
 				openServerGui(thisState);
 			});
-		} else if (text.equals("TEST TASK")) {
-			button.setOnAction(e -> task(Integer.parseInt(InputName.getText().isEmpty() ? "1" : InputName.getText())));
-		} else if (text.equals("Test Setup")) {
-			button.setOnAction(e -> {
-				CharaterSelectgui setup = new CharaterSelectgui(this::onCharacterSelected);
-				this.getChildren().add(setup);
-			});
-
 		}
 		// Add hover effect
 		button.setOnMouseEntered(e -> {
@@ -317,47 +304,6 @@ public class MainMenuPane extends Pane {
 
 	public static String getServerName() {
 		return InputName.getText().isEmpty() ? "Host" : InputName.getText();
-	}
-
-	// TODO for testing remove later
-	private void task(int taskId) {
-		if (activeTaskGui != null) {
-			this.getChildren().remove(activeTaskGui);
-		}
-
-		activeTaskGui = new TaskGui(taskId);
-		activeTaskGui.setLayoutX(this.getWidth() / 4);
-		activeTaskGui.setLayoutY(this.getHeight() / 10);
-
-		this.getChildren().add(activeTaskGui);
-	}
-
-	public void taskClose(boolean success) {
-		if (activeTaskGui != null) {
-			getChildren().remove(activeTaskGui);
-			activeTaskGui = null;
-		}
-		if (success) {
-			StackPane successOverlay = new StackPane();
-			Rectangle background = new Rectangle(this.getWidth(), this.getHeight(), Color.rgb(0, 0, 0, 0.5)); // 50%
-																												// transparent
-																												// black
-			Text successText = new Text("Task Success!");
-			successText.setFont(new Font(30));
-			successText.setFill(Color.WHITE);
-			successText.setTextAlignment(TextAlignment.CENTER);
-
-			successOverlay.getChildren().addAll(background, successText);
-			this.getChildren().add(successOverlay);
-			new Thread(() -> {
-				try {
-					Thread.sleep(2000); // Wait 2 seconds
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				Platform.runLater(() -> this.getChildren().remove(successOverlay));
-			}).start();
-		}
 	}
 
 	public static void setNameDisable(boolean disable) {

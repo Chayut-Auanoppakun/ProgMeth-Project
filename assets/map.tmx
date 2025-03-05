@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="120" height="120" tilewidth="32" tileheight="32" infinite="0" nextlayerid="20" nextobjectid="500">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="120" height="120" tilewidth="32" tileheight="32" infinite="0" nextlayerid="20" nextobjectid="501">
  <editorsettings>
   <export target="../temp/map.tmx" format="tmx"/>
  </editorsettings>
@@ -2022,6 +2022,11 @@
   <object id="484" x="1315" y="2436" width="24" height="23">
    <properties>
     <property name="Event_ID" value="0"/>
+   </properties>
+  </object>
+  <object id="500" x="1888.67" y="1633" width="32" height="31">
+   <properties>
+    <property name="Event_ID" value="1"/>
    </properties>
   </object>
  </objectgroup>
