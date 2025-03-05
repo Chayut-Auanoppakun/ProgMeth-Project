@@ -8,6 +8,7 @@ import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -74,8 +75,7 @@ public class TaskGui extends Pane{
 		case 11: task11(); break;
 		case 12: task12(); break;
 		case 13: task13(); break;
-		case 14:
-			//task14();
+		case 14: task14(); break;
 		default:
 			break;
 		}
@@ -640,4 +640,58 @@ public class TaskGui extends Pane{
 		
 		}
 	
+		// Task 14: Firefighter game
+		public void task14() {
+		    // Load images
+		    Image sceneImage = new Image("/TaskAsset/Fire/background.png");
+		    Image fireImage = new Image("/TaskAsset/Fire/fire.png");
+		    Image extinguisherImage = new Image("/TaskAsset/Fire/fire_extinguisher.png");
+
+		    // Background scene
+		    ImageView scene = new ImageView(sceneImage);
+		    scene.setFitWidth(600);
+		    scene.setFitHeight(400);
+		    scene.setLayoutX(0);
+		    scene.setLayoutY(0);
+
+		    int fireCount = 5; // Number of fire spots
+		    Random random = new Random();
+		    AtomicInteger remainingFire = new AtomicInteger(fireCount);
+
+		    this.getChildren().add(scene); // Add scene first so fire spots appear in front
+
+		    // Fire spots
+		    for (int i = 0; i < fireCount; i++) {
+		        ImageView fire = new ImageView(fireImage);
+		        fire.setFitWidth(50);  // Adjust fire image size
+		        fire.setFitHeight(50);
+
+		        // Random position
+		        double x = 50 + random.nextInt(500);
+		        double y = 50 + random.nextInt(300);
+		        fire.setLayoutX(x);
+		        fire.setLayoutY(y);
+
+		        fire.setOnMouseClicked(e -> {
+		            this.getChildren().remove(fire);
+		            if (remainingFire.decrementAndGet() == 0) {
+		                // Task is completed when all fire spots are extinguished
+		                ((Pane) this.getParent()).getChildren().remove(this);
+		            }
+		        });
+
+		        this.getChildren().add(fire);
+		    }
+
+		    // Fire extinguisher
+		    ImageView extinguisher = new ImageView(extinguisherImage);
+		    extinguisher.setFitWidth(100);
+		    extinguisher.setFitHeight(50);
+		    extinguisher.setLayoutX(300);
+		    extinguisher.setLayoutY(300);
+
+		    this.getChildren().add(extinguisher);
+		}
+
+
 }
