@@ -593,8 +593,6 @@ public class GameWindow {
 			gc.fillRect(0, 0, screenWidth, screenHeight);
 		}
 
-		// Draw players
-
 		// Debug: Draw collision objects
 		if (showCollision) {
 			renderCollisionObjects();
@@ -615,83 +613,127 @@ public class GameWindow {
 	}
 
 	private void renderPlayers() {
-	    // Determine if local player is dead
-	    boolean localPlayerIsDead = "dead".equalsIgnoreCase(PlayerLogic.getStatus());
+		// Determine if local player is dead
+		boolean localPlayerIsDead = "dead".equalsIgnoreCase(PlayerLogic.getStatus());
+
+		// Create a list to store all players (including local player) for sorting by
+		// y-position
+		List<PlayerRenderInfo> playersToRender = new ArrayList<>();
+
+		// Add the local player to the list
+		playersToRender.add(new PlayerRenderInfo("local", PlayerLogic.getMyPosX(), PlayerLogic.getMyPosY(), null,
+				PlayerLogic.getCharID()));
+
+		// Add other players to the list
+		for (String key : GameLogic.playerList.keySet()) {
+			PlayerInfo playerInfo = GameLogic.playerList.get(key);
+
+			// Skip rendering dead players if local player is alive
+			boolean playerIsDead = "dead".equalsIgnoreCase(playerInfo.getStatus());
+			if (!localPlayerIsDead && playerIsDead) {
+				continue; // Living players cannot see dead players
+			}
+
+			// Check if player is within FOV radius before adding to render list
+			final int FOV_RADIUS = 1000; // Adjust as needed
+			double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
+			double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
+			double distance = Math.sqrt(distX * distX + distY * distY);
+
+			if (distance <= FOV_RADIUS) {
+				playersToRender.add(new PlayerRenderInfo(key, playerInfo.getX(), playerInfo.getY(), playerInfo,
+						playerInfo.getCharacterID()));
+			}
+		}
+
+		// Sort players by Y position (higher Y values render on top/later)
+		Collections.sort(playersToRender, Comparator.comparingDouble(PlayerRenderInfo::getY));
+
+		// Get the GraphicsContext
+		GraphicsContext gc = canvas.getGraphicsContext2D();
+		double originalOpacity = gc.getGlobalAlpha();
+		double deadPlayerOpacity = 0.5; // 50% opacity for dead players
+
+		// Render all players in sorted order
+		for (PlayerRenderInfo player : playersToRender) {
+			boolean playerIsDead = false;
+
+			if (player.getKey().equals("local")) {
+				playerIsDead = "dead".equalsIgnoreCase(PlayerLogic.getStatus());
+
+				// Apply transparency for dead local player
+				if (playerIsDead) {
+					gc.setGlobalAlpha(deadPlayerOpacity);
+				}
+
+				renderLocalPlayer(player.getX(), player.getY());
+
+				// Reset opacity if modified
+				if (playerIsDead) {
+					gc.setGlobalAlpha(originalOpacity);
+				}
+			} else {
+				playerIsDead = "dead".equalsIgnoreCase(player.getInfo().getStatus());
+
+				// Apply transparency for dead players
+				if (playerIsDead) {
+					gc.setGlobalAlpha(deadPlayerOpacity);
+				}
+
+				renderOtherPlayer(player.getInfo());
+
+				// Reset opacity if modified
+				if (playerIsDead) {
+					gc.setGlobalAlpha(originalOpacity);
+				}
+			}
+		}
+
+		// Ensure opacity is reset to original value
+		gc.setGlobalAlpha(originalOpacity);
+	}
+
+	private void renderCorpses() {
+	    // Skip if there are no corpses
+	    if (GameLogic.corpseList.isEmpty()) {
+	        return;
+	    }
 	    
-	    // Create a list to store all players (including local player) for sorting by y-position
-	    List<PlayerRenderInfo> playersToRender = new ArrayList<>();
-
-	    // Add the local player to the list
-	    playersToRender.add(new PlayerRenderInfo("local", PlayerLogic.getMyPosX(), PlayerLogic.getMyPosY(), null,
-	            PlayerLogic.getCharID()));
-
-	    // Add other players to the list
-	    for (String key : GameLogic.playerList.keySet()) {
-	        PlayerInfo playerInfo = GameLogic.playerList.get(key);
+	    // Set the fill color for corpses
+	    gc.setFill(Color.RED);
+	    
+	    // Iterate through all corpses
+	    for (Corpse corpse : GameLogic.corpseList.values()) {
+	    	 if (corpse.isFound()) {
+	             continue;
+	         }
+	        // Calculate the screen position of the corpse
+	        double corpseScreenX = corpse.getX() - viewportX;
+	        double corpseScreenY = corpse.getY() - viewportY;
 	        
-	        // Skip rendering dead players if local player is alive
-	        boolean playerIsDead = "dead".equalsIgnoreCase(playerInfo.getStatus());
-	        if (!localPlayerIsDead && playerIsDead) {
-	            continue; // Living players cannot see dead players
-	        }
-
-	        // Check if player is within FOV radius before adding to render list
-	        final int FOV_RADIUS = 1000; // Adjust as needed
-	        double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
-	        double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
-	        double distance = Math.sqrt(distX * distX + distY * distY);
-
-	        if (distance <= FOV_RADIUS) {
-	            playersToRender.add(new PlayerRenderInfo(key, playerInfo.getX(), playerInfo.getY(), playerInfo,
-	                    playerInfo.getCharacterID()));
+	        // Check if the corpse is visible on screen
+	        if (corpseScreenX > -50 && corpseScreenX < screenWidth + 50 &&
+	            corpseScreenY > -50 && corpseScreenY < screenHeight + 50) {
+	            
+	            // Draw a red circle for the corpse
+	            gc.fillOval(corpseScreenX - 20, corpseScreenY - 20, 40, 40);
+	            
+	            // Add a black outline
+	            gc.setStroke(Color.BLACK);
+	            gc.setLineWidth(2);
+	            gc.strokeOval(corpseScreenX - 20, corpseScreenY - 20, 40, 40);
+	            
+	            // Optionally draw character silhouette below the red circle
+	            // This would require the character's sprite image
+	            // For now, we're just adding an X inside the circle
+	            gc.setStroke(Color.BLACK);
+	            gc.setLineWidth(3);
+	            gc.strokeLine(corpseScreenX - 10, corpseScreenY - 10, 
+	                         corpseScreenX + 10, corpseScreenY + 10);
+	            gc.strokeLine(corpseScreenX + 10, corpseScreenY - 10, 
+	                         corpseScreenX - 10, corpseScreenY + 10);
 	        }
 	    }
-
-	    // Sort players by Y position (higher Y values render on top/later)
-	    Collections.sort(playersToRender, Comparator.comparingDouble(PlayerRenderInfo::getY));
-
-	    // Get the GraphicsContext
-	    GraphicsContext gc = canvas.getGraphicsContext2D();
-	    double originalOpacity = gc.getGlobalAlpha();
-	    double deadPlayerOpacity = 0.5; // 50% opacity for dead players
-
-	    // Render all players in sorted order
-	    for (PlayerRenderInfo player : playersToRender) {
-	        boolean playerIsDead = false;
-	        
-	        if (player.getKey().equals("local")) {
-	            playerIsDead = "dead".equalsIgnoreCase(PlayerLogic.getStatus());
-	            
-	            // Apply transparency for dead local player
-	            if (playerIsDead) {
-	                gc.setGlobalAlpha(deadPlayerOpacity);
-	            }
-	            
-	            renderLocalPlayer(player.getX(), player.getY());
-	            
-	            // Reset opacity if modified
-	            if (playerIsDead) {
-	                gc.setGlobalAlpha(originalOpacity);
-	            }
-	        } else {
-	            playerIsDead = "dead".equalsIgnoreCase(player.getInfo().getStatus());
-	            
-	            // Apply transparency for dead players
-	            if (playerIsDead) {
-	                gc.setGlobalAlpha(deadPlayerOpacity);
-	            }
-	            
-	            renderOtherPlayer(player.getInfo());
-	            
-	            // Reset opacity if modified
-	            if (playerIsDead) {
-	                gc.setGlobalAlpha(originalOpacity);
-	            }
-	        }
-	    }
-	    
-	    // Ensure opacity is reset to original value
-	    gc.setGlobalAlpha(originalOpacity);
 	}
 
 	// Helper class to store player information for rendering
@@ -1006,24 +1048,23 @@ public class GameWindow {
 		}
 
 		if (!"crewmate".equals(target.getStatus())) {
-			System.out.println("GAMEWINDOW: Invalid kill attempt - target is not a crewmate: " + target.getStatus());
+			// System.out.println("GAMEWINDOW: Invalid kill attempt - target is not a
+			// crewmate: " + target.getStatus());
 			return;
 		}
 
 		System.out.println("GAMEWINDOW: Attempting to kill player: " + target.getName());
 
-		// Prepare kill report to send to server
 		try {
-			// Get killed player's info
 			String killedPlayerKey = target.getAddress().getHostAddress() + ":" + target.getPort();
 			String killerKey = PlayerLogic.getLocalAddressPort();
 
 			System.out.println("GAMEWINDOW: Kill details - Victim: " + killedPlayerKey + ", Killer: " + killerKey);
 
-			// Before sending the report, directly mark the player as dead in the local list
-			// This ensures we see the change immediately even before server response
 			target.setStatus("dead");
-			System.out.println("GAMEWINDOW: Marked player as dead in local state");
+			Corpse corpse = new Corpse(target);
+			GameLogic.corpseList.put(killedPlayerKey, corpse);
+			System.out.println("GAMEWINDOW: Created local corpse at " + corpse.getX() + "," + corpse.getY());
 
 			// Construct the report payload
 			JSONObject killReport = new JSONObject();
@@ -1033,22 +1074,16 @@ public class GameWindow {
 
 			// Send kill report to server
 			String message = "/kill/" + killReport.toString();
-
-			// Play kill sound effect
 			String killSoundPath = "assets/sounds/impostor_kill.wav";
 			SoundLogic.playSound(killSoundPath, 0);
-			System.out.println("GAMEWINDOW: Playing kill sound effect");
 
 			// Create kill animation
 			createKillAnimation(target);
-			System.out.println("GAMEWINDOW: Created kill animation");
 
 			// Use appropriate logic to send the message based on if we're server or client
 			if (MainMenuPane.getState().equals(State.CLIENT)) {
-				System.out.println("GAMEWINDOW: Sending kill message to server as CLIENT");
 				ClientLogic.sendMessage(message, ServerSelectGui.getLogArea());
 			} else if (MainMenuPane.getState().equals(State.SERVER)) {
-				System.out.println("GAMEWINDOW: Processing kill directly as SERVER");
 				// If server, directly call server logic
 				ServerLogic.handleKillReport(killedPlayerKey, killerKey, ServerSelectGui.getLogArea());
 			}
@@ -1186,6 +1221,7 @@ public class GameWindow {
 			}
 		}
 
+		renderCorpses();
 // Render the player
 		renderPlayers();
 

@@ -74,6 +74,7 @@ public class ClientLogic {
 			@Override
 			public void run() {
 				Platform.runLater(() -> logUniqueServerIDs(logArea));
+				System.out.println("Corpse size ="+GameLogic.corpseList.size());
 			}
 		}, 0, 1000); // 0 delay, 1000 milliseconds (1 seconds) period
 	}
@@ -131,7 +132,7 @@ public class ClientLogic {
 	public static void sendMessage(String message, TextArea logArea) {
 		if (connectedServerAddress != null && connectedServerPort != -1) {
 			try {
-				if (message.startsWith("/sys/") || message.startsWith("/name/")) {
+				if (message.startsWith("/sys/") || message.startsWith("/name/") || message.startsWith("/kill/")) {
 					byte[] buf = message.getBytes(StandardCharsets.UTF_8);
 					DatagramPacket packet = new DatagramPacket(buf, buf.length, connectedServerAddress,
 							connectedServerPort);
@@ -212,7 +213,7 @@ public class ClientLogic {
 					try {
 						clientSocket.receive(packet);
 						String received = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
-						// System.out.println(received);
+						// Handle system messages
 						if (received.startsWith("/sys/")) {
 							if ("/sys/PONG".equals(received)) {
 								missedPings = 0; // Reset missed ping count
@@ -221,23 +222,9 @@ public class ClientLogic {
 							} else if ("/sys/ACK".equals(received)) {
 								System.out.println("Handshake Test Complete"); // Print to terminal for debugging
 							}
-						} else if (received.startsWith("/data/") || received.startsWith("/kill/")
-								|| received.startsWith("/report/")) {
-							// put here to prevent cout to log area
-						} else if (received.startsWith("/r/")) {
-							String msg = received.substring(3);
-							log(logArea, msg);
-						} else if (received.startsWith("/sname/")) {
-							String output = received.substring(7);
-							log(logArea, output);
-						} else if (received.startsWith("/ls/")) {
-							String list = received.substring(4);
-							log(logArea, list);
-						} else {
-							log(logArea, received);
 						}
-
-						if (received.startsWith("/data/")) {
+						// Handle game data messages
+						else if (received.startsWith("/data/")) {
 							String jsonStr = received.substring(6);
 							JSONObject json = new JSONObject(jsonStr);
 							// System.out.println(received);
@@ -286,9 +273,11 @@ public class ClientLogic {
 								}
 							}
 						}
-
-						if (received.startsWith("/kill/")) {
+						// Handle kill messages
+						else if (received.startsWith("/kill/")) {
 							try {
+								System.out.println(received);
+
 								String jsonStr = received.substring(6); // Remove "/kill/" prefix
 								JSONObject killReport = new JSONObject(jsonStr);
 								String killedPlayerKey = killReport.getString("killedPlayer");
@@ -319,8 +308,7 @@ public class ClientLogic {
 									killedPlayer.setStatus("dead");
 
 									// Create a corpse
-									Corpse corpse = GameLogic.createCorpse(killedPlayer); // create corpse and put into
-																							// list
+									Corpse corpse = GameLogic.createCorpse(killedPlayer);
 									System.out.println(
 											"CLIENT: Created corpse at " + corpse.getX() + "," + corpse.getY());
 								} else {
@@ -334,30 +322,45 @@ public class ClientLogic {
 								e.printStackTrace();
 							}
 						}
-//						 else if (received.startsWith("/report/")) {
-//							try {
-//								String jsonStr = received.substring(8); // Remove "/report/" prefix
-//								JSONObject reportJSON = new JSONObject(jsonStr);
-//
-//								String reporterKey = reportJSON.getString("reporter");
-//								String deadBodyKey = reportJSON.getString("deadBody");
-//
-//								// Find the reporter and dead body
-//								PlayerInfo reporter = GameLogic.playerList.get(reporterKey);
-//								Corpse corpse = GameLogic.getCorpse(deadBodyKey);
-//
-//								if (reporter != null && corpse != null) {
-//									// Mark body as found
-//									corpse.setFound(true);
-//									System.out.println("REPORT PLAYER : " + corpse.getPlayerName());
-//									// TODO
-//									// Trigger emergency meeting
-//									// GameLogic.startEmergencyMeeting(corpse.getPlayerName(), reporter.getName());
-//								}
-//							} catch (Exception e) {
-//								System.err.println("Error processing body report: " + e.getMessage());
-//							}
-//						}
+						// Handle report messages (currently commented out in your code)
+						/*
+						 * else if (received.startsWith("/report/")) { try { String jsonStr =
+						 * received.substring(8); // Remove "/report/" prefix JSONObject reportJSON =
+						 * new JSONObject(jsonStr);
+						 * 
+						 * String reporterKey = reportJSON.getString("reporter"); String deadBodyKey =
+						 * reportJSON.getString("deadBody");
+						 * 
+						 * // Find the reporter and dead body PlayerInfo reporter =
+						 * GameLogic.playerList.get(reporterKey); Corpse corpse =
+						 * GameLogic.getCorpse(deadBodyKey);
+						 * 
+						 * if (reporter != null && corpse != null) { // Mark body as found
+						 * corpse.setFound(true); System.out.println("REPORT PLAYER : " +
+						 * corpse.getPlayerName()); // TODO // Trigger emergency meeting //
+						 * GameLogic.startEmergencyMeeting(corpse.getPlayerName(), reporter.getName());
+						 * } } catch (Exception e) { System.err.println("Error processing body report: "
+						 * + e.getMessage()); } }
+						 */
+						// Handle relay messages
+						else if (received.startsWith("/r/")) {
+							String msg = received.substring(3);
+							log(logArea, msg);
+						}
+						// Handle server name messages
+						else if (received.startsWith("/sname/")) {
+							String output = received.substring(7);
+							log(logArea, output);
+						}
+						// Handle list messages
+						else if (received.startsWith("/ls/")) {
+							String list = received.substring(4);
+							log(logArea, list);
+						}
+						// Handle other messages (regular chat, etc.)
+						else {
+							log(logArea, received);
+						}
 					} catch (SocketTimeoutException e) {
 						// log(logArea, "No message received. Waiting...");
 					}

@@ -155,8 +155,31 @@ public class ServerLogic {
 			handleSystemMessage(received, clientAddress, clientPort, packet, logArea);
 		} else if (received.startsWith("/data/")) {
 			handlePlayerData(received, packet);
+		} else if (received.startsWith("/kill/")) {
+			// Add dedicated handler for kill messages
+			handleKillMessage(received, clientAddress, clientPort, logArea);
 		} else {
 			handleChatMessage(received, clientAddress, clientPort, logArea);
+		}
+	}
+
+	private static void handleKillMessage(String received, InetAddress clientAddress, int clientPort,
+			TextArea logArea) {
+		try {
+			String jsonStr = received.substring(6); // Remove "/kill/" prefix
+			JSONObject killReport = new JSONObject(jsonStr);
+
+			String killedPlayerKey = killReport.getString("killedPlayer");
+			String reporterKey = killReport.getString("reporter");
+
+			System.out.println("SERVER: Received kill report from " + clientAddress + ":" + clientPort);
+			System.out.println("SERVER: Kill details - Victim: " + killedPlayerKey + ", Reporter: " + reporterKey);
+
+			// Process the kill report
+			handleKillReport(killedPlayerKey, reporterKey, logArea);
+		} catch (Exception e) {
+			System.err.println("SERVER ERROR: Failed to process kill message: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -547,6 +570,7 @@ public class ServerLogic {
 			// Find the killed player
 			if (PlayerLogic.getLocalAddressPort().equals(killedPlayerKey)) {
 				System.out.println("WE GOT KILLED");
+				PlayerLogic.setStatus("dead");
 			} else {
 				PlayerInfo killedPlayer = GameLogic.playerList.get(killedPlayerKey);
 				PlayerInfo reporter = GameLogic.playerList.get(reporterKey);
