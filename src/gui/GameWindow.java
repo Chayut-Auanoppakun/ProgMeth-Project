@@ -39,6 +39,11 @@ import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.BorderStrokeStyle;
+import javafx.scene.layout.BorderWidths;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -47,6 +52,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.shape.Line;
@@ -242,6 +248,8 @@ public class GameWindow {
 				update();
 				render();
 				displayFPS();
+			    checkPlayerStateChange();
+
 				if (PlayerLogic.getMoving()) {
 					animation.play();
 				} else {
@@ -613,68 +621,90 @@ public class GameWindow {
 	}
 
 	private void renderPlayers(boolean renderGhost) {
-	    // Determine if local player is dead
-	    boolean localPlayerIsDead = "dead".equalsIgnoreCase(PlayerLogic.getStatus());
+		// Determine if local player is dead
+		boolean localPlayerIsDead = "dead".equalsIgnoreCase(PlayerLogic.getStatus());
 
-	    // Create a list to store all players (including local player) for sorting by y-position
-	    List<PlayerRenderInfo> playersToRender = new ArrayList<>();
+		// Create a list to store all players (including local player) for sorting by
+		// y-position
+		List<PlayerRenderInfo> playersToRender = new ArrayList<>();
 
-	    // Only add the local player if it matches the ghost/non-ghost filter
-	    if (renderGhost == localPlayerIsDead) {
-	        playersToRender.add(new PlayerRenderInfo("local", PlayerLogic.getMyPosX(), PlayerLogic.getMyPosY(), null,
-	                PlayerLogic.getCharID()));
-	    }
+		// Only add the local player if it matches the ghost/non-ghost filter
+		if (renderGhost == localPlayerIsDead) {
+			// For ghost rendering, check if we already have a corpse for the local player
+			String localPlayerKey = PlayerLogic.getLocalAddressPort();
+			boolean hasCorpse = GameLogic.corpseList.containsKey(localPlayerKey);
 
-	    // Add other players to the list if they match the filter criteria
-	    for (String key : GameLogic.playerList.keySet()) {
-	        PlayerInfo playerInfo = GameLogic.playerList.get(key);
-	        boolean playerIsDead = "dead".equalsIgnoreCase(playerInfo.getStatus());
-	        
-	        // Only add players that match our renderGhost criteria
-	        if (renderGhost == playerIsDead) {
-	            // Check if player is within FOV radius before adding to render list
-	            final int FOV_RADIUS = 1000; // Adjust as needed
-	            double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
-	            double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
-	            double distance = Math.sqrt(distX * distX + distY * distY);
+			// When rendering ghosts, only add if the player has moved from their corpse
+			// position
+			if (!renderGhost || !hasCorpse || (hasCorpse
+					&& (Math.abs(PlayerLogic.getMyPosX() - GameLogic.corpseList.get(localPlayerKey).getX()) > 10 || Math
+							.abs(PlayerLogic.getMyPosY() - GameLogic.corpseList.get(localPlayerKey).getY()) > 10))) {
+				playersToRender.add(new PlayerRenderInfo("local", PlayerLogic.getMyPosX(), PlayerLogic.getMyPosY(),
+						null, PlayerLogic.getCharID()));
+			}
+		}
 
-	            if (distance <= FOV_RADIUS) {
-	                playersToRender.add(new PlayerRenderInfo(key, playerInfo.getX(), playerInfo.getY(), playerInfo,
-	                        playerInfo.getCharacterID()));
-	            }
-	        }
-	    }
+		// Add other players to the list if they match the filter criteria
+		for (String key : GameLogic.playerList.keySet()) {
+			PlayerInfo playerInfo = GameLogic.playerList.get(key);
+			boolean playerIsDead = "dead".equalsIgnoreCase(playerInfo.getStatus());
 
-	    // If there are no players to render, return early
-	    if (playersToRender.isEmpty()) {
-	        return;
-	    }
+			// Only add players that match our renderGhost criteria
+			if (renderGhost == playerIsDead) {
+				// For ghost rendering, check if we already have a corpse for this player
+				boolean hasCorpse = GameLogic.corpseList.containsKey(key);
 
-	    // Sort players by Y position (higher Y values render on top/later)
-	    Collections.sort(playersToRender, Comparator.comparingDouble(PlayerRenderInfo::getY));
+				// When rendering ghosts, only add if the player has moved from their corpse
+				// position
+				if (!renderGhost || !hasCorpse
+						|| (hasCorpse && (Math.abs(playerInfo.getX() - GameLogic.corpseList.get(key).getX()) > 10
+								|| Math.abs(playerInfo.getY() - GameLogic.corpseList.get(key).getY()) > 10))) {
 
-	    // Get the GraphicsContext
-	    GraphicsContext gc = canvas.getGraphicsContext2D();
-	    double originalOpacity = gc.getGlobalAlpha();
-	    double ghostOpacity = 0.5; // 50% opacity for ghosts/dead players
+					// Check if player is within FOV radius before adding to render list
+					final int FOV_RADIUS = 1000; // Adjust as needed
+					double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
+					double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
+					double distance = Math.sqrt(distX * distX + distY * distY);
 
-	    // Render all players in sorted order
-	    for (PlayerRenderInfo player : playersToRender) {
-	        // If we're rendering ghosts, apply the ghost opacity
-	        if (renderGhost) {
-	            gc.setGlobalAlpha(ghostOpacity);
-	        }
+					if (distance <= FOV_RADIUS) {
+						playersToRender.add(new PlayerRenderInfo(key, playerInfo.getX(), playerInfo.getY(), playerInfo,
+								playerInfo.getCharacterID()));
+					}
+				}
+			}
+		}
 
-	        if (player.getKey().equals("local")) {
-	            renderLocalPlayer(player.getX(), player.getY());
-	        } else {
-	            renderOtherPlayer(player.getInfo());
-	        }
-	    }
+		// If there are no players to render, return early
+		if (playersToRender.isEmpty()) {
+			return;
+		}
 
-	    // Ensure opacity is reset to original value
-	    gc.setGlobalAlpha(originalOpacity);
+		// Sort players by Y position (higher Y values render on top/later)
+		Collections.sort(playersToRender, Comparator.comparingDouble(PlayerRenderInfo::getY));
+
+		// Get the GraphicsContext
+		GraphicsContext gc = canvas.getGraphicsContext2D();
+		double originalOpacity = gc.getGlobalAlpha();
+		double ghostOpacity = 0.5; // 50% opacity for ghosts/dead players
+
+		// Render all players in sorted order
+		for (PlayerRenderInfo player : playersToRender) {
+			// If we're rendering ghosts, apply the ghost opacity
+			if (renderGhost) {
+				gc.setGlobalAlpha(ghostOpacity);
+			}
+
+			if (player.getKey().equals("local")) {
+				renderLocalPlayer(player.getX(), player.getY());
+			} else {
+				renderOtherPlayer(player.getInfo());
+			}
+		}
+
+		// Ensure opacity is reset to original value
+		gc.setGlobalAlpha(originalOpacity);
 	}
+
 	private void renderCorpses() {
 		// Skip if there are no corpses
 		if (GameLogic.corpseList.isEmpty()) {
@@ -809,6 +839,18 @@ public class GameWindow {
 			SnapshotParameters params = new SnapshotParameters();
 			params.setFill(Color.TRANSPARENT); // Set the background to transparent
 
+			// Special handling for dead players (ghosts)
+			if ("dead".equalsIgnoreCase(PlayerLogic.getStatus())) {
+				// For dead players, use a static frame but still respect direction
+				if (PlayerLogic.getDirection() == 1) { // Left
+					playerIMG
+							.setViewport(new Rectangle2D(5 * FRAME_WIDTH, 1 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+				} else { // Right
+					playerIMG
+							.setViewport(new Rectangle2D(5 * FRAME_WIDTH, 0 * FRAME_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT));
+				}
+			}
+
 			// Take a snapshot of the playerIMG with transparency
 			Image playerImage = playerIMG.snapshot(params, null);
 
@@ -830,12 +872,12 @@ public class GameWindow {
 
 			// Draw the bottom 20-pixel collision area for the local player
 			gc.setStroke(Color.CYAN);
-			double collisionAreaY = localPlayerScreenY + 12; // Bottom 20 pixels (64 - 20 = 44, 44 / 2 = 22, 32 - 22 =
-																// 10)
+			double collisionAreaY = localPlayerScreenY + 12; // Bottom 20 pixels
 			gc.strokeRect(collisionBoxX, collisionAreaY, 48, 20);
 		}
 	}
 
+	// Update the renderOtherPlayer method for non-local player ghosts
 	private void renderOtherPlayer(PlayerInfo playerInfo) {
 		final int FOV_RADIUS = 1000; // Adjust this value as needed
 		double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
@@ -869,15 +911,19 @@ public class GameWindow {
 
 			ImageView otherPlayerIMG = playerSpriteCache.get(playerID);
 
-			// Set the frame based on movement state
+			// Set the frame based on movement state and whether player is dead
 			int direction = playerInfo.getDirection();
 			int frameIndex;
 
-			// Always use frame 5 (idle frame) when the player is not moving
-			if (playerInfo.isMoving()) {
+			// For dead players (ghosts), use a static frame but respect direction
+			if ("dead".equalsIgnoreCase(playerInfo.getStatus())) {
+				frameIndex = 0; // Static pose for ghosts
+			}
+			// For alive players, animate normally
+			else if (playerInfo.isMoving()) {
 				frameIndex = (int) ((System.currentTimeMillis() / ANIMATION_SPEED) % SPRITE_COLUMNS);
 			} else {
-				frameIndex = 5; // Always use frame 5 for stationary players
+				frameIndex = 5; // Always use frame 5 for stationary alive players
 			}
 
 			// Update viewport based on direction and frame
@@ -901,16 +947,7 @@ public class GameWindow {
 		}
 	}
 
-	private void handleKeyPress(KeyEvent event) {
-		pressedKeys.add(event.getCode());
-		// System.out.println("Key pressed: " + event.getCode()); // Debug output
-	}
-
-	private void handleKeyRelease(KeyEvent event) {
-		pressedKeys.remove(event.getCode());
-		// System.out.println("Key released: " + event.getCode()); // Debug output
-	}
-
+	// Update the updateMovement method to handle player turns even if dead
 	private void updateMovement(long now) {
 		if (lastUpdate == 0) {
 			lastUpdate = now;
@@ -930,26 +967,33 @@ public class GameWindow {
 		double dx = 0, dy = 0;
 		int Direction = PlayerLogic.getDirection();
 		boolean moved = false;
+
 		if (pressedKeys.contains(KeyCode.W)) {
 			dy -= speed * deltaTime; // Move up
+			moved = true;
 		}
 		if (pressedKeys.contains(KeyCode.S)) {
 			dy += speed * deltaTime; // Move down
+			moved = true;
 		}
 		if (pressedKeys.contains(KeyCode.A)) {
 			dx -= speed * deltaTime; // Move left
 			Direction = 1;
+			moved = true;
 		}
 		if (pressedKeys.contains(KeyCode.D)) {
 			dx += speed * deltaTime; // Move right
 			Direction = 2;
+			moved = true;
 		}
+
 		if (!PlayerLogic.getStatus().equals("dead")) { // if alive check for collision
 			// Move horizontally
 			if (dx != 0) {
 				if (!checkCollision(playerX + dx, playerY)) {
 					playerX += dx;
-					moved = true;
+				} else {
+					moved = false; // Hit collision, didn't actually move
 				}
 			}
 
@@ -957,28 +1001,47 @@ public class GameWindow {
 			if (dy != 0) {
 				if (!checkCollision(playerX, playerY + dy)) {
 					playerY += dy;
-					moved = true;
+				} else {
+					moved = false; // Hit collision, didn't actually move
 				}
 			}
-		} else { // if dead
+		} else { // if dead - no collision checks
 			playerX += dx;
 			playerY += dy;
 		}
-		// moved = true;
+
 		// Send the updated position to the server or client
 		PlayerLogic.isMoving(moved, Direction);
 		PlayerLogic.setPosition(playerX, playerY);
 
-		if (moved) {
-			if (animation.getStatus() != Animation.Status.RUNNING) {
-				animation.play();
+		// Handle animation updates for alive players only
+		if (!PlayerLogic.getStatus().equals("dead")) {
+			if (moved) {
+				if (animation.getStatus() != Animation.Status.RUNNING) {
+					animation.play();
+				}
+			} else {
+				if (animation.getStatus() == Animation.Status.RUNNING) {
+					animation.stop();
+					setPlayerIdleFrame();
+				}
 			}
 		} else {
+			// For dead players, always stop animation but still update direction
 			if (animation.getStatus() == Animation.Status.RUNNING) {
 				animation.stop();
-				setPlayerIdleFrame();
 			}
 		}
+	}
+
+	private void handleKeyPress(KeyEvent event) {
+		pressedKeys.add(event.getCode());
+		// System.out.println("Key pressed: " + event.getCode()); // Debug output
+	}
+
+	private void handleKeyRelease(KeyEvent event) {
+		pressedKeys.remove(event.getCode());
+		// System.out.println("Key released: " + event.getCode()); // Debug output
 	}
 
 	private void keylogger() {
@@ -994,7 +1057,7 @@ public class GameWindow {
 		if (pressedKeys.contains(KeyCode.F)) {
 			if (System.currentTimeMillis() - lastFpressed > 250) {
 				lastFpressed = System.currentTimeMillis();
-				if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("crewmate")) {
+				if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead")) {
 					System.out.println("F pressed - checking for interactive objects");
 
 					// Check for event collisions
@@ -1123,26 +1186,70 @@ public class GameWindow {
 
 	// TODO REFINE
 	private void createKillAnimation(PlayerInfo target) {
-		// Create a blood splatter effect
-		StackPane bloodSplatter = new StackPane();
-		bloodSplatter.setStyle("-fx-background-color: rgba(255, 0, 0, 0.5);");
-		bloodSplatter.setPrefSize(64, 64); // Adjust size as needed
+		try {
+			// Load the blood image rather than using a colored rectangle
+			Image bloodImage = new Image(getClass().getResourceAsStream("/player/blood.png"));
 
-		// Position the blood splatter at the killed player's location
-		double screenX = target.getX() - viewportX;
-		double screenY = target.getY() - viewportY;
-		bloodSplatter.setLayoutX(screenX);
-		bloodSplatter.setLayoutY(screenY);
+			if (bloodImage.isError()) {
+				System.err.println("Error loading blood image: " + bloodImage.getException().getMessage());
+				return;
+			}
 
-		// Add to root for visibility
-		root.getChildren().add(bloodSplatter);
+			// Create an ImageView for the blood splatter
+			ImageView bloodSplatter = new ImageView(bloodImage);
+			bloodSplatter.setFitWidth(96); // Adjust size for better visual impact
+			bloodSplatter.setFitHeight(96);
+			bloodSplatter.setPreserveRatio(true);
 
-		// Fade out animation
-		FadeTransition fadeOut = new FadeTransition(Duration.millis(2000), bloodSplatter);
-		fadeOut.setFromValue(1.0);
-		fadeOut.setToValue(0.0);
-		fadeOut.setOnFinished(e -> root.getChildren().remove(bloodSplatter));
-		fadeOut.play();
+			// Calculate the screen position accounting for zoom and viewport
+			// We need to transform the world coordinates to screen coordinates
+			double worldX = target.getX();
+			double worldY = target.getY();
+
+			// Apply viewport transformation and camera zoom
+			double screenX = (worldX - viewportX) * CAMERA_ZOOM;
+			double screenY = (worldY - viewportY) * CAMERA_ZOOM;
+
+			// Center the blood splatter on the player
+			screenX -= bloodSplatter.getFitWidth() / 2;
+			screenY -= bloodSplatter.getFitHeight() / 2;
+
+			// Position the blood splatter
+			bloodSplatter.setLayoutX(screenX);
+			bloodSplatter.setLayoutY(screenY);
+
+			// Add a subtle pulse effect for more impact
+			ScaleTransition pulse = new ScaleTransition(Duration.millis(300), bloodSplatter);
+			pulse.setFromX(0.8);
+			pulse.setFromY(0.8);
+			pulse.setToX(1.2);
+			pulse.setToY(1.2);
+			pulse.setCycleCount(1);
+
+			// Add to root for visibility
+			root.getChildren().add(bloodSplatter);
+
+			// Play the pulse animation
+			pulse.play();
+
+			// Fade out animation after the pulse
+			FadeTransition fadeOut = new FadeTransition(Duration.millis(2000), bloodSplatter);
+			fadeOut.setFromValue(1.0);
+			fadeOut.setToValue(0.0);
+			fadeOut.setDelay(Duration.millis(300)); // Start after pulse completes
+			fadeOut.setOnFinished(e -> root.getChildren().remove(bloodSplatter));
+
+			// Chain animations: pulse then fade
+			pulse.setOnFinished(e -> fadeOut.play());
+
+			// Log confirmation for debugging
+			System.out.println("Kill animation created at screen position: " + screenX + ", " + screenY);
+			System.out.println("Target world position was: " + worldX + ", " + worldY);
+
+		} catch (Exception e) {
+			System.err.println("Error creating kill animation: " + e.getMessage());
+			e.printStackTrace();
+		}
 	}
 
 	private void showTaskCompletedMessage() {
@@ -1233,9 +1340,9 @@ public class GameWindow {
 		gc.setFill(Color.BLACK);
 		gc.fillRect(0, 0, viewportWidth, viewportHeight);
 
-// Render layers that should appear below the player
+		// Render layers that should appear below players
 		for (MapLayer layer : map.getLayers()) {
-// Skip layers that should appear above the player
+			// Skip layers that should appear above the player
 			if (layer.getName().equalsIgnoreCase("Foreground") || layer.getName().equalsIgnoreCase("SuperForeground")) {
 				continue; // Skip these layers for now
 			}
@@ -1246,15 +1353,16 @@ public class GameWindow {
 				drawObjectGroup(gc, (ObjectGroup) layer, viewportX, viewportY);
 			}
 		}
+
+		// Render corpses before players so they appear underneath
 		renderCorpses();
-// Render the player
+
+		// Render alive players
 		renderPlayers(false);
 
-// Render layers that should appear above the player
+		// Render foreground layers
 		for (MapLayer layer : map.getLayers()) {
-			// Only render layers that should appear above the player
 			if (layer.getName().equalsIgnoreCase("Foreground") || layer.getName().equalsIgnoreCase("SuperForeground")) {
-
 				if (layer instanceof TileLayer) {
 					drawTileLayer(gc, (TileLayer) layer, viewportX, viewportY, screenWidth, screenHeight);
 				} else if (layer instanceof ObjectGroup) {
@@ -1262,8 +1370,11 @@ public class GameWindow {
 				}
 			}
 		}
-		if (PlayerLogic.getStatus().equals("dead"))
+
+		// If the local player is dead, also render ghost players
+		if (PlayerLogic.getStatus().equals("dead")) {
 			renderPlayers(true);
+		}
 	}
 
 	@SuppressWarnings("deprecation")
@@ -1793,6 +1904,477 @@ public class GameWindow {
 		return playerBox;
 	}
 
+	private void reportNearbyCorpse() {
+		// Skip if the player is dead - dead players can't report bodies
+		if ("dead".equalsIgnoreCase(PlayerLogic.getStatus())) {
+			System.out.println("Dead players cannot report bodies.");
+			showNotification("Cannot report bodies while dead");
+			return;
+		}
+
+		// Skip if the game has ended
+		if (GameLogic.isGameEnded()) {
+			return;
+		}
+
+		// Define report range
+		final double REPORT_RANGE = 150.0; // Adjust as needed
+
+		// Track the closest corpse
+		Corpse closestCorpse = null;
+		String closestCorpseKey = null;
+		double closestDistance = Double.MAX_VALUE;
+
+		// Check all corpses in the game
+		for (String corpseKey : GameLogic.corpseList.keySet()) {
+			Corpse corpse = GameLogic.corpseList.get(corpseKey);
+
+			// Skip corpses that have already been reported
+			if (corpse.isFound()) {
+				continue;
+			}
+
+			// Calculate distance to corpse
+			double dx = corpse.getX() - PlayerLogic.getMyPosX();
+			double dy = corpse.getY() - PlayerLogic.getMyPosY();
+			double distance = Math.sqrt(dx * dx + dy * dy);
+
+			// Check if this corpse is within range and closer than the current closest
+			if (distance <= REPORT_RANGE && distance < closestDistance) {
+				closestCorpse = corpse;
+				closestCorpseKey = corpseKey;
+				closestDistance = distance;
+			}
+		}
+
+		// If a corpse was found within range, report it
+		if (closestCorpse != null) {
+			System.out.println(
+					"Reporting corpse of " + closestCorpse.getPlayerName() + " at distance " + closestDistance);
+
+			// Mark the corpse as found
+			closestCorpse.setFound(true);
+
+			// Play report sound
+			SoundLogic.playSound("assets/sounds/report.wav", 0);
+
+			// Create a report animation
+			createReportAnimation(closestCorpse);
+
+			// Send the report to the server
+			String reporterKey = PlayerLogic.getLocalAddressPort();
+
+			// Send report based on game mode (server or client)
+			if (MainMenuPane.getState().equals(State.SERVER)) {
+				ServerLogic.handleBodyReport(reporterKey, closestCorpseKey, ServerSelectGui.getLogArea());
+			} else if (MainMenuPane.getState().equals(State.CLIENT)) {
+				// Create a report message for the server
+				JSONObject reportData = new JSONObject();
+				reportData.put("reporter", reporterKey);
+				reportData.put("corpse", closestCorpseKey);
+
+				String reportMessage = "/report/" + reportData.toString();
+				ClientLogic.sendMessage(reportMessage, ServerSelectGui.getLogArea());
+			}
+
+			// Start emergency meeting UI
+			startEmergencyMeeting(closestCorpse.getPlayerName());
+		} else {
+			// No corpses nearby
+			System.out.println("No unreported corpses nearby");
+			showNotification("No bodies nearby to report");
+		}
+	}
+
+	/**
+	 * Creates a visual animation when a body is reported.
+	 * 
+	 * @param corpse The reported corpse
+	 */
+	private void createReportAnimation(Corpse corpse) {
+		try {
+			// Load the report image
+			Image reportImage = new Image(getClass().getResourceAsStream("/ui/report.png"));
+
+			if (reportImage.isError()) {
+				System.err.println("Error loading report image: " + reportImage.getException().getMessage());
+				return;
+			}
+
+			// Create an ImageView for the report animation
+			ImageView reportView = new ImageView(reportImage);
+			reportView.setFitWidth(200);
+			reportView.setFitHeight(200);
+			reportView.setPreserveRatio(true);
+
+			// Calculate screen position for the report animation
+			double screenX = (corpse.getX() - viewportX) * CAMERA_ZOOM;
+			double screenY = (corpse.getY() - viewportY) * CAMERA_ZOOM;
+
+			// Center the animation
+			screenX -= reportView.getFitWidth() / 2;
+			screenY -= reportView.getFitHeight() / 2;
+
+			// Position the animation
+			reportView.setLayoutX(screenX);
+			reportView.setLayoutY(screenY);
+
+			// Add a scaling effect
+			reportView.setScaleX(0);
+			reportView.setScaleY(0);
+
+			// Add to root for visibility
+			root.getChildren().add(reportView);
+
+			// Scale up animation
+			ScaleTransition scaleUp = new ScaleTransition(Duration.millis(300), reportView);
+			scaleUp.setFromX(0);
+			scaleUp.setFromY(0);
+			scaleUp.setToX(1.0);
+			scaleUp.setToY(1.0);
+
+			// Hold at full size, then scale down
+			ScaleTransition scaleDown = new ScaleTransition(Duration.millis(300), reportView);
+			scaleDown.setFromX(1.0);
+			scaleDown.setFromY(1.0);
+			scaleDown.setToX(0);
+			scaleDown.setToY(0);
+			scaleDown.setDelay(Duration.millis(1000));
+
+			// Remove the view when animation is complete
+			scaleDown.setOnFinished(e -> root.getChildren().remove(reportView));
+
+			// Chain animations
+			scaleUp.setOnFinished(e -> scaleDown.play());
+
+			// Start animation
+			scaleUp.play();
+
+		} catch (Exception e) {
+			System.err.println("Error creating report animation: " + e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Shows a temporary notification message to the player.
+	 * 
+	 * @param message The message to display
+	 */
+	private void showNotification(String message) {
+		// Create a stylized label for the notification
+		Text notification = new Text(message);
+		notification.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
+		notification.setFill(Color.WHITE);
+		notification.setStroke(Color.BLACK);
+		notification.setStrokeWidth(1);
+
+		StackPane notificationPane = new StackPane(notification);
+		notificationPane.setStyle(
+				"-fx-background-color: rgba(50, 50, 70, 0.7);" + "-fx-padding: 10px;" + "-fx-background-radius: 5px;");
+
+		notificationPane.setLayoutX((screenWidth - 200) / 2);
+		notificationPane.setLayoutY(screenHeight * 0.7);
+		notificationPane.setOpacity(0);
+
+		root.getChildren().add(notificationPane);
+
+		// Fade in
+		FadeTransition fadeIn = new FadeTransition(Duration.millis(200), notificationPane);
+		fadeIn.setFromValue(0);
+		fadeIn.setToValue(1);
+		fadeIn.play();
+
+		// Hold then fade out
+		FadeTransition fadeOut = new FadeTransition(Duration.millis(200), notificationPane);
+		fadeOut.setFromValue(1);
+		fadeOut.setToValue(0);
+		fadeOut.setDelay(Duration.millis(1500));
+		fadeOut.setOnFinished(e -> root.getChildren().remove(notificationPane));
+
+		fadeIn.setOnFinished(e -> fadeOut.play());
+	}
+
+	/**
+	 * Starts the emergency meeting UI after a body is reported.
+	 * 
+	 * @param reportedPlayerName The name of the player whose body was reported
+	 */
+	private void startEmergencyMeeting(String reportedPlayerName) {
+		// This would open the meeting UI where players can discuss and vote
+		// For now, we'll just show a simple message
+
+		// Create a full-screen overlay for the meeting
+		Rectangle overlay = new Rectangle(0, 0, screenWidth, screenHeight);
+		overlay.setFill(new Color(0, 0, 0, 0.85));
+
+		// Create meeting text
+		Text headingText = new Text("EMERGENCY MEETING");
+		headingText.setFont(Font.font("Monospace", FontWeight.BOLD, 36));
+		headingText.setFill(Color.RED);
+		headingText.setStroke(Color.BLACK);
+		headingText.setStrokeWidth(2);
+
+		Text bodyReportedText = new Text("Dead Body Reported: " + reportedPlayerName);
+		bodyReportedText.setFont(Font.font("Monospace", FontWeight.MEDIUM, 24));
+		bodyReportedText.setFill(Color.WHITE);
+		bodyReportedText.setStroke(Color.BLACK);
+		bodyReportedText.setStrokeWidth(1);
+
+		// For a real implementation, you'd add player icons, voting UI, timer, etc.
+		Text instructionText = new Text("This is a placeholder for the emergency meeting UI.");
+		instructionText.setFont(Font.font("Monospace", FontWeight.NORMAL, 18));
+		instructionText.setFill(Color.LIGHTGRAY);
+
+		// Create the layout
+		VBox meetingContent = new VBox(20);
+		meetingContent.setAlignment(Pos.CENTER);
+		meetingContent.getChildren().addAll(headingText, bodyReportedText, instructionText);
+
+		StackPane meetingPane = new StackPane(overlay, meetingContent);
+		meetingPane.setPrefSize(screenWidth, screenHeight);
+
+		// Add to root for visibility
+		root.getChildren().add(meetingPane);
+
+		// For a simple example, auto-close after 5 seconds
+		// In a real game, this would stay open for discussion and voting
+		FadeTransition fadeOut = new FadeTransition(Duration.millis(500), meetingPane);
+		fadeOut.setFromValue(1);
+		fadeOut.setToValue(0);
+		fadeOut.setDelay(Duration.seconds(5));
+		fadeOut.setOnFinished(e -> root.getChildren().remove(meetingPane));
+		fadeOut.play();
+	}
+
+	/**
+	 * Shows a death panel when the player dies, styled to match the CharacterSelectGui.
+	 * 
+	 * @param killerCharId The character ID of the killer
+	 */
+	private void showDeathPanel(int killerCharId) {
+	    // Create panel container
+	    StackPane deathPanel = new StackPane();
+	    deathPanel.setPrefSize(screenWidth, screenHeight);
+	    
+	    // Add semi-transparent dark background
+	    Rectangle darkOverlay = new Rectangle(screenWidth, screenHeight);
+	    darkOverlay.setFill(new Color(0, 0, 0, 0.8)); // Darker overlay to make panel stand out
+	    
+	    // Create content container styled like CharacterSelectGui
+	    VBox contentBox = new VBox(20);
+	    contentBox.setAlignment(Pos.CENTER);
+	    contentBox.setPrefWidth(500);
+	    contentBox.setPrefHeight(550);
+	    contentBox.setMaxWidth(500);
+	    contentBox.setMaxHeight(550);
+	    contentBox.setPadding(new Insets(25));
+	    
+	    // Use the same dark blue-gray background as CharacterSelectGui
+	    contentBox.setStyle("-fx-background-color: rgba(30, 30, 50, 0.95);");
+	    
+	    // Create border with same blue accent color
+	    contentBox.setBorder(new Border(new BorderStroke(
+	            Paint.valueOf("#1e90ff"), // Blue border color
+	            BorderStrokeStyle.SOLID, 
+	            new CornerRadii(0), // Sharp corners
+	            new BorderWidths(3))));
+	    
+	    // Death title text
+	    Text title = new Text("YOU WERE KILLED");
+	    title.setFill(Paint.valueOf("#ff6347")); // Tomato red
+	    title.setFont(Font.font("Monospace", FontWeight.BOLD, 28));
+	    
+	    // Shadow effect for title text to make it pop (just like in CharacterSelectGui)
+	    title.setStyle("-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 3, 0, 0, 0);");
+	    
+	    // Character display container
+	    HBox characterBox = new HBox(50);
+	    characterBox.setAlignment(Pos.CENTER);
+	    characterBox.setPadding(new Insets(15, 0, 15, 0));
+	    
+	    // Create character displays with same style as CharacterSelectGui
+	    VBox playerBox = createCharSelectStyleCharacterDisplay(PlayerLogic.getCharID(), PlayerLogic.getName(), "Dead");
+	    VBox killerBox = createCharSelectStyleCharacterDisplay(killerCharId, "Your Killer", "Impostor");
+	    
+	    // Add bob animation to the killer
+	    TranslateTransition bobAnimation = new TranslateTransition(Duration.millis(700), killerBox);
+	    bobAnimation.setByY(15);
+	    bobAnimation.setAutoReverse(true);
+	    bobAnimation.setCycleCount(Animation.INDEFINITE);
+	    bobAnimation.play();
+	    
+	    // Add the character boxes
+	    characterBox.getChildren().addAll(playerBox, killerBox);
+	    
+	    // Ghost task info
+	    Text ghostInfoText = new Text("You can continue to play as a ghost.\nComplete tasks to help your team win!");
+	    ghostInfoText.setFill(Paint.valueOf("#87cefa")); // Light blue text
+	    ghostInfoText.setFont(Font.font("Monospace", 16));
+	    ghostInfoText.setTextAlignment(TextAlignment.CENTER);
+	    
+	    // Continue button using same style as CharacterSelectGui buttons
+	    Button continueButton = new Button("CONTINUE AS GHOST");
+	    
+	    // Match the button style from CharacterSelectGui
+	    String baseButtonStyle = "-fx-background-color: #1e90ff;" +
+	                             "-fx-text-fill: white;" +
+	                             "-fx-font-family: 'Monospace';" +
+	                             "-fx-font-size: 16px;" +
+	                             "-fx-font-weight: bold;" +
+	                             "-fx-padding: 10 20 10 20;" +
+	                             "-fx-border-color: #87cefa;" +
+	                             "-fx-border-width: 2px;" +
+	                             "-fx-background-radius: 0;" +
+	                             "-fx-border-radius: 0;" +
+	                             "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 5, 0, 0, 1);";
+
+	    String hoverButtonStyle = "-fx-background-color: #00bfff;" +
+	                              "-fx-text-fill: white;" +
+	                              "-fx-font-family: 'Monospace';" +
+	                              "-fx-font-size: 16px;" +
+	                              "-fx-font-weight: bold;" +
+	                              "-fx-padding: 10 20 10 20;" +
+	                              "-fx-border-color: #b0e2ff;" +
+	                              "-fx-border-width: 2px;" +
+	                              "-fx-background-radius: 0;" +
+	                              "-fx-border-radius: 0;" +
+	                              "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 8, 0, 0, 1);";
+	    
+	    continueButton.setStyle(baseButtonStyle);
+	    continueButton.setPrefWidth(250);
+	    
+	    // Add hover effects
+	    continueButton.setOnMouseEntered(e -> continueButton.setStyle(hoverButtonStyle));
+	    continueButton.setOnMouseExited(e -> continueButton.setStyle(baseButtonStyle));
+	    
+	    // Button action to close the panel
+	    continueButton.setOnAction(e -> {
+	        FadeTransition fadeOut = new FadeTransition(Duration.millis(500), deathPanel);
+	        fadeOut.setFromValue(1);
+	        fadeOut.setToValue(0);
+	        fadeOut.setOnFinished(event -> root.getChildren().remove(deathPanel));
+	        fadeOut.play();
+	    });
+	    
+	    // Add all elements to the content box
+	    contentBox.getChildren().addAll(title, characterBox, ghostInfoText, continueButton);
+	    
+	    // Add elements to the panel
+	    deathPanel.getChildren().addAll(darkOverlay, contentBox);
+	    
+	    // Add panel to the root with animation
+	    deathPanel.setOpacity(0);
+	    root.getChildren().add(deathPanel);
+	    
+	    // Create fade-in animation
+	    FadeTransition fadeIn = new FadeTransition(Duration.millis(800), deathPanel);
+	    fadeIn.setFromValue(0);
+	    fadeIn.setToValue(1);
+	    fadeIn.play();
+	    
+	    // Play death sound
+	    SoundLogic.playSound("assets/sounds/impostor_kill.wav", 0);
+	}
+
+	/**
+	 * Creates a character display matching the CharacterSelectGui style
+	 */
+	private VBox createCharSelectStyleCharacterDisplay(int charId, String name, String status) {
+	    VBox charBox = new VBox(10);
+	    charBox.setAlignment(Pos.CENTER);
+	    charBox.setStyle("-fx-background-color: rgba(42, 42, 58, 0.6);" +
+	                     "-fx-padding: 15px;" +
+	                     "-fx-border-color: #1e90ff;" +
+	                     "-fx-border-width: 2px;");
+	    
+	    // Load character profile image
+	    String profilePath = String.format("/player/profile/%02d.png", (charId + 1));
+	    try {
+	        Image profileImage = new Image(getClass().getResourceAsStream(profilePath));
+	        ImageView profileView = new ImageView(profileImage);
+	        
+	        // Set size matching CharacterSelectGui
+	        profileView.setFitWidth(150);
+	        profileView.setFitHeight(200);
+	        profileView.setPreserveRatio(true);
+	        
+	        // Add styling to match CharacterSelectGui
+	        profileView.setStyle("-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 5, 0, 0, 1);" +
+	                            "-fx-border-color: #1e90ff;" +
+	                            "-fx-border-width: 2px;" +
+	                            "-fx-background-color: #2a2a3a;");
+	        
+	        // Name label
+	        Text nameText = new Text(name);
+	        nameText.setFont(Font.font("Monospace", FontWeight.BOLD, 18));
+	        nameText.setFill(Color.WHITE);
+	        
+	        // Status label
+	        Text statusText = new Text(status);
+	        statusText.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
+	        
+	        // Set color based on status
+	        if (status.equalsIgnoreCase("Impostor")) {
+	            statusText.setFill(Color.RED);
+	        } else {
+	            statusText.setFill(Color.LIGHTBLUE);
+	        }
+	        
+	        // Add all elements to the box
+	        charBox.getChildren().addAll(profileView, nameText, statusText);
+	        
+	    } catch (Exception e) {
+	        System.err.println("Error loading profile image: " + e.getMessage());
+	        
+	        // Fallback for missing image
+	        Rectangle fallbackImage = new Rectangle(150, 150);
+	        fallbackImage.setFill(Color.DARKGRAY);
+	        
+	        Text nameText = new Text(name);
+	        nameText.setFont(Font.font("Monospace", FontWeight.BOLD, 18));
+	        nameText.setFill(Color.WHITE);
+	        
+	        Text statusText = new Text(status);
+	        statusText.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
+	        statusText.setFill(status.equalsIgnoreCase("Impostor") ? Color.RED : Color.LIGHTBLUE);
+	        
+	        charBox.getChildren().addAll(fallbackImage, nameText, statusText);
+	    }
+	    
+	    return charBox;
+	}
+
+	/**
+	 * Check for player death and show the death panel
+	 */
+	private boolean wasAlive = true; // Add as a class field
+
+	private void checkPlayerStateChange() {
+	    boolean isAlive = !"dead".equalsIgnoreCase(PlayerLogic.getStatus());
+	    
+	    // Check if player just died
+	    if (wasAlive && !isAlive) {
+	        // Get the killer character ID - replace with your implementation
+	        int killerCharId = getKillerCharacterId();
+	        
+	        // Show death panel
+	        Platform.runLater(() -> showDeathPanel(killerCharId));
+	    }
+	    
+	    // Update state tracker
+	    wasAlive = isAlive;
+	}
+
+	/**
+	 * Gets the killer's character ID
+	 * Replace this with your actual implementation
+	 */
+	private int getKillerCharacterId() {
+	    // This is a placeholder - you should implement this to return the actual killer
+	    return new Random().nextInt(10);
+	}
+	
 	// Add this method to GameWindow class to make it callable from other classes
 	public static void triggerGameStartTransition() {
 		if (gameWindowInstance != null) {
