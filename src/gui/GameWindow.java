@@ -59,6 +59,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import logic.*;
 
+import org.json.JSONObject;
 import org.mapeditor.core.Map;
 import org.mapeditor.core.MapLayer;
 import org.mapeditor.core.ObjectGroup;
@@ -915,15 +916,112 @@ public class GameWindow {
 						System.out.println("No interactive object nearby");
 						// Maybe show a hint message that there's nothing to interact with
 					}
-				} else { // For Imposter cannot Do tasks
-					for (String key : GameLogic.playerList.keySet()) {
-						PlayerInfo playerInfo = GameLogic.playerList.get(key);
-						if ("imposter".equals(playerInfo.getStatus())) {
-						}
+				} else { // For Imposter kill code
+					PlayerInfo closestTarget = findClosestKillablePlayer();
+					if (closestTarget != null) {
+						// Trigger kill method
+						killPlayer(closestTarget);
+					} else {
+						System.out.println("No players in kill range");
 					}
 				}
 			}
 		}
+	}
+
+	private PlayerInfo findClosestKillablePlayer() {
+		// Kill range (adjust as needed)
+		final double KILL_RANGE = 100.0;
+
+		PlayerInfo closestPlayer = null;
+		double closestDistance = Double.MAX_VALUE;
+
+		for (String key : GameLogic.playerList.keySet()) {
+			PlayerInfo playerInfo = GameLogic.playerList.get(key);
+
+			// Skip dead players, imposters, and the local player
+			if ("dead".equals(playerInfo.getStatus()) || "imposter".equals(playerInfo.getStatus())
+					|| key.equals(PlayerLogic.getLocalAddressPort())) {
+				continue;
+			}
+
+			// Calculate distance
+			double dx = playerInfo.getX() - PlayerLogic.getMyPosX();
+			double dy = playerInfo.getY() - PlayerLogic.getMyPosY();
+			double distance = Math.sqrt(dx * dx + dy * dy);
+
+			// Update closest player if within range
+			if (distance <= KILL_RANGE && distance < closestDistance) {
+				closestPlayer = playerInfo;
+				closestDistance = distance;
+			}
+		}
+
+		return closestPlayer;
+	}
+
+	private void killPlayer(PlayerInfo target) {
+		// Validate kill
+		if (target == null || !"crewmate".equals(target.getStatus())) {
+			System.out.println("Invalid kill attempt");
+			return;
+		}
+
+		// Prepare kill report to send to server
+		try {
+			// Construct the report payload
+			JSONObject killReport = new JSONObject();
+			String killedPlayerKey = target.getAddress().getHostAddress() + ":" + target.getPort();
+			killReport.put("killedPlayer", killedPlayerKey);
+			killReport.put("reporter", PlayerLogic.getLocalAddressPort());
+			killReport.put("killLocation", new double[] { target.getX(), target.getY() });
+
+			// Send kill report to server
+			String message = "/kill/" + killReport.toString();
+
+			// Use ClientLogic to send the message
+			if (MainMenuPane.getState().equals(State.CLIENT)) {
+				ClientLogic.sendMessage(message, null);
+			} else if (MainMenuPane.getState().equals(State.SERVER)) {
+				// If server, directly call server logic
+				ServerLogic.handleKillReport(killedPlayerKey, PlayerLogic.getLocalAddressPort(), null);
+			}
+
+			// Play kill sound effect
+			String killSoundPath = "assets/sounds/Kill_Sound.wav";
+			SoundLogic.playSound(killSoundPath, 0);
+
+			// Create kill animation
+			createKillAnimation(target);
+
+			System.out.println("Kill report sent for player: " + target.getName());
+		} catch (Exception e) {
+			System.err.println("Error sending kill report: " + e.getMessage());
+		}
+	}
+
+	// TODO REFINE
+	private void createKillAnimation(PlayerInfo target) {
+		// Create a blood splatter effect
+		StackPane bloodSplatter = new StackPane();
+		bloodSplatter.setStyle("-fx-background-color: rgba(255, 0, 0, 0.5);");
+		bloodSplatter.setPrefSize(64, 64); // Adjust size as needed
+
+		// Position the blood splatter at the killed player's location
+		double screenX = target.getX() - viewportX;
+		double screenY = target.getY() - viewportY;
+		bloodSplatter.setLayoutX(screenX);
+		bloodSplatter.setLayoutY(screenY);
+
+		// Add to root for visibility
+		root.getChildren().add(bloodSplatter);
+
+		// Fade out animation
+		FadeTransition fadeOut = new FadeTransition(Duration.millis(2000), bloodSplatter);
+		fadeOut.setFromValue(1.0);
+		fadeOut.setToValue(0.0);
+		fadeOut.setOnFinished(e -> root.getChildren().remove(bloodSplatter));
+		fadeOut.play();
 	}
 
 	private void showTaskCompletedMessage() {

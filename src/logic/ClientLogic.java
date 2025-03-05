@@ -14,6 +14,9 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import org.json.JSONObject;
+
+import gameObjects.Corpse;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -215,7 +218,8 @@ public class ClientLogic {
 							} else if ("/sys/ACK".equals(received)) {
 								System.out.println("Handshake Test Complete"); // Print to terminal for debugging
 							}
-						} else if (received.startsWith("/data/")) {
+						} else if (received.startsWith("/data/") || received.startsWith("/body/")
+								|| received.startsWith("/report/")) {
 							// put here to prevent cout to log area
 						} else if (received.startsWith("/r/")) {
 							String msg = received.substring(3);
@@ -275,6 +279,55 @@ public class ClientLogic {
 								}
 							}
 
+						}
+
+						if (received.startsWith("/kill/")) {
+							try {
+								String jsonStr = received.substring(6); // Remove "/kill/" prefix
+								JSONObject killReport = new JSONObject(jsonStr);
+
+								String killedPlayerKey = killReport.getString("killedPlayer");
+								String playerName = killReport.getString("playerName");
+								double x = killReport.getDouble("x");
+								double y = killReport.getDouble("y");
+								int characterID = killReport.getInt("characterID");
+								long timeOfDeath = killReport.getLong("timeOfDeath");
+
+								// Find the killed player
+								PlayerInfo killedPlayer = GameLogic.playerList.get(killedPlayerKey);
+								if (killedPlayer != null) {
+									// Mark player as dead
+									killedPlayer.setStatus("dead");
+
+									// Create a corpse
+									GameLogic.createCorpse(killedPlayer); //create corpse and put into list
+								}
+							} catch (Exception e) {
+								System.err.println("Error processing dead body report: " + e.getMessage());
+							}
+						} else if (received.startsWith("/report/")) {
+							try {
+								String jsonStr = received.substring(8); // Remove "/report/" prefix
+								JSONObject reportJSON = new JSONObject(jsonStr);
+
+								String reporterKey = reportJSON.getString("reporter");
+								String deadBodyKey = reportJSON.getString("deadBody");
+
+								// Find the reporter and dead body
+								PlayerInfo reporter = GameLogic.playerList.get(reporterKey);
+								Corpse corpse = GameLogic.getCorpse(deadBodyKey);
+
+								if (reporter != null && corpse != null) {
+									// Mark body as found
+									corpse.setFound(true);
+									System.out.println("REPORT PLAYER : " + corpse.getPlayerName());
+									// TODO
+									// Trigger emergency meeting
+									// GameLogic.startEmergencyMeeting(corpse.getPlayerName(), reporter.getName());
+								}
+							} catch (Exception e) {
+								System.err.println("Error processing body report: " + e.getMessage());
+							}
 						}
 					} catch (SocketTimeoutException e) {
 						// log(logArea, "No message received. Waiting...");

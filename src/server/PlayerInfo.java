@@ -2,7 +2,6 @@ package server;
 
 import java.net.InetAddress;
 
-//For all the other players
 public class PlayerInfo extends ClientInfo {
 	private double x;
 	private double y;
@@ -12,6 +11,10 @@ public class PlayerInfo extends ClientInfo {
 	private boolean isMoving;
 	private int CharacterID;
 	boolean isReady = false;
+	
+	// New attributes for body tracking
+	private boolean isDead = false;
+	private boolean isFound = false;
 	
 	public PlayerInfo(InetAddress address, int port, String name, double x, double y, boolean isMoving, int Direction,
 			String status, int CharID) {
@@ -25,6 +28,24 @@ public class PlayerInfo extends ClientInfo {
 		this.CharacterID = CharID;
 	}
 
+	// Getters and setters for new attributes
+	public boolean isDead() {
+		return isDead;
+	}
+
+	public void setDead(boolean dead) {
+		isDead = dead;
+	}
+
+	public boolean isFound() {
+		return isFound;
+	}
+
+	public void setFound(boolean found) {
+		isFound = found;
+	}
+
+	// Existing getters and setters remain the same
 	public boolean isReady() {
 		return isReady;
 	}
