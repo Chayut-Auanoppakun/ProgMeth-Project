@@ -1220,7 +1220,6 @@ public class GameWindow {
 				drawObjectGroup(gc, (ObjectGroup) layer, viewportX, viewportY);
 			}
 		}
-
 		renderCorpses();
 // Render the player
 		renderPlayers();

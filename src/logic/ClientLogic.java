@@ -74,7 +74,7 @@ public class ClientLogic {
 			@Override
 			public void run() {
 				Platform.runLater(() -> logUniqueServerIDs(logArea));
-				System.out.println("Corpse size ="+GameLogic.corpseList.size());
+				System.out.println("Corpse size =" + GameLogic.corpseList.size());
 			}
 		}, 0, 1000); // 0 delay, 1000 milliseconds (1 seconds) period
 	}
@@ -272,56 +272,113 @@ public class ClientLogic {
 													direction, Status, charID));
 								}
 							}
-						}
-						// Handle kill messages
-						else if (received.startsWith("/kill/")) {
+						} else if (received.startsWith("/kill/")) {
 							try {
-								System.out.println(received);
+								System.out.println("CLIENT: Received kill message: " + received);
 
+								// Extract and parse the JSON data
 								String jsonStr = received.substring(6); // Remove "/kill/" prefix
-								JSONObject killReport = new JSONObject(jsonStr);
-								String killedPlayerKey = killReport.getString("killedPlayer");
-								String playerName = killReport.getString("playerName");
-								double x = killReport.getDouble("x");
-								double y = killReport.getDouble("y");
-								int characterID = killReport.getInt("characterID");
+								JSONObject killData = new JSONObject(jsonStr);
 
-								// Debug log
-								System.out.println("CLIENT: Received kill report for player: " + killedPlayerKey);
-								System.out.println("CLIENT: Kill location: " + x + "," + y);
+								// Extract all needed fields
+								String killedPlayerKey = killData.getString("killedPlayer");
+								String playerName = killData.getString("playerName");
+								double x = killData.getDouble("x");
+								double y = killData.getDouble("y");
+								int characterID = killData.getInt("characterID");
 
-								// Check if this is us (the local player)
+								System.out.println("CLIENT: Processing kill report for " + playerName + " at " + x + ","
+										+ y + " (Character ID: " + characterID + ")");
+
+								// Special handling if we are the killed player
 								if (killedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
-									System.out.println("CLIENT: WE GOT KILLED!");
-									// Update local player status
+									System.out.println("CLIENT: Local player was killed!");
+
+									// Update our own status
 									PlayerLogic.setStatus("dead");
-									// log(logArea, "You have been killed!");
-									System.out.println("You have been killed!");
-									// Could play death sound or show death animation here
+
+									// Play death sound
+									SoundLogic.playSound("assets/sounds/impostor_kill.wav", 0);
+
+									System.out.println("CLIENT: Updated local player status to dead");
 								}
 
 								// Find the killed player in our list
 								PlayerInfo killedPlayer = GameLogic.playerList.get(killedPlayerKey);
+
 								if (killedPlayer != null) {
-									System.out.println("CLIENT: Setting player " + killedPlayer.getName() + " as dead");
-									// Mark player as dead
+									System.out
+											.println("CLIENT: Found player in player list: " + killedPlayer.getName());
+
+									// Update player status to dead
 									killedPlayer.setStatus("dead");
 
-									// Create a corpse
-									Corpse corpse = GameLogic.createCorpse(killedPlayer);
-									System.out.println(
-											"CLIENT: Created corpse at " + corpse.getX() + "," + corpse.getY());
+									// Create a corpse if not already exists
+									if (!GameLogic.corpseList.containsKey(killedPlayerKey)) {
+										Corpse corpse = new Corpse(killedPlayer);
+										GameLogic.corpseList.put(killedPlayerKey, corpse);
+
+										System.out.println("CLIENT: Created corpse for " + killedPlayer.getName()
+												+ " at " + corpse.getX() + "," + corpse.getY());
+
+										// Print info about the corpse list
+										System.out.println(
+												"CLIENT: Current corpse list size: " + GameLogic.corpseList.size());
+									} else {
+										Corpse existingCorpse = GameLogic.corpseList.get(killedPlayerKey);
+										System.out.println("CLIENT: Corpse already exists at " + existingCorpse.getX()
+												+ "," + existingCorpse.getY());
+									}
 								} else {
-									System.out.println(
-											"CLIENT ERROR: Could not find player with key: " + killedPlayerKey);
-									System.out
-											.println("CLIENT: Available player keys: " + GameLogic.playerList.keySet());
+									System.out.println("CLIENT: Player " + killedPlayerKey
+											+ " not found in player list, creating placeholder");
+
+									// Create a placeholder player
+									try {
+										String[] addressParts = killedPlayerKey.split(":");
+										InetAddress address = InetAddress.getByName(addressParts[0]);
+										int port = Integer.parseInt(addressParts[1]);
+
+										// Create new player info
+										PlayerInfo placeholderPlayer = new PlayerInfo(address, port, playerName, x, y,
+												false, 0, "dead", characterID);
+
+										// Add to player list
+										GameLogic.playerList.put(killedPlayerKey, placeholderPlayer);
+
+										// Create corpse
+										Corpse corpse = new Corpse(placeholderPlayer);
+										GameLogic.corpseList.put(killedPlayerKey, corpse);
+
+										System.out.println(
+												"CLIENT: Created placeholder player and corpse at " + x + "," + y);
+										System.out.println(
+												"CLIENT: Current corpse list size: " + GameLogic.corpseList.size());
+									} catch (Exception e) {
+										System.err
+												.println("CLIENT ERROR creating placeholder player: " + e.getMessage());
+										e.printStackTrace();
+									}
 								}
+
+								// Play sound if not our own death (which already plays a sound)
+								if (!killedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+									SoundLogic.playSound("assets/sounds/dead_body.wav", 0);
+								}
+
+								// Debug info about all corpses
+								for (String key : GameLogic.corpseList.keySet()) {
+									Corpse c = GameLogic.corpseList.get(key);
+									System.out.println("CLIENT DEBUG - Corpse: " + c.getPlayerName() + " at " + c.getX()
+											+ "," + c.getY() + " (found: " + c.isFound() + ")");
+								}
+
 							} catch (Exception e) {
-								System.err.println("Error processing dead body report: " + e.getMessage());
+								System.err.println("CLIENT ERROR processing kill message: " + e.getMessage());
 								e.printStackTrace();
 							}
 						}
+
 						// Handle report messages (currently commented out in your code)
 						/*
 						 * else if (received.startsWith("/report/")) { try { String jsonStr =
