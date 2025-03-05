@@ -47,3 +47,4 @@ public class Task6 extends Pane {
         this.getChildren().addAll(trashBin, trashBag);
     }
 }
+ 
