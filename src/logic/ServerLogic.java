@@ -470,7 +470,10 @@ public class ServerLogic {
 	 * Logs a message to the text area on the JavaFX application thread
 	 */
 	private static void log(TextArea logArea, String message) {
-		Platform.runLater(() -> logArea.appendText(message + "\n"));
+		if (logArea != null)
+			Platform.runLater(() -> logArea.appendText(message + "\n"));
+		else
+			System.out.println("logArea missing " + message);
 	}
 
 	/**

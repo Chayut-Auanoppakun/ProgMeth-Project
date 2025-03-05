@@ -252,7 +252,8 @@ public class ClientLogic {
 								int direction = playerData.getInt("Direction");
 								boolean isMoving = playerData.getBoolean("isMoving");
 								int charID = playerData.getInt("charID");
-								String Status = playerData.optString("Status", "crewmate");
+								String Status = "crewmate";
+								Status = playerData.optString("Status", "Unknown");
 
 								// === For ending Prep Phase ===
 								if (!GameLogic.isPrepEnded()) {
@@ -264,7 +265,7 @@ public class ClientLogic {
 								}
 								// ================================
 								if (PlayerLogic.getLocalAddressPort().equals(key)) { // our own
-									if (PlayerLogic.getStatus() != Status) {
+									if (!PlayerLogic.getStatus().equals(Status)) {
 										System.out.println("Set Status to " + Status);
 										PlayerLogic.setStatus(Status);
 									}
@@ -276,6 +277,7 @@ public class ClientLogic {
 									existing.setDirection(direction);
 									existing.setStatus(Status);
 									existing.setCharacterID(charID);
+									existing.setStatus(Status);
 								} else {
 									GameLogic.playerList.put(key,
 											new PlayerInfo(InetAddress.getByName(key.split(":")[0]),

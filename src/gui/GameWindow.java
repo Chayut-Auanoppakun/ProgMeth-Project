@@ -615,47 +615,83 @@ public class GameWindow {
 	}
 
 	private void renderPlayers() {
-		// Create a list to store all players (including local player) for sorting by
-		// y-position
-		List<PlayerRenderInfo> playersToRender = new ArrayList<>();
+	    // Determine if local player is dead
+	    boolean localPlayerIsDead = "dead".equalsIgnoreCase(PlayerLogic.getStatus());
+	    
+	    // Create a list to store all players (including local player) for sorting by y-position
+	    List<PlayerRenderInfo> playersToRender = new ArrayList<>();
 
-		// Add the local player to the list
-		playersToRender.add(new PlayerRenderInfo("local", PlayerLogic.getMyPosX(), PlayerLogic.getMyPosY(), null, // For
-																													// local
-																													// player,
-																													// we'll
-																													// use
-																													// playerIMG
-																													// directly
-				PlayerLogic.getCharID()));
+	    // Add the local player to the list
+	    playersToRender.add(new PlayerRenderInfo("local", PlayerLogic.getMyPosX(), PlayerLogic.getMyPosY(), null,
+	            PlayerLogic.getCharID()));
 
-		// Add other players to the list
-		for (String key : GameLogic.playerList.keySet()) {
-			PlayerInfo playerInfo = GameLogic.playerList.get(key);
+	    // Add other players to the list
+	    for (String key : GameLogic.playerList.keySet()) {
+	        PlayerInfo playerInfo = GameLogic.playerList.get(key);
+	        
+	        // Skip rendering dead players if local player is alive
+	        boolean playerIsDead = "dead".equalsIgnoreCase(playerInfo.getStatus());
+	        if (!localPlayerIsDead && playerIsDead) {
+	            continue; // Living players cannot see dead players
+	        }
 
-			// Check if player is within FOV radius before adding to render list
-			final int FOV_RADIUS = 1000; // Adjust as needed
-			double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
-			double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
-			double distance = Math.sqrt(distX * distX + distY * distY);
+	        // Check if player is within FOV radius before adding to render list
+	        final int FOV_RADIUS = 1000; // Adjust as needed
+	        double distX = playerInfo.getX() - PlayerLogic.getMyPosX();
+	        double distY = playerInfo.getY() - PlayerLogic.getMyPosY();
+	        double distance = Math.sqrt(distX * distX + distY * distY);
 
-			if (distance <= FOV_RADIUS) {
-				playersToRender.add(new PlayerRenderInfo(key, playerInfo.getX(), playerInfo.getY(), playerInfo,
-						playerInfo.getCharacterID()));
-			}
-		}
+	        if (distance <= FOV_RADIUS) {
+	            playersToRender.add(new PlayerRenderInfo(key, playerInfo.getX(), playerInfo.getY(), playerInfo,
+	                    playerInfo.getCharacterID()));
+	        }
+	    }
 
-		// Sort players by Y position (higher Y values render on top/later)
-		Collections.sort(playersToRender, Comparator.comparingDouble(PlayerRenderInfo::getY));
+	    // Sort players by Y position (higher Y values render on top/later)
+	    Collections.sort(playersToRender, Comparator.comparingDouble(PlayerRenderInfo::getY));
 
-		// Render all players in sorted order
-		for (PlayerRenderInfo player : playersToRender) {
-			if (player.getKey().equals("local")) {
-				renderLocalPlayer(player.getX(), player.getY());
-			} else {
-				renderOtherPlayer(player.getInfo());
-			}
-		}
+	    // Get the GraphicsContext
+	    GraphicsContext gc = canvas.getGraphicsContext2D();
+	    double originalOpacity = gc.getGlobalAlpha();
+	    double deadPlayerOpacity = 0.5; // 50% opacity for dead players
+
+	    // Render all players in sorted order
+	    for (PlayerRenderInfo player : playersToRender) {
+	        boolean playerIsDead = false;
+	        
+	        if (player.getKey().equals("local")) {
+	            playerIsDead = "dead".equalsIgnoreCase(PlayerLogic.getStatus());
+	            
+	            // Apply transparency for dead local player
+	            if (playerIsDead) {
+	                gc.setGlobalAlpha(deadPlayerOpacity);
+	            }
+	            
+	            renderLocalPlayer(player.getX(), player.getY());
+	            
+	            // Reset opacity if modified
+	            if (playerIsDead) {
+	                gc.setGlobalAlpha(originalOpacity);
+	            }
+	        } else {
+	            playerIsDead = "dead".equalsIgnoreCase(player.getInfo().getStatus());
+	            
+	            // Apply transparency for dead players
+	            if (playerIsDead) {
+	                gc.setGlobalAlpha(deadPlayerOpacity);
+	            }
+	            
+	            renderOtherPlayer(player.getInfo());
+	            
+	            // Reset opacity if modified
+	            if (playerIsDead) {
+	                gc.setGlobalAlpha(originalOpacity);
+	            }
+	        }
+	    }
+	    
+	    // Ensure opacity is reset to original value
+	    gc.setGlobalAlpha(originalOpacity);
 	}
 
 	// Helper class to store player information for rendering
@@ -840,7 +876,7 @@ public class GameWindow {
 			dx += speed * deltaTime; // Move right
 			Direction = 2;
 		}
-		if (PlayerLogic.getStatus() != "dead") {
+		if (!PlayerLogic.getStatus().equals("dead")) {
 			// Move horizontally
 			if (dx != 0) {
 				if (!checkCollision(playerX + dx, playerY)) {

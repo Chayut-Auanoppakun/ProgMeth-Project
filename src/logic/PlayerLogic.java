@@ -16,17 +16,17 @@ public class PlayerLogic {
 	private static double myPosY = 0;
 	private static int charID = 99; // 99 is not initialized
 	private static boolean isPlayerReady = false;
-	private static String status;
+	private static String status = "crewmate";
 	private static boolean playdeadsound = false;
 
 	public static String getStatus() {
+		//System.out.println("Sending out Status : " + status);
 		return status;
 	}
 
-	public static void setStatus(String status) {
-		 System.out.println("PLAYERLOGIC: Player status changed from " +
-		 PlayerLogic.status + " to " + status);
-		PlayerLogic.status = status;
+	public static void setStatus(String newstatus) {
+		System.out.println("PLAYERLOGIC: Player status changed from " + PlayerLogic.status + " to " + newstatus);
+		status = newstatus;
 
 		// When player is killed, play a death sound
 		if ("dead".equals(status) && !playdeadsound) {
@@ -107,15 +107,6 @@ public class PlayerLogic {
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			return "unknown:0";
-		}
-	}
-
-	// For Imposters
-	public void KillPlayer() {
-		if (MainMenuPane.getState().equals(logic.State.SERVER)) {
-
-		} else {
-
 		}
 	}
 
