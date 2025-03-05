@@ -840,24 +840,26 @@ public class GameWindow {
 			dx += speed * deltaTime; // Move right
 			Direction = 2;
 		}
-
-		// Move horizontally
-		if (dx != 0) {
-			if (!checkCollision(playerX + dx, playerY)) {
-				playerX += dx;
-				moved = true;
+		if (PlayerLogic.getStatus() != "dead") {
+			// Move horizontally
+			if (dx != 0) {
+				if (!checkCollision(playerX + dx, playerY)) {
+					playerX += dx;
+					moved = true;
+				}
 			}
-		}
 
-		// Move vertically
-		if (dy != 0) {
-			if (!checkCollision(playerX, playerY + dy)) {
-				playerY += dy;
-				moved = true;
+			// Move vertically
+			if (dy != 0) {
+				if (!checkCollision(playerX, playerY + dy)) {
+					playerY += dy;
+					moved = true;
+				}
 			}
+		} else {
+			playerY += dy;
+			playerX += dx;
 		}
-//		playerY += dy;
-//		playerX += dx;
 		// moved = true;
 		// Send the updated position to the server or client
 		PlayerLogic.isMoving(moved, Direction);
@@ -962,41 +964,63 @@ public class GameWindow {
 
 	private void killPlayer(PlayerInfo target) {
 		// Validate kill
-		if (target == null || !"crewmate".equals(target.getStatus())) {
-			System.out.println("Invalid kill attempt");
+		if (target == null) {
+			System.out.println("GAMEWINDOW: Invalid kill attempt - target is null");
 			return;
 		}
 
+		if (!"crewmate".equals(target.getStatus())) {
+			System.out.println("GAMEWINDOW: Invalid kill attempt - target is not a crewmate: " + target.getStatus());
+			return;
+		}
+
+		System.out.println("GAMEWINDOW: Attempting to kill player: " + target.getName());
+
 		// Prepare kill report to send to server
 		try {
+			// Get killed player's info
+			String killedPlayerKey = target.getAddress().getHostAddress() + ":" + target.getPort();
+			String killerKey = PlayerLogic.getLocalAddressPort();
+
+			System.out.println("GAMEWINDOW: Kill details - Victim: " + killedPlayerKey + ", Killer: " + killerKey);
+
+			// Before sending the report, directly mark the player as dead in the local list
+			// This ensures we see the change immediately even before server response
+			target.setStatus("dead");
+			System.out.println("GAMEWINDOW: Marked player as dead in local state");
+
 			// Construct the report payload
 			JSONObject killReport = new JSONObject();
-			String killedPlayerKey = target.getAddress().getHostAddress() + ":" + target.getPort();
 			killReport.put("killedPlayer", killedPlayerKey);
-			killReport.put("reporter", PlayerLogic.getLocalAddressPort());
+			killReport.put("reporter", killerKey);
 			killReport.put("killLocation", new double[] { target.getX(), target.getY() });
 
 			// Send kill report to server
 			String message = "/kill/" + killReport.toString();
 
-			// Use ClientLogic to send the message
-			if (MainMenuPane.getState().equals(State.CLIENT)) {
-				ClientLogic.sendMessage(message, null);
-			} else if (MainMenuPane.getState().equals(State.SERVER)) {
-				// If server, directly call server logic
-				ServerLogic.handleKillReport(killedPlayerKey, PlayerLogic.getLocalAddressPort(), null);
-			}
-
 			// Play kill sound effect
-			String killSoundPath = "assets/sounds/Kill_Sound.wav";
+			String killSoundPath = "assets/sounds/impostor_kill.wav";
 			SoundLogic.playSound(killSoundPath, 0);
+			System.out.println("GAMEWINDOW: Playing kill sound effect");
 
 			// Create kill animation
 			createKillAnimation(target);
+			System.out.println("GAMEWINDOW: Created kill animation");
 
-			System.out.println("Kill report sent for player: " + target.getName());
+			// Use appropriate logic to send the message based on if we're server or client
+			if (MainMenuPane.getState().equals(State.CLIENT)) {
+				System.out.println("GAMEWINDOW: Sending kill message to server as CLIENT");
+				ClientLogic.sendMessage(message, ServerSelectGui.getLogArea());
+			} else if (MainMenuPane.getState().equals(State.SERVER)) {
+				System.out.println("GAMEWINDOW: Processing kill directly as SERVER");
+				// If server, directly call server logic
+				ServerLogic.handleKillReport(killedPlayerKey, killerKey, ServerSelectGui.getLogArea());
+			}
+
+			System.out.println("GAMEWINDOW: Kill report sent for player: " + target.getName());
 		} catch (Exception e) {
-			System.err.println("Error sending kill report: " + e.getMessage());
+			System.err.println("GAMEWINDOW ERROR: Error sending kill report: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 

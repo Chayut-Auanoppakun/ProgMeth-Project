@@ -13,7 +13,6 @@ public class PlayerInfo extends ClientInfo {
 	boolean isReady = false;
 	
 	// New attributes for body tracking
-	private boolean isDead = false;
 	private boolean isFound = false;
 	
 	public PlayerInfo(InetAddress address, int port, String name, double x, double y, boolean isMoving, int Direction,
@@ -26,15 +25,6 @@ public class PlayerInfo extends ClientInfo {
 		this.Direction = Direction;
 		this.status = status;
 		this.CharacterID = CharID;
-	}
-
-	// Getters and setters for new attributes
-	public boolean isDead() {
-		return isDead;
-	}
-
-	public void setDead(boolean dead) {
-		isDead = dead;
 	}
 
 	public boolean isFound() {

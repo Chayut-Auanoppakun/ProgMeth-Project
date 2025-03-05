@@ -3,11 +3,11 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry excluding="Test_Code/" kind="src" path="src"/>
 	<classpathentry kind="src" path="assets"/>
-	<classpathentry kind="lib" path="D:/Download/jaxb-impl-2.3.2.jar"/>
-	<classpathentry kind="lib" path="D:/Download/jaxb-api-2.3.1.jar"/>
-	<classpathentry kind="lib" path="D:/Download/activation-1.1.1.jar"/>
-	<classpathentry kind="lib" path="D:/Download/jaxb-core-2.3.0.1.jar"/>
-	<classpathentry kind="lib" path="D:/Download/libtiled-1.4.2.jar"/>
-	<classpathentry kind="lib" path="D:/Download/json-20250107.jar"/>
+	<classpathentry kind="lib" path="D:/Project Dep/activation-1.1.1.jar"/>
+	<classpathentry kind="lib" path="D:/Project Dep/jaxb-api-2.3.1.jar"/>
+	<classpathentry kind="lib" path="D:/Project Dep/jaxb-core-2.3.0.1.jar"/>
+	<classpathentry kind="lib" path="D:/Project Dep/jaxb-impl-2.3.2.jar"/>
+	<classpathentry kind="lib" path="D:/Project Dep/json-20250107.jar"/>
+	<classpathentry kind="lib" path="D:/Project Dep/libtiled-1.4.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

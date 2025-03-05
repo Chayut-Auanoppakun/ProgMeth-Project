@@ -173,8 +173,19 @@ public class GameLogic {
 	}
 
 	public static Corpse createCorpse(PlayerInfo player) {
+		String playerKey = player.getAddress().getHostAddress() + ":" + player.getPort();
+
+		// Check if a corpse already exists for this player
+		if (corpseList.containsKey(playerKey)) {
+			System.out.println("GAMELOGIC: Corpse already exists for player " + player.getName());
+			return corpseList.get(playerKey);
+		}
+
+		System.out.println(
+				"GAMELOGIC: Creating corpse for " + player.getName() + " at " + player.getX() + "," + player.getY());
 		Corpse corpse = new Corpse(player);
-		corpseList.put(corpse.getPlayerKey(), corpse);
+		corpseList.put(playerKey, corpse);
+		System.out.println("GAMELOGIC: Corpse created, total corpses: " + corpseList.size());
 		return corpse;
 	}
 

@@ -542,27 +542,33 @@ public class ServerLogic {
 	public static void handleKillReport(String killedPlayerKey, String reporterKey, TextArea logArea) {
 		try {
 			// Find the killed player
-			PlayerInfo killedPlayer = GameLogic.playerList.get(killedPlayerKey);
-			PlayerInfo reporter = GameLogic.playerList.get(reporterKey);
+			if (PlayerLogic.getLocalAddressPort().equals(killedPlayerKey)) {
+				System.out.println("WE GOT KILLED");
+			} else {
+				PlayerInfo killedPlayer = GameLogic.playerList.get(killedPlayerKey);
+				PlayerInfo reporter = GameLogic.playerList.get(reporterKey);
 
-			if (killedPlayer == null || reporter == null) {
-				log(logArea, "Error: Invalid kill report");
-				return;
+				if (killedPlayer == null || reporter == null) {
+					log(logArea, "Error: Invalid kill report");
+					return;
+				}
+
+				// Mark the player as dead
+				killedPlayer.setStatus("dead");
+				log(logArea, "Player " + killedPlayer.getName() + " has been killed");
+
+				// Create a corpse
+				Corpse corpse = GameLogic.createCorpse(killedPlayer);
+
+				// Broadcast the kill to all clients
+				broadcastKillReport(killedPlayerKey, corpse);
+
+				// No immediate emergency meeting
+				// Players will need to find and report the body
 			}
+		} catch (
 
-			// Mark the player as dead
-			killedPlayer.setStatus("dead");
-			log(logArea, "Player " + killedPlayer.getName() + " has been killed");
-
-			// Create a corpse
-			Corpse corpse = GameLogic.createCorpse(killedPlayer);
-
-			// Broadcast the kill to all clients
-			broadcastKillReport(killedPlayerKey, corpse);
-
-			// No immediate emergency meeting
-			// Players will need to find and report the body
-		} catch (Exception e) {
+		Exception e) {
 			log(logArea, "Error processing kill report: " + e.getMessage());
 		}
 	}
@@ -576,10 +582,14 @@ public class ServerLogic {
 			bodyReport.put("x", corpse.getX());
 			bodyReport.put("y", corpse.getY());
 			bodyReport.put("characterID", corpse.getCharacterID());
+			bodyReport.put("timeOfDeath", System.currentTimeMillis()); // Add timestamp
 
 			// Convert to message format
 			String message = "/kill/" + bodyReport.toString();
 			byte[] buf = message.getBytes(StandardCharsets.UTF_8);
+
+			System.out.println("SERVER: Broadcasting kill report for " + corpse.getPlayerName() + " at " + corpse.getX()
+					+ "," + corpse.getY());
 
 			// Send to all connected clients
 			for (ClientInfo clientInfo : clientAddresses) {
@@ -587,12 +597,17 @@ public class ServerLogic {
 					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
 							clientInfo.getPort());
 					serverSocket.send(packet);
+					System.out.println(
+							"SERVER: Kill report sent to " + clientInfo.getAddress() + ":" + clientInfo.getPort());
 				} catch (IOException e) {
 					System.err.println("Error broadcasting dead body: " + e.getMessage());
 				}
 			}
-		} catch (Exception e) {
+		} catch (
+
+		Exception e) {
 			System.err.println("Error in broadcastDeadBody: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -638,14 +653,14 @@ public class ServerLogic {
 			System.err.println("Error in broadcastBodyReport: " + e.getMessage());
 		}
 	}
-	
+
 	// Method to check if a body can be reported at a given location
 	public static String findReportableBodyNearby(double x, double y, double maxDistance) {
 		for (String key : GameLogic.playerList.keySet()) {
 			PlayerInfo player = GameLogic.playerList.get(key);
 
 			// Check for dead players that haven't been found yet
-			if (player.isDead() && !player.isFound()) {
+			if (player.getStatus().equals("dead") && !player.isFound()) {
 				double dx = player.getX() - x;
 				double dy = player.getY() - y;
 				double distance = Math.sqrt(dx * dx + dy * dy);

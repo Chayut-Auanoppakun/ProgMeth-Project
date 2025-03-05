@@ -222,4 +222,8 @@ public class ServerSelectGui extends Pane {
 		return CurState;
 	}
 
+	public static TextArea getLogArea() {
+		return logArea;
+	}
+
 }

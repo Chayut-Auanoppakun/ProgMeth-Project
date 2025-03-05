@@ -171,7 +171,10 @@ public class ClientLogic {
 	}
 
 	private static void log(TextArea logArea, String message) {
-		Platform.runLater(() -> logArea.appendText(message + "\n"));
+		if (logArea != null)
+			Platform.runLater(() -> logArea.appendText(message + "\n"));
+		else
+			System.out.println("logArea missing " + message);
 	}
 
 	private static void logUniqueServerIDs(TextArea logArea) {
@@ -218,7 +221,7 @@ public class ClientLogic {
 							} else if ("/sys/ACK".equals(received)) {
 								System.out.println("Handshake Test Complete"); // Print to terminal for debugging
 							}
-						} else if (received.startsWith("/data/") || received.startsWith("/body/")
+						} else if (received.startsWith("/data/") || received.startsWith("/kill/")
 								|| received.startsWith("/report/")) {
 							// put here to prevent cout to log area
 						} else if (received.startsWith("/r/")) {
@@ -249,7 +252,7 @@ public class ClientLogic {
 								int direction = playerData.getInt("Direction");
 								boolean isMoving = playerData.getBoolean("isMoving");
 								int charID = playerData.getInt("charID");
-								String Status = playerData.optString("Status", "Unknown");
+								String Status = playerData.optString("Status", "crewmate");
 
 								// === For ending Prep Phase ===
 								if (!GameLogic.isPrepEnded()) {
@@ -261,7 +264,10 @@ public class ClientLogic {
 								}
 								// ================================
 								if (PlayerLogic.getLocalAddressPort().equals(key)) { // our own
-									PlayerLogic.setStatus(Status);
+									if (PlayerLogic.getStatus() != Status) {
+										System.out.println("Set Status to " + Status);
+										PlayerLogic.setStatus(Status);
+									}
 								} else if (GameLogic.playerList.containsKey(key)) {
 									PlayerInfo existing = GameLogic.playerList.get(key);
 									existing.setX(pos[0]);
@@ -270,7 +276,6 @@ public class ClientLogic {
 									existing.setDirection(direction);
 									existing.setStatus(Status);
 									existing.setCharacterID(charID);
-									existing.setStatus(Status);
 								} else {
 									GameLogic.playerList.put(key,
 											new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
@@ -278,60 +283,79 @@ public class ClientLogic {
 													direction, Status, charID));
 								}
 							}
-
 						}
 
 						if (received.startsWith("/kill/")) {
 							try {
 								String jsonStr = received.substring(6); // Remove "/kill/" prefix
 								JSONObject killReport = new JSONObject(jsonStr);
-
 								String killedPlayerKey = killReport.getString("killedPlayer");
 								String playerName = killReport.getString("playerName");
 								double x = killReport.getDouble("x");
 								double y = killReport.getDouble("y");
 								int characterID = killReport.getInt("characterID");
-								long timeOfDeath = killReport.getLong("timeOfDeath");
 
-								// Find the killed player
+								// Debug log
+								System.out.println("CLIENT: Received kill report for player: " + killedPlayerKey);
+								System.out.println("CLIENT: Kill location: " + x + "," + y);
+
+								// Check if this is us (the local player)
+								if (killedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+									System.out.println("CLIENT: WE GOT KILLED!");
+									// Update local player status
+									PlayerLogic.setStatus("dead");
+									// log(logArea, "You have been killed!");
+									System.out.println("You have been killed!");
+									// Could play death sound or show death animation here
+								}
+
+								// Find the killed player in our list
 								PlayerInfo killedPlayer = GameLogic.playerList.get(killedPlayerKey);
 								if (killedPlayer != null) {
-									if (killedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
-										System.out.println("WE GOT KILLED");
-									}
+									System.out.println("CLIENT: Setting player " + killedPlayer.getName() + " as dead");
 									// Mark player as dead
 									killedPlayer.setStatus("dead");
 
 									// Create a corpse
-									GameLogic.createCorpse(killedPlayer); //create corpse and put into list
+									Corpse corpse = GameLogic.createCorpse(killedPlayer); // create corpse and put into
+																							// list
+									System.out.println(
+											"CLIENT: Created corpse at " + corpse.getX() + "," + corpse.getY());
+								} else {
+									System.out.println(
+											"CLIENT ERROR: Could not find player with key: " + killedPlayerKey);
+									System.out
+											.println("CLIENT: Available player keys: " + GameLogic.playerList.keySet());
 								}
 							} catch (Exception e) {
 								System.err.println("Error processing dead body report: " + e.getMessage());
-							}
-						} else if (received.startsWith("/report/")) {
-							try {
-								String jsonStr = received.substring(8); // Remove "/report/" prefix
-								JSONObject reportJSON = new JSONObject(jsonStr);
-
-								String reporterKey = reportJSON.getString("reporter");
-								String deadBodyKey = reportJSON.getString("deadBody");
-
-								// Find the reporter and dead body
-								PlayerInfo reporter = GameLogic.playerList.get(reporterKey);
-								Corpse corpse = GameLogic.getCorpse(deadBodyKey);
-
-								if (reporter != null && corpse != null) {
-									// Mark body as found
-									corpse.setFound(true);
-									System.out.println("REPORT PLAYER : " + corpse.getPlayerName());
-									// TODO
-									// Trigger emergency meeting
-									// GameLogic.startEmergencyMeeting(corpse.getPlayerName(), reporter.getName());
-								}
-							} catch (Exception e) {
-								System.err.println("Error processing body report: " + e.getMessage());
+								e.printStackTrace();
 							}
 						}
+//						 else if (received.startsWith("/report/")) {
+//							try {
+//								String jsonStr = received.substring(8); // Remove "/report/" prefix
+//								JSONObject reportJSON = new JSONObject(jsonStr);
+//
+//								String reporterKey = reportJSON.getString("reporter");
+//								String deadBodyKey = reportJSON.getString("deadBody");
+//
+//								// Find the reporter and dead body
+//								PlayerInfo reporter = GameLogic.playerList.get(reporterKey);
+//								Corpse corpse = GameLogic.getCorpse(deadBodyKey);
+//
+//								if (reporter != null && corpse != null) {
+//									// Mark body as found
+//									corpse.setFound(true);
+//									System.out.println("REPORT PLAYER : " + corpse.getPlayerName());
+//									// TODO
+//									// Trigger emergency meeting
+//									// GameLogic.startEmergencyMeeting(corpse.getPlayerName(), reporter.getName());
+//								}
+//							} catch (Exception e) {
+//								System.err.println("Error processing body report: " + e.getMessage());
+//							}
+//						}
 					} catch (SocketTimeoutException e) {
 						// log(logArea, "No message received. Waiting...");
 					}

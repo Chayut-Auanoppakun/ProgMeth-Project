@@ -17,13 +17,23 @@ public class PlayerLogic {
 	private static int charID = 99; // 99 is not initialized
 	private static boolean isPlayerReady = false;
 	private static String status;
+	private static boolean playdeadsound = false;
 
 	public static String getStatus() {
 		return status;
 	}
 
 	public static void setStatus(String status) {
+		 System.out.println("PLAYERLOGIC: Player status changed from " +
+		 PlayerLogic.status + " to " + status);
 		PlayerLogic.status = status;
+
+		// When player is killed, play a death sound
+		if ("dead".equals(status) && !playdeadsound) {
+			playdeadsound = true;
+			// Play death sound
+			SoundLogic.playSound("assets/sounds/impostor_kill.wav", 0);
+		}
 	}
 
 	public static boolean isPlayerReady() {
@@ -108,4 +118,5 @@ public class PlayerLogic {
 
 		}
 	}
+
 }
