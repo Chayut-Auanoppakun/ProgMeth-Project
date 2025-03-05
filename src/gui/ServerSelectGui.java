@@ -208,10 +208,10 @@ public class ServerSelectGui extends Pane {
 	}
 
 	private void startGame() {
+		toGameButton.setDisable(true);
 		isGameWindow = true;
 		Stage gameStage = new Stage();
 		new GameWindow().start(gameStage); // Start the GameWindow in a new window
-		settoGamedisable(true);
 	}
 
 	public static boolean isGameWindow() {
