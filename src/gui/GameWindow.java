@@ -966,7 +966,7 @@ public class GameWindow {
 	private boolean checkCollision(double x, double y) {
 		double playerLeft = x - 24; // Half of 48 (width)
 		double playerRight = x + 24; // Half of 48 (width)
-		double playerBottom = y + 32; // Bottom of the player's bounding box (64 height)
+		double playerBottom = y + 34; // Bottom of the player's bounding box (64 height)
 		double playerFeetTop = playerBottom - 20; // Top of the 20-pixel tall collision area
 
 		int startGridX = (int) (playerLeft / GRID_CELL_SIZE);
@@ -1353,7 +1353,7 @@ public class GameWindow {
 		// Set text and color based on role
 		boolean isImposter = "imposter".equals(PlayerLogic.getStatus());
 		if (isImposter) {
-			System.out.println("I AM IMPOSTER");
+			//System.out.println("I AM IMPOSTER");
 			roleText.setText("IMPOSTOR");
 			roleText.setFill(Color.rgb(255, 0, 0)); // Bright red text for impostor
 		} else {
@@ -1567,9 +1567,10 @@ public class GameWindow {
 
 		// Create container for role description and player's info
 		VBox infoContainer = new VBox(15);
-		infoContainer.setAlignment(Pos.TOP_CENTER);
 		infoContainer.getChildren().addAll(subtitleText);
-		infoContainer.setLayoutX((screenWidth - 300) / 2);
+		infoContainer.setPrefWidth(screenWidth);
+		infoContainer.setAlignment(Pos.CENTER);
+		infoContainer.setLayoutX(0);
 		infoContainer.setLayoutY(150);
 		infoContainer.setOpacity(0);
 
