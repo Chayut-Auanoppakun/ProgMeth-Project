@@ -1,6 +1,5 @@
 package logic;
 
-
 import java.util.concurrent.ConcurrentHashMap;
 import server.PlayerInfo;
 
@@ -34,9 +33,7 @@ public class GameLogic {
 	}
 
 	public static void setImposterCount(int count) {
-		if (count < Math.floor(playerList.size() / 2)) { // imposter must not be more than 1/2 of player
-			ImposterCount = count;
-		}
+		ImposterCount = count;
 	}
 
 	public static int autoImposterCount() {
@@ -45,6 +42,8 @@ public class GameLogic {
 			count = 1;
 		}
 		setImposterCount(count);
+		System.out.println(playerList.size());
+		System.out.println(ImposterCount);
 		return ImposterCount;
 	}
 
