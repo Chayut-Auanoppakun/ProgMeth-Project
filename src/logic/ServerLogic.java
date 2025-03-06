@@ -935,8 +935,14 @@ public class ServerLogic {
 				targetName = targetKey.equals(PlayerLogic.getLocalAddressPort()) ? PlayerLogic.getName()
 						: GameLogic.playerList.get(targetKey).getName();
 			}
-
-			log(logArea, voterName + " voted for " + targetName);
+			if (GameWindow.getGameWindowInstance() != null) {
+			    MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
+			    
+			    // Remove the meeting ID check entirely
+			    if (activeMeeting != null) {
+			        activeMeeting.receiveChatMessage(voterName, voterName + " voted for " + targetName, "player");
+			    }
+			}
 
 		} catch (Exception e) {
 			log(logArea, "Error handling vote: " + e.getMessage());

@@ -2441,7 +2441,7 @@ public class GameWindow {
 					meetingData.put("reportedCharId", reportedCharId);
 					meetingData.put("time", System.currentTimeMillis());
 
-					String meetingMessage = "/meeting/" + meetingData.toString();
+					String meetingMessage = "/report/" + meetingData.toString();
 
 					// Broadcast to all clients
 					for (ClientInfo clientInfo : ServerLogic.getConnectedClients()) {
