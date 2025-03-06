@@ -76,7 +76,7 @@ public class ClientLogic {
 			@Override
 			public void run() {
 				Platform.runLater(() -> logUniqueServerIDs(logArea));
-				System.out.println("Corpse size =" + GameLogic.corpseList.size());
+				//System.out.println("Corpse size =" + GameLogic.corpseList.size());
 			}
 		}, 0, 1000); // 0 delay, 1000 milliseconds (1 seconds) period
 	}

@@ -4,7 +4,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
@@ -29,7 +28,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
@@ -47,18 +45,15 @@ import javafx.scene.layout.BorderStroke;
 import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
-import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
-import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
-import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -101,7 +96,7 @@ public class GameWindow {
 	private GraphicsContext gc;
 	private PrepGui prepPhaseGui;
 	private static GameWindow gameWindowInstance;
-
+	private GameOverlayManager overlayManager;
 	// === Game State ===
 	private static boolean showCollision = false;
 	private static long lastCollisionChanged = 0;
@@ -235,7 +230,7 @@ public class GameWindow {
 				}
 
 				if (GameLogic.isPrepEnded() != PrepEnd) { // RUN AFTER PREP END ONCE
-					System.out.println("HIDE PREP");
+
 					PrepEnd = GameLogic.isPrepEnded();
 					updateUIForPrepPhase();
 					GameLogic.autoImposterCount(); // For now, automatically set imposter count to be 1/4 of player size
@@ -248,6 +243,10 @@ public class GameWindow {
 
 				if (!GameLogic.isPrepEnded() && prepPhaseGui != null) {
 					updatePrepPhasePlayerCount();
+				}
+				if (GameLogic.isPrepEnded() && overlayManager != null) {
+					overlayManager.updateTaskProgress();
+					overlayManager.updatePlayerRoleUI();
 				}
 				keylogger();
 				updateMovement(now);
@@ -275,6 +274,8 @@ public class GameWindow {
 
 		root = new Group();
 		root.getChildren().add(canvas);
+		overlayManager = new GameOverlayManager(this);
+		overlayManager.initialize(root, screenWidth, screenHeight);
 		setupCharacterSelectButton();
 		initializePrepPhaseUI();
 		taskContainer = new Pane();
@@ -1110,7 +1111,7 @@ public class GameWindow {
 		}
 	}
 
-	private PlayerInfo findClosestKillablePlayer() {
+	public PlayerInfo findClosestKillablePlayer() {
 		// Kill range (adjust as needed)
 		final double KILL_RANGE = 100.0;
 
@@ -1141,7 +1142,7 @@ public class GameWindow {
 		return closestPlayer;
 	}
 
-	private void killPlayer(PlayerInfo target) {
+	public void killPlayer(PlayerInfo target) {
 		// Validate kill
 		if (target == null) {
 			System.out.println("GAMEWINDOW: Invalid kill attempt - target is null");
@@ -1648,29 +1649,6 @@ public class GameWindow {
 		} else {
 			prepPhaseGui.hide();
 		}
-	}
-
-	private void updateUIForPrepPhase() {
-		Platform.runLater(() -> {
-			if (!GameLogic.isPrepEnded()) {
-				if (prepPhaseGui != null) {
-					prepPhaseGui.show();
-				}
-				if (characterSelectButton != null) {
-					characterSelectButton.setVisible(true);
-				}
-			} else {
-				if (prepPhaseGui != null) {
-					prepPhaseGui.hide();
-				}
-				if (characterSelectButton != null) {
-					characterSelectButton.setVisible(false);
-				}
-				if (characterSelectGui != null && characterSelectVisible) {
-					hideCharacterSelectGui();
-				}
-			}
-		});
 	}
 
 	private void updatePrepPhasePlayerCount() {
@@ -2231,13 +2209,11 @@ public class GameWindow {
 			int charID = reportedCharacterId;
 
 			// Use the same constants as in renderCorpses method
-			final int FRAME_WIDTH = 48;
-			final int FRAME_HEIGHT = 75;
 			final int HEAD_WIDTH = 48;
 			final int HEAD_HEIGHT = 48;
 
 			// Build character path string (format matches your existing code)
-			String playerPath = "/player/" + (charID < 9 ? "0" + (charID + 1) : "10") + ".png";
+			String playerPath = "/player/profile/" + (charID < 9 ? "0" + (charID + 1) : "10") + ".png";
 
 			// Load character sprite sheet
 			Image spriteSheet = new Image(getClass().getResourceAsStream(playerPath));
@@ -2345,7 +2321,7 @@ public class GameWindow {
 			});
 
 			// Play emergency meeting sound
-			SoundLogic.playSound("assets/sounds/report.wav", 0);
+			SoundLogic.playSound("assets/sounds/alarm_emergencymeeting.wav", 0);
 
 		} catch (Exception e) {
 			System.err.println("Error creating emergency meeting UI: " + e.getMessage());
@@ -2357,7 +2333,7 @@ public class GameWindow {
 	 * Modified reportNearbyCorpse method to pass the character ID to the emergency
 	 * meeting UI and trigger it for all players while hiding the reported corpse.
 	 */
-	private void reportNearbyCorpse() {
+	public void reportNearbyCorpse() {
 		// Skip if the player is dead - dead players can't report bodies
 		if ("dead".equalsIgnoreCase(PlayerLogic.getStatus())) {
 			System.out.println("Dead players cannot report bodies.");
@@ -2472,6 +2448,159 @@ public class GameWindow {
 		if (gameWindowInstance != null) {
 			Platform.runLater(() -> gameWindowInstance.showGameStartTransition());
 		}
+	}
+
+	public boolean hasNearbyInteractiveTask() {
+		// Check for event collisions
+		String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
+
+		// If we're colliding with an event object and it's not completed yet
+		if (!eventId.isEmpty() && !TaskLogic.isTaskCompleted(eventId)) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Checks if there's a killable player nearby
+	 * 
+	 * @return true if there's a killable player in range
+	 */
+	public boolean hasNearbyKillablePlayer() {
+		// Only imposters can kill and only if they're not dead
+		if (!"imposter".equals(PlayerLogic.getStatus()) || "dead".equals(PlayerLogic.getStatus())) {
+			return false;
+		}
+
+		// Kill range
+		final double KILL_RANGE = 100.0;
+
+		for (String key : GameLogic.playerList.keySet()) {
+			PlayerInfo playerInfo = GameLogic.playerList.get(key);
+
+			// Skip dead players, imposters, and the local player
+			if ("dead".equals(playerInfo.getStatus()) || "imposter".equals(playerInfo.getStatus())
+					|| key.equals(PlayerLogic.getLocalAddressPort())) {
+				continue;
+			}
+
+			// Calculate distance
+			double dx = playerInfo.getX() - PlayerLogic.getMyPosX();
+			double dy = playerInfo.getY() - PlayerLogic.getMyPosY();
+			double distance = Math.sqrt(dx * dx + dy * dy);
+
+			// Check if player is within kill range
+			if (distance <= KILL_RANGE) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Checks if there's a reportable corpse nearby
+	 * 
+	 * @return true if there's a reportable corpse in range
+	 */
+	public boolean hasNearbyCorpse() {
+		// Dead players can't report
+		if ("dead".equals(PlayerLogic.getStatus())) {
+			return false;
+		}
+
+		// Define report range
+		final double REPORT_RANGE = 150.0;
+
+		// Check all corpses in the game
+		for (String corpseKey : GameLogic.corpseList.keySet()) {
+			Corpse corpse = GameLogic.corpseList.get(corpseKey);
+
+			// Skip corpses that have already been reported
+			if (corpse.isFound()) {
+				continue;
+			}
+
+			// Calculate distance to corpse
+			double dx = corpse.getX() - PlayerLogic.getMyPosX();
+			double dy = corpse.getY() - PlayerLogic.getMyPosY();
+			double distance = Math.sqrt(dx * dx + dy * dy);
+
+			// Check if corpse is within report range
+			if (distance <= REPORT_RANGE) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Interact with the nearest task if any
+	 */
+	public void interactWithNearbyTask() {
+		if (System.currentTimeMillis() - lastFpressed > 250) {
+			lastFpressed = System.currentTimeMillis();
+
+			if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead")) {
+				System.out.println("Interact - checking for interactive objects");
+
+				// Check for event collisions
+				String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
+
+				// If we're colliding with an event object
+				if (!eventId.isEmpty()) {
+					System.out.println("Interacting with event: " + eventId);
+
+					// Attempt to open the task
+					boolean taskOpened = TaskLogic.openTask(eventId, taskContainer);
+
+					if (taskOpened) {
+						System.out.println("Task opened: " + eventId);
+					} else {
+						System.out.println("Failed to open task: " + eventId);
+						// Maybe show a notification that this task is already completed
+						if (TaskLogic.isTaskCompleted(eventId)) {
+							showTaskCompletedMessage();
+						}
+					}
+				} else {
+					System.out.println("No interactive object nearby");
+					// Maybe show a hint message that there's nothing to interact with
+				}
+			}
+		}
+	}
+
+	// Modify the updateUIForPrepPhase method to show/hide the overlay
+	private void updateUIForPrepPhase() {
+		Platform.runLater(() -> {
+			if (!GameLogic.isPrepEnded()) {
+				if (prepPhaseGui != null) {
+					prepPhaseGui.show();
+				}
+				if (characterSelectButton != null) {
+					characterSelectButton.setVisible(true);
+				}
+				if (overlayManager != null) {
+					overlayManager.hide();
+				}
+			} else {
+				if (prepPhaseGui != null) {
+					prepPhaseGui.hide();
+				}
+				if (characterSelectButton != null) {
+					characterSelectButton.setVisible(false);
+				}
+				if (characterSelectGui != null && characterSelectVisible) {
+					hideCharacterSelectGui();
+				}
+				if (overlayManager != null) {
+					overlayManager.show();
+				}
+			}
+		});
 	}
 
 	public static GameWindow getGameWindowInstance() {
