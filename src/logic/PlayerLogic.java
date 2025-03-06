@@ -141,7 +141,7 @@ public class PlayerLogic {
 	public static void randomizeTasks(int Amount) {
 		Random random = new Random();
 		while (tasks.size() < Amount) {
-			tasks.add(random.nextInt(1, 13)); // 1-13
+			tasks.add(random.nextInt(1, 22)); // 1-23
 		}
 		System.out.println("Random Tasks : " + tasks);
 	}

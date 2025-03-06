@@ -108,7 +108,7 @@ public class GameWindow {
 	// === Player Properties ===
 	private static double playerX = 980; // Starting Position
 	private static double playerY = 3616; // Starting Position
-	private static double speed = 120; // Movement speed in units per second
+	private static double speed = 130; // Movement speed in units per second
 	private ImageView playerIMG;
 	private Animation animation;
 
@@ -263,7 +263,7 @@ public class GameWindow {
 				if (System.currentTimeMillis() - lastchecktask > 500) {
 					lastchecktask = System.currentTimeMillis();
 					PlayerLogic.updateTaskPercent();
-					//System.out.println("Total Task % = " + getTotalPercentage());
+					// System.out.println("Total Task % = " + getTotalPercentage());
 				}
 
 				if (PlayerLogic.getMoving()) {
@@ -668,7 +668,7 @@ public class GameWindow {
 			if (renderGhost == playerIsDead) {
 				// For ghost rendering, check if we already have a corpse for this player
 				boolean hasCorpse = GameLogic.corpseList.containsKey(key);
-
+				hasCorpse = false; // TODO
 				// When rendering ghosts, only add if the player has moved from their corpse
 				// position
 				if (!renderGhost || !hasCorpse
@@ -932,7 +932,7 @@ public class GameWindow {
 
 			// For dead players (ghosts), use a static frame but respect direction
 			if ("dead".equalsIgnoreCase(playerInfo.getStatus())) {
-				frameIndex = 0; // Static pose for ghosts
+				frameIndex = 5; // Static pose for ghosts
 			}
 			// For alive players, animate normally
 			else if (playerInfo.isMoving()) {
@@ -1001,24 +1001,23 @@ public class GameWindow {
 			Direction = 2;
 			moved = true;
 		}
-
+		if (dx != 0 && dy != 0) { //cap diag speed
+			dx /= Math.sqrt(2);
+			dy /= Math.sqrt(2);
+		}
 		if (!PlayerLogic.getStatus().equals("dead")) { // if alive check for collision
 			// Move horizontally
 			if (dx != 0) {
 				if (!checkCollision(playerX + dx, playerY)) {
 					playerX += dx;
-				} else {
-					moved = false; // Hit collision, didn't actually move
-				}
+				} 
 			}
 
 			// Move vertically
 			if (dy != 0) {
 				if (!checkCollision(playerX, playerY + dy)) {
 					playerY += dy;
-				} else {
-					moved = false; // Hit collision, didn't actually move
-				}
+				} 
 			}
 		} else { // if dead - no collision checks
 			playerX += dx;
@@ -1088,7 +1087,6 @@ public class GameWindow {
 						try {
 							root.getChildren().remove(taskContainer); // Remove taskContainer first
 						} catch (Exception e) {
-							// TODO: handle exception
 						}
 
 						root.getChildren().add(taskContainer); // Re-add it to ensure it’s on top
