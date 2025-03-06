@@ -572,25 +572,22 @@ public class MeetingUI extends StackPane {
 	}
 
 	public void receiveChatMessage(String playerName, String message, String playerStatus) {
-		Platform.runLater(() -> {
-			// Check if the message is from a dead player
-			boolean isDeadMessage = "dead".equals(playerStatus);
-
-			// Add the message to the chat
-			String timestamp = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
-
-			// Format message differently based on sender status
-			String formattedMessage;
-			if (isDeadMessage) {
-				formattedMessage = "[" + timestamp + "] 👻 " + playerName + " (GHOST): " + message + "\n";
-			} else {
-				formattedMessage = "[" + timestamp + "] " + playerName + ": " + message + "\n";
-			}
-
-			// Add to chat area
-			chatArea.appendText(formattedMessage);
-			chatArea.setScrollTop(Double.MAX_VALUE); // Scroll to bottom
-		});
+	    Platform.runLater(() -> {
+	        // Check if the chat area is properly initialized
+	        if (chatArea == null) {
+	            System.err.println("Chat area is null in MeetingUI");
+	            return;
+	        }
+	        
+	        // Debug print to verify the method is being called
+	        System.out.println("MeetingUI received message: " + playerName + ": " + message);
+	        
+	        // Format and add the message to the chat area
+	        String timestamp = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+	        String formattedMessage = "[" + timestamp + "] " + playerName + ": " + message + "\n";
+	        chatArea.appendText(formattedMessage);
+	        chatArea.setScrollTop(Double.MAX_VALUE); // Scroll to bottom
+	    });
 	}
 
 	/**
@@ -1297,7 +1294,7 @@ public class MeetingUI extends StackPane {
 	}
 
 	/**
-	 * Closes the meeting UI
+	 * {@link Cloneable the meeting UI
 	 */
 	private void closeMeetingUI() {
 	    // Fade out animation

@@ -385,28 +385,38 @@ public class ClientLogic {
 						}
 
 						else if (received.startsWith("/meeting/")) {
-						    try {
-						        String jsonStr = received.substring(9); // Remove "/meeting/" prefix
-						        JSONObject meetingData = new JSONObject(jsonStr);
-						        
-						        // Only route chat messages to the meeting UI
-						        if (meetingData.has("type") && "chat".equals(meetingData.getString("type"))) {
-						            String meetingId = meetingData.getString("meetingId");
-						            String senderName = meetingData.getString("name");
-						            String message = meetingData.getString("message");
-						            String status = meetingData.optString("status", "crewmate");
-						            
-						            // Find the active meeting UI and route the message there
-						            if (GameWindow.getGameWindowInstance() != null) {
-						                MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
-						                if (activeMeeting != null && activeMeeting.getMeetingId().equals(meetingId)) {
-						                    activeMeeting.receiveChatMessage(senderName, message, status);
-						                }
-						            }
-						        }
-						    } catch (Exception e) {
-						        System.err.println("Error processing meeting message: " + e.getMessage());
-						    }
+							try {
+								String jsonStr = received.substring(9); // Remove "/meeting/" prefix
+								JSONObject meetingData = new JSONObject(jsonStr);
+
+								System.out.println("Client received meeting message: " + jsonStr);
+
+								if (meetingData.has("type") && "chat".equals(meetingData.getString("type"))) {
+									String meetingId = meetingData.getString("meetingId");
+									String senderName = meetingData.getString("name");
+									String message = meetingData.getString("message");
+									String status = meetingData.optString("status", "crewmate");
+
+									System.out.println("Client processing chat message for meeting: " + meetingId);
+									System.out.println(
+											"Have game window? " + (GameWindow.getGameWindowInstance() != null));
+
+									// In ClientLogic.java, in the "/meeting/" handler:
+
+									if (GameWindow.getGameWindowInstance() != null) {
+										MeetingUI activeMeeting = GameWindow.getGameWindowInstance()
+												.getActiveMeetingUI();
+
+										// Remove the meeting ID check entirely
+										if (activeMeeting != null) {
+											activeMeeting.receiveChatMessage(senderName, message, status);
+										}
+									}
+								}
+							} catch (Exception e) {
+								System.err.println("Error processing meeting message: " + e.getMessage());
+								e.printStackTrace();
+							}
 						} else if (received.startsWith("/vote/")) {
 							try {
 								// Extract vote data
@@ -415,12 +425,13 @@ public class ClientLogic {
 
 								String voterKey = voteData.getString("voter");
 								String targetKey = voteData.getString("target");
-								String meetingId = voteData.getString("meetingId");
 
 								// If there's an active meeting UI, update it with this vote
 								if (GameWindow.getGameWindowInstance() != null) {
 									MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
-									if (activeMeeting != null && activeMeeting.getMeetingId().equals(meetingId)) {
+
+									// Remove the meeting ID check entirely
+									if (activeMeeting != null) {
 										activeMeeting.receiveVote(voterKey, targetKey);
 									}
 								}

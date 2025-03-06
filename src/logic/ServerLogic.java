@@ -30,6 +30,7 @@ import org.json.JSONObject;
 import gameObjects.Corpse;
 import gui.GameWindow;
 import gui.MainMenuPane;
+import gui.MeetingUI;
 import gui.PrepGui;
 import gui.ServerSelectGui;
 
@@ -237,7 +238,18 @@ public class ServerLogic {
 				String senderName = meetingData.getString("name");
 
 				// Log the message
-				log(logArea, "[Meeting " + meetingId + "] " + senderName + ": " + chatMessage);
+				// In ServerLogic.java, modify the handleMeetingMessage method:
+
+				if (GameWindow.getGameWindowInstance() != null) {
+				    MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
+				    
+				    // Remove the meeting ID check entirely
+				    if (activeMeeting != null) {
+				        // Display the message in the server's MeetingUI
+				        activeMeeting.receiveChatMessage(senderName, chatMessage, 
+				            meetingData.optString("status", "crewmate"));
+				    }
+				}
 
 				// Relay the chat message to all other clients
 				relayMeetingChatToClients(senderKey, senderName, chatMessage, meetingId, logArea);
