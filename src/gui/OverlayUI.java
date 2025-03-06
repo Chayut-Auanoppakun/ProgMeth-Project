@@ -1,5 +1,9 @@
 package gui;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 import javafx.animation.FadeTransition;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -32,8 +36,7 @@ import server.PlayerInfo;
 public class OverlayUI extends Pane {
 	// UI Components
 	private Pane overlayPane;
-	private Rectangle taskProgressBar; // Now using Rectangle instead of ProgressBar
-	private double progressBarMaxWidth;
+	private ProgressBar taskProgressBar;
 	private Text taskProgressText;
 	private Button actionButton;
 	private Button reportButton;
@@ -58,6 +61,86 @@ public class OverlayUI extends Pane {
 		this.gameWindow = gameWindow;
 	}
 
+	private VBox createTaskListDisplay() {
+	    VBox taskListBox = new VBox(5);
+	    taskListBox.setAlignment(Pos.CENTER_LEFT);
+	    taskListBox.setMaxWidth(300);
+
+	    // Create stylized backing panel similar to progress bar
+	    Rectangle taskListBg = new Rectangle(300, 100);
+	    taskListBg.setArcWidth(12);
+	    taskListBg.setArcHeight(12);
+	    taskListBg.setFill(Color.rgb(30, 30, 50, 0.85));
+	    taskListBg.setStroke(Color.rgb(70, 130, 180, 0.8));
+	    taskListBg.setStrokeWidth(2);
+
+	    // Add drop shadow for depth
+	    DropShadow dropShadow = new DropShadow();
+	    dropShadow.setRadius(5.0);
+	    dropShadow.setOffsetX(3.0);
+	    dropShadow.setOffsetY(3.0);
+	    dropShadow.setColor(Color.rgb(0, 0, 0, 0.5));
+	    taskListBg.setEffect(dropShadow);
+
+	    // Task list title
+	    Text taskListTitle = new Text("Remaining Tasks");
+	    taskListTitle.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
+	    taskListTitle.setFill(Color.WHITE);
+
+	    // Create container for task list content
+	    VBox content = new VBox(8);
+	    content.setAlignment(Pos.CENTER_LEFT);
+	    content.setPadding(new Insets(10));
+
+	    // Map of task IDs to their descriptive names
+	    Map<Integer, String> taskDescriptions = new HashMap<>() {{
+	        put(1, "🔧 Fix Electrical Switches");
+	        put(2, "🚽 Unclog Toilet");
+	        put(3, "🔢 Restore Oxygen Systems");
+	        put(4, "🍽️ Wash Dishes");
+	        put(5, "🎣 Go Fishing");
+	        put(6, "🗑️ Take Out Trash");
+	        put(7, "🛏️ Make the Bed");
+	        put(8, "🔌 Repair Wiring");
+	        put(9, "📚 Organize Bookshelf");
+	        put(10, "🌼 Collect Flowers");
+	        put(11, "🧯 Extinguish Fires");
+	        put(12, "🪞 Clean Mirror");
+	        put(13, "🥕 Chop Vegetables");
+	    }};
+
+	    // Create container for task entries
+	    VBox taskList = new VBox(3);
+	    taskList.setAlignment(Pos.CENTER_LEFT);
+
+	    // Get the player's current tasks and display them
+	    Set<Integer> playerTasks = PlayerLogic.getTasks();
+	    if (playerTasks.isEmpty()) {
+	        Text noTasksText = new Text("All tasks completed!");
+	        noTasksText.setFont(Font.font("Monospace", FontWeight.BOLD, 12));
+	        noTasksText.setFill(Color.LIGHTGREEN);
+	        taskList.getChildren().add(noTasksText);
+	    } else {
+	        for (Integer taskId : playerTasks) {
+	            Text taskText = new Text(taskDescriptions.get(taskId));
+	            taskText.setFont(Font.font("Monospace", FontWeight.NORMAL, 12));
+	            taskText.setFill(Color.WHITE);
+	            taskList.getChildren().add(taskText);
+	        }
+	    }
+
+	    // Add title and task list to content
+	    content.getChildren().addAll(taskListTitle, taskList);
+
+	    // Create a StackPane to layer the background and content
+	    StackPane taskListPanel = new StackPane();
+	    taskListPanel.getChildren().addAll(taskListBg, content);
+
+	    // Add to main container
+	    taskListBox.getChildren().add(taskListPanel);
+
+	    return taskListBox;
+	}
 	/**
 	 * Initializes the overlay UI components and adds them to the root node.
 	 * 
@@ -122,44 +205,26 @@ public class OverlayUI extends Pane {
 		title.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
 		title.setFill(Color.WHITE);
 
-		// Custom progress bar using shapes instead of JavaFX ProgressBar
-		// This avoids the styling issues with ProgressBar
+		// Create a JavaFX ProgressBar
+		ProgressBar progressBar = new ProgressBar(0);
+		progressBar.setPrefWidth(screenWidth * 0.25);
+		progressBar.setPrefHeight(16);
+		progressBar.setStyle("-fx-accent: #2196F3;" + // Default blue color
+				"-fx-control-inner-background: #e0e0e0;" // Light gray background
+		);
 
-		// Container for our custom progress bar
-		StackPane customProgressBar = new StackPane();
-		customProgressBar.setAlignment(Pos.CENTER_LEFT);
-		customProgressBar.setPrefWidth(screenWidth * 0.25);
-		customProgressBar.setPrefHeight(16);
-
-		// Background rectangle (empty progress)
-		Rectangle progressBgRect = new Rectangle(screenWidth * 0.25, 16);
-		progressBgRect.setFill(Color.rgb(42, 42, 58)); // Dark background
-		progressBgRect.setStroke(Color.rgb(135, 206, 250)); // Light blue border (#87cefa)
-		progressBgRect.setStrokeWidth(1);
-
-		// Foreground rectangle (filled progress)
-		Rectangle progressFillRect = new Rectangle(0, 14); // Start with 0 width
-		progressFillRect.setFill(Color.rgb(33, 150, 243)); // Blue fill (#2196F3)
-		progressFillRect.setTranslateX(-((screenWidth * 0.25) / 2) + 1); // Align to left with 1px offset for border
-
-		// Add both rectangles to the stack with background on bottom
-		customProgressBar.getChildren().addAll(progressBgRect, progressFillRect);
-
-		// Store reference to the fill rectangle to update later
-		taskProgressBar = progressFillRect;
+		// Store reference to the ProgressBar
+		taskProgressBar = progressBar;
 
 		// Progress text
 		taskProgressText = new Text("0%");
 		taskProgressText.setFont(Font.font("Monospace", FontWeight.BOLD, 14));
 		taskProgressText.setFill(Color.LIGHTBLUE);
 
-		// Save the max width for calculations
-		progressBarMaxWidth = screenWidth * 0.25;
-
 		// Create layout for progress elements
 		HBox progressRow = new HBox(15);
 		progressRow.setAlignment(Pos.CENTER_LEFT);
-		progressRow.getChildren().addAll(customProgressBar, taskProgressText);
+		progressRow.getChildren().addAll(progressBar, taskProgressText);
 
 		// Stack everything in the container
 		StackPane progressPanel = new StackPane();
@@ -168,7 +233,8 @@ public class OverlayUI extends Pane {
 		content.setAlignment(Pos.CENTER_LEFT);
 		content.setPadding(new Insets(10));
 		content.getChildren().addAll(title, progressRow);
-
+		VBox taskListDisplay = createTaskListDisplay();
+		content.getChildren().add(taskListDisplay);
 		progressPanel.getChildren().addAll(progressBg, content);
 
 		taskContainer.getChildren().add(progressPanel);
@@ -310,12 +376,15 @@ public class OverlayUI extends Pane {
 	/**
 	 * Updates the task progress display
 	 */
+	/**
+	 * Updates the task progress display using a standard ProgressBar
+	 */
 	public void updateTaskProgress() {
 		if (!isInitialized || !isVisible)
 			return;
 
 		// Get current task completion percentage
-		double progressValue = GameWindow.getTotalPercentage();
+		double progressValue = GameWindow.getTotalPercentage() / 100;
 		String progressText = String.format("%.0f%%", progressValue * 100);
 
 		// Update UI on JavaFX thread
@@ -323,22 +392,31 @@ public class OverlayUI extends Pane {
 			// Update progress text
 			taskProgressText.setText(progressText);
 
-			// Update the custom progress bar width
-			double newWidth = progressBarMaxWidth * progressValue;
-			taskProgressBar.setWidth(newWidth);
-
-			// Update progress color based on completion
+			// Update the progress bar
+			taskProgressBar.setProgress(progressValue);
+			VBox taskListDisplay = createTaskListDisplay();
+			if (taskContainer.getChildren().size() > 1) {
+				taskContainer.getChildren().remove(1);
+			}
+			taskContainer.getChildren().add(taskListDisplay);
+			// Update progress bar color based on completion
 			if (progressValue > 0.8) {
 				// Green for high completion
-				taskProgressBar.setFill(Color.rgb(76, 175, 80)); // #4CAF50
+				taskProgressBar.setStyle("-fx-accent: #4CAF50;" + // Green progress
+						"-fx-control-inner-background: #e0e0e0;" // Light gray background
+				);
 				taskProgressText.setFill(Color.rgb(76, 175, 80));
 			} else if (progressValue > 0.5) {
 				// Yellow for medium completion
-				taskProgressBar.setFill(Color.rgb(255, 193, 7)); // #FFC107
+				taskProgressBar.setStyle("-fx-accent: #FFC107;" + // Yellow progress
+						"-fx-control-inner-background: #e0e0e0;" // Light gray background
+				);
 				taskProgressText.setFill(Color.rgb(255, 193, 7));
 			} else {
 				// Blue for low completion
-				taskProgressBar.setFill(Color.rgb(33, 150, 243)); // #2196F3
+				taskProgressBar.setStyle("-fx-accent: #2196F3;" + // Blue progress
+						"-fx-control-inner-background: #e0e0e0;" // Light gray background
+				);
 				taskProgressText.setFill(Color.rgb(33, 150, 243));
 			}
 		});

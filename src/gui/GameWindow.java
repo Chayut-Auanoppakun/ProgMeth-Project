@@ -260,10 +260,10 @@ public class GameWindow {
 				render();
 				displayFPS();
 				checkPlayerStateChange();
-				if (System.currentTimeMillis() - lastchecktask > 1000) {
+				if (System.currentTimeMillis() - lastchecktask > 500) {
 					lastchecktask = System.currentTimeMillis();
 					PlayerLogic.updateTaskPercent();
-					System.out.println("Total Task % = " + getTotalPercentage());
+					//System.out.println("Total Task % = " + getTotalPercentage());
 				}
 
 				if (PlayerLogic.getMoving()) {

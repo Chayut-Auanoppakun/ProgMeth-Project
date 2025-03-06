@@ -60,8 +60,8 @@ public class PlayerLogic {
 	}
 
 	public static void updateTaskPercent() {
-		int taskfinished = GameLogic.getTaskAmount() - tasks.size();
-		taskPercent = taskfinished / GameLogic.getTaskAmount() * 100;
+	    int taskfinished = GameLogic.getTaskAmount() - tasks.size();
+	    taskPercent = ((double) taskfinished / GameLogic.getTaskAmount()) * 100;
 	}
 	
 	public static boolean isPlayerReady() {
