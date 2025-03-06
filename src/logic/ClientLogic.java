@@ -305,13 +305,10 @@ public class ClientLogic {
 								if (killedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
 									System.out.println("CLIENT: Local player was killed!");
 
-									// Update our own status
-									PlayerLogic.setStatus("dead");
+									// Set temporary killed flag instead of changing status directly
+									PlayerLogic.flagKilled(true);
 
-									// Play death sound
-									SoundLogic.playSound("assets/sounds/impostor_kill.wav", 0);
-
-									System.out.println("CLIENT: Updated local player status to dead");
+									System.out.println("CLIENT: Local player flagged as being killed");
 								}
 
 								// Find the killed player in our list
@@ -321,7 +318,8 @@ public class ClientLogic {
 									System.out
 											.println("CLIENT: Found player in player list: " + killedPlayer.getName());
 
-									// Update player status to dead
+									// Set normal "dead" status for other players - we don't need temporary flags
+									// for them
 									killedPlayer.setStatus("dead");
 
 									// Create a corpse if not already exists
@@ -372,7 +370,7 @@ public class ClientLogic {
 									}
 								}
 
-								// Play sound if not our own death (which already plays a sound)
+								// Play sound if not our own death (which already plays a sound via PlayerLogic)
 								if (!killedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
 									SoundLogic.playSound("assets/sounds/dead_body.wav", 0);
 								}
@@ -388,9 +386,7 @@ public class ClientLogic {
 								System.err.println("CLIENT ERROR processing kill message: " + e.getMessage());
 								e.printStackTrace();
 							}
-						}
-
-						else if (received.startsWith("/meeting/")) {
+						} else if (received.startsWith("/meeting/")) {
 							try {
 								String jsonStr = received.substring(9); // Remove "/meeting/" prefix
 								JSONObject meetingData = new JSONObject(jsonStr);
@@ -537,20 +533,47 @@ public class ClientLogic {
 
 									// Handle player ejection
 									if (ejectedPlayerKey != null) {
+										boolean wasImposter = resultsData.has("wasImposter")
+												? resultsData.getBoolean("wasImposter")
+												: false;
+
+										System.out.println("CLIENT: Ejected player wasImposter: " + wasImposter);
+
 										// If it's the local player
 										if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
 											System.out.println("CLIENT: You were ejected!");
-											PlayerLogic.setStatus("dead");
+											wasImposter = "imposter".equals(PlayerLogic.getStatus());
+											System.out.println("imposter".equals(PlayerLogic.getStatus()));
+											// Flag as ejected instead of changing status directly
+											PlayerLogic.flagEjected(true);
+
+											System.out.println("CLIENT: Local player flagged as being ejected");
 										}
 										// If it's another player
 										else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
 											PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
 											if (player != null) {
 												System.out.println("CLIENT: " + player.getName() + " was ejected");
+
+												// Store the player's imposter status before changing it
+												String originalStatus = player.getStatus();
+												System.out.println(
+														"CLIENT: Original status of ejected player: " + originalStatus);
+
+												// Set to dead status
 												player.setStatus("dead");
+
+												System.out.println("CLIENT: Other player set to dead");
 											}
 										}
-									}
+										// Explicitly set ejection info in the GameWindow
+										 if (GameWindow.getGameWindowInstance() != null) {
+							                    System.out.println("CLIENT: Setting ejection info in GameWindow with wasImposter=" + wasImposter);
+							                    GameWindow.getGameWindowInstance().setEjectionInfo(ejectedPlayerKey, wasImposter);
+							                } else {
+							                    System.err.println("CLIENT ERROR: GameWindow instance is null when handling ejection result");
+							                }
+							            }
 
 									// If there's an active meeting UI, update it with the results
 									if (GameWindow.getGameWindowInstance() != null) {
@@ -559,7 +582,13 @@ public class ClientLogic {
 										if (activeMeeting != null && activeMeeting.getMeetingId().equals(meetingId)) {
 											System.out.println("CLIENT: Updating meeting UI with voting results");
 											activeMeeting.showVotingResults(ejectedPlayerKey, voteResults);
+										} else {
+											System.out.println(
+													"CLIENT: No active meeting UI found or meeting ID doesn't match");
 										}
+									} else {
+										System.err.println(
+												"CLIENT ERROR: GameWindow instance is null when updating meeting UI");
 									}
 								}
 							} catch (Exception e) {

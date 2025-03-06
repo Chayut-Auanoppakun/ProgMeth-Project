@@ -11,6 +11,8 @@ import gui.MainMenuPane;
 
 //Logic for all player both client and server
 //For our own Player
+//In PlayerLogic.java, modify the status handling to support different death types
+
 public class PlayerLogic {
 	static boolean isMoving;
 	static int Direction; // 1 left, 2 Right
@@ -19,11 +21,73 @@ public class PlayerLogic {
 	private static double myPosY = 0;
 	private static int charID = 99; // 99 is not initialized
 	private static boolean isPlayerReady = false;
+	private static boolean temporaryKilled = false;
+	private static boolean temporaryEjected = false;
+
+	// Modified status to be more specific
 	private static String status = "crewmate";
+
 	private static boolean playdeadsound = false;
 	private static Set<Integer> tasks = new HashSet<>();
-	
-	
+	private static double taskPercent = 0;
+
+	public static void finalizeDeathState() {
+		if (temporaryKilled || temporaryEjected) {
+			System.out.println("PLAYERLOGIC: Finalizing death state to 'dead'");
+			temporaryKilled = false;
+			temporaryEjected = false;
+			status = "dead"; // Set final status to dead for compatibility
+		}
+	}
+
+	public static boolean isBeingKilled() {
+		return temporaryKilled;
+	}
+
+	public static boolean isBeingEjected() {
+		return temporaryEjected;
+	}
+
+	public static void flagKilled(boolean killed) {
+		temporaryKilled = killed;
+		if (killed) {
+			System.out.println("PLAYERLOGIC: Player flagged as being killed");
+		}
+	}
+
+	public static void flagEjected(boolean ejected) {
+		temporaryEjected = ejected;
+		if (ejected) {
+			System.out.println("PLAYERLOGIC: Player flagged as being ejected");
+		}
+	}
+
+	public static void setStatus(String newstatus) {
+		System.out.println("PLAYERLOGIC: Player status changing from " + PlayerLogic.status + " to " + newstatus);
+
+		// Special handling for death states
+		if ("dead".equals(newstatus)) {
+			if (temporaryEjected) {
+				System.out.println("PLAYERLOGIC: Player is in ejection animation, deferring 'dead' status");
+				// Don't set status yet, let finalizeDeathState do it after animation
+				return;
+			} else if (!temporaryKilled) {
+				// If no temporary death state is set, assume killed
+				temporaryKilled = true;
+				System.out.println("PLAYERLOGIC: Assuming player was killed (no ejection flag)");
+
+				// Play death sound for kills
+				if (!playdeadsound) {
+					playdeadsound = true;
+					SoundLogic.playSound("assets/sounds/impostor_kill.wav", 0);
+				}
+			}
+		} else {
+			// For other statuses (crewmate, imposter), set them directly
+			status = newstatus;
+		}
+	}
+
 	public static Set<Integer> getTasks() {
 		return tasks;
 	}
@@ -31,8 +95,6 @@ public class PlayerLogic {
 	public static void setTasks(Set<Integer> tasks) {
 		PlayerLogic.tasks = tasks;
 	}
-
-	private static double taskPercent = 0;
 
 	public static double getTaskPercent() {
 		return taskPercent;
@@ -43,27 +105,30 @@ public class PlayerLogic {
 	}
 
 	public static String getStatus() {
-		// System.out.println("Sending out Status : " + status);
 		return status;
 	}
 
-	public static void setStatus(String newstatus) {
-		System.out.println("PLAYERLOGIC: Player status changed from " + PlayerLogic.status + " to " + newstatus);
-		status = newstatus;
+	// For compatibility with existing code that checks for "dead" status
+	public static boolean isDeadStatus(String statusToCheck) {
+		return "dead".equals(statusToCheck) || "killed".equals(statusToCheck) || "ejected".equals(statusToCheck);
+	}
 
-		// When player is killed, play a death sound
-		if ("dead".equals(status) && !playdeadsound) {
-			playdeadsound = true;
-			// Play death sound
-			SoundLogic.playSound("assets/sounds/impostor_kill.wav", 0);
-		}
+	private static boolean wasEjected = false;
+
+	public static boolean wasEjected() {
+		return wasEjected;
+	}
+
+	// For compatibility, check if player is dead or in a death animation
+	public static boolean isEffectivelyDead() {
+		return "dead".equals(status) || temporaryKilled || temporaryEjected;
 	}
 
 	public static void updateTaskPercent() {
-	    int taskfinished = GameLogic.getTaskAmount() - tasks.size();
-	    taskPercent = ((double) taskfinished / GameLogic.getTaskAmount()) * 100;
+		int taskfinished = GameLogic.getTaskAmount() - tasks.size();
+		taskPercent = ((double) taskfinished / GameLogic.getTaskAmount()) * 100;
 	}
-	
+
 	public static boolean isPlayerReady() {
 		return isPlayerReady;
 	}
@@ -145,5 +210,4 @@ public class PlayerLogic {
 		}
 		System.out.println("Random Tasks : " + tasks);
 	}
-
 }

@@ -14,7 +14,7 @@ public class PlayerInfo extends ClientInfo {
 	private double taskPercent = 0;
 	// New attributes for body tracking
 	private boolean isFound = false;
-	
+
 	public PlayerInfo(InetAddress address, int port, String name, double x, double y, boolean isMoving, int Direction,
 			String status, int CharID) {
 		super(address, port, name);
@@ -111,4 +111,9 @@ public class PlayerInfo extends ClientInfo {
 	public String toString() {
 		return this.getAddress() + ":" + this.getPort();
 	}
+
+	public boolean isDead() {
+		return "killed".equals(this.status) || "ejected".equals(this.status);
+	}
+
 }

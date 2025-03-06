@@ -1191,15 +1191,14 @@ public class MeetingUI extends StackPane {
 					if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
 						localPlayerEjected = true;
 						wasLocalPlayerImposter = "imposter".equals(PlayerLogic.getStatus());
-						PlayerLogic.setStatus("dead");
+						PlayerLogic.flagEjected(true);
 						System.out.println("CLIENT: You were ejected!");
 					}
 					// If it's another player
 					else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
 						PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
 						if (player != null) {
-							// Check if player was an imposter before marking as dead
-							boolean wasImposter = "imposter".equals(player.getStatus());
+							// Update player status
 							player.setStatus("dead");
 							System.out.println("CLIENT: Player " + player.getName() + " was ejected!");
 						}
@@ -1209,17 +1208,13 @@ public class MeetingUI extends StackPane {
 					boolean finalWasImposter = false;
 
 					if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
-						// For local player, we need to check before we changed status to "dead"
+						// For local player
 						finalWasImposter = wasLocalPlayerImposter;
 					} else {
-						// For other players, we need to check before status was changed to "dead"
-						// Get from server broadcast for clients, or handle directly on server
-						PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
-
-						// Check status directly - NOTE: This won't work if the status has already
-						// changed
-						// to "dead", so the server needs to broadcast the correct info
-						finalWasImposter = player != null && player.getStatus().contains("imposter");
+						// Get imposter status from server broadcast
+						finalWasImposter = voteResults.containsKey("wasImposter")
+								? (voteResults.get("wasImposter") == 1)
+								: false;
 					}
 
 					// Add a custom callback to the GameWindow class when closing the meeting UI
@@ -1227,7 +1222,8 @@ public class MeetingUI extends StackPane {
 						gameWindow.setEjectionInfo(ejectedPlayerKey, finalWasImposter);
 					}
 
-					// Close meeting UI quickly to show ejection screen
+					// Close meeting UI quickly to show ejection screen - REDUCED DELAY from 5+
+					// seconds
 					if (executor != null && !executor.isShutdown()) {
 						executor.schedule(() -> Platform.runLater(this::closeMeetingUI), 1, TimeUnit.SECONDS);
 					} else {
@@ -1285,13 +1281,13 @@ public class MeetingUI extends StackPane {
 				fadeIn.setToValue(1);
 				fadeIn.play();
 
-				// Schedule closing the meeting UI after showing results (longer delay for no
-				// ejection)
+				// Schedule closing the meeting UI after showing results - REDUCED DELAY from 7
+				// seconds
 				if (executor != null && !executor.isShutdown()) {
-					executor.schedule(() -> Platform.runLater(this::closeMeetingUI), 7, TimeUnit.SECONDS);
+					executor.schedule(() -> Platform.runLater(this::closeMeetingUI), 3, TimeUnit.SECONDS);
 				} else {
 					// Fallback if executor is already shut down
-					Timeline closingTimer = new Timeline(new KeyFrame(Duration.seconds(7), e -> closeMeetingUI()));
+					Timeline closingTimer = new Timeline(new KeyFrame(Duration.seconds(3), e -> closeMeetingUI()));
 					closingTimer.play();
 				}
 			} catch (Exception e) {
@@ -1299,6 +1295,17 @@ public class MeetingUI extends StackPane {
 				e.printStackTrace();
 			}
 		});
+	}
+
+	private void ensureProperClosing() {
+		// Schedule the UI to close after results are displayed - REDUCED DELAY
+		if (executor != null && !executor.isShutdown()) {
+			executor.schedule(() -> Platform.runLater(this::closeMeetingUI), 3, TimeUnit.SECONDS);
+		} else {
+			// Fallback if executor is unavailable
+			Timeline closingTimer = new Timeline(new KeyFrame(Duration.seconds(3), e -> closeMeetingUI()));
+			closingTimer.play();
+		}
 	}
 
 	private void debugPrintVotes() {
@@ -1685,17 +1692,6 @@ public class MeetingUI extends StackPane {
 				}
 			}
 		});
-	}
-
-	private void ensureProperClosing() {
-		// Schedule the UI to close after results are displayed
-		if (executor != null && !executor.isShutdown()) {
-			executor.schedule(() -> Platform.runLater(this::closeMeetingUI), 7, TimeUnit.SECONDS);
-		} else {
-			// Fallback if executor is unavailable
-			Timeline closingTimer = new Timeline(new KeyFrame(Duration.seconds(7), e -> closeMeetingUI()));
-			closingTimer.play();
-		}
 	}
 
 }

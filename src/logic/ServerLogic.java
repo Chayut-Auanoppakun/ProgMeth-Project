@@ -765,7 +765,9 @@ public class ServerLogic {
 			// Check if it's the server player
 			if (PlayerLogic.getLocalAddressPort().equals(killedPlayerKey)) {
 				System.out.println("SERVER: The server player got killed");
-				PlayerLogic.setStatus("dead");
+
+				// Flag as killed instead of setting status directly
+				PlayerLogic.flagKilled(true);
 
 				// Create a special corpse for the server player
 				Corpse serverCorpse = new Corpse(new PlayerInfo(InetAddress.getLocalHost(), serverSocket.getLocalPort(),
@@ -811,6 +813,168 @@ public class ServerLogic {
 			System.err.println("SERVER ERROR in handleKillReport: " + e.getMessage());
 			e.printStackTrace();
 			log(logArea, "Error processing kill report: " + e.getMessage());
+		}
+	}
+
+	// In ServerLogic.java, update the endMeetingAndBroadcastResults method to use
+	// the specific ejection status:
+
+	public static void endMeetingAndBroadcastResults(String meetingId, TextArea logArea) {
+		try {
+			// Calculate results
+			meetingId = "default";
+			String ejectedPlayerKey = calculateVotingResult(meetingId);
+			System.out.println("VOTING RESULT = " + ejectedPlayerKey);
+
+			// Get vote counts
+			Map<String, String> votesMap = meetingVotes.getOrDefault(meetingId, new HashMap<>());
+			Map<String, Integer> voteCounts = new HashMap<>();
+			for (String targetKey : votesMap.values()) {
+				voteCounts.put(targetKey, voteCounts.getOrDefault(targetKey, 0) + 1);
+			}
+
+			// Handle ejection locally first
+			if (ejectedPlayerKey != null) {
+				boolean wasImposter = false;
+
+				// If local player was ejected
+				if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+					wasImposter = "imposter".equals(PlayerLogic.getStatus());
+
+					// Flag as ejected instead of status directly
+					PlayerLogic.flagEjected(true);
+
+					System.out.println("SERVER: Local player (you) has been flagged for ejection");
+					System.out.println("SERVER: Local player wasImposter: " + wasImposter);
+				}
+				// If another player was ejected
+				else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
+					PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
+					if (player != null) {
+						wasImposter = "imposter".equals(player.getStatus());
+
+						// For other players, just set to dead
+						player.setStatus("dead");
+
+						System.out.println("SERVER: Player " + player.getName() + " has been ejected");
+						System.out.println("SERVER: Ejected player wasImposter: " + wasImposter);
+					}
+				}
+
+				// Create results data JSON with imposter info
+				JSONObject resultsData = new JSONObject();
+				resultsData.put("ejected", ejectedPlayerKey != null ? ejectedPlayerKey : JSONObject.NULL);
+				resultsData.put("meetingId", "default");
+				resultsData.put("time", System.currentTimeMillis());
+				resultsData.put("wasImposter", wasImposter); // Include imposter status in results
+				voteCounts.put("wasImposter", wasImposter ? 1 : 0);
+				// Convert vote counts to JSON
+				JSONObject votesJson = new JSONObject();
+				for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
+					votesJson.put(entry.getKey(), entry.getValue());
+				}
+				resultsData.put("votes", votesJson);
+
+				String resultsMessage = "/results/" + resultsData.toString();
+				byte[] buf = resultsMessage.getBytes(StandardCharsets.UTF_8);
+
+				System.out.println("SERVER: Broadcasting voting results: " + resultsMessage);
+
+				// Send to all clients
+				for (ClientInfo clientInfo : clientAddresses) {
+					try {
+						DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
+								clientInfo.getPort());
+
+						// Send multiple times to ensure delivery
+						for (int i = 0; i < 5; i++) {
+							serverSocket.send(packet);
+							Thread.sleep(50);
+						}
+
+						System.out.println("SERVER: Sent voting results to " + clientInfo.getAddress() + ":"
+								+ clientInfo.getPort());
+					} catch (Exception e) {
+						log(logArea, "Error sending results to " + clientInfo.getAddress() + ":" + clientInfo.getPort()
+								+ ": " + e.getMessage());
+					}
+				}
+
+				// Log the results
+				if (ejectedPlayerKey == null) {
+					log(logArea, "No one was ejected.");
+				} else {
+					String playerName = ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())
+							? PlayerLogic.getName()
+							: GameLogic.playerList.containsKey(ejectedPlayerKey)
+									? GameLogic.playerList.get(ejectedPlayerKey).getName()
+									: "Unknown";
+					log(logArea, playerName + " was ejected.");
+				}
+
+				// Update local UI if present
+				if (GameWindow.getGameWindowInstance() != null) {
+					MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
+					if (activeMeeting != null) {
+						activeMeeting.showVotingResults(ejectedPlayerKey, voteCounts);
+					}
+				}
+			} else {
+				// No player ejected case - original code remains the same
+				JSONObject resultsData = new JSONObject();
+				resultsData.put("ejected", JSONObject.NULL);
+				resultsData.put("meetingId", "default");
+				resultsData.put("time", System.currentTimeMillis());
+
+				// Convert vote counts to JSON
+				JSONObject votesJson = new JSONObject();
+				for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
+					votesJson.put(entry.getKey(), entry.getValue());
+				}
+				resultsData.put("votes", votesJson);
+
+				String resultsMessage = "/results/" + resultsData.toString();
+				byte[] buf = resultsMessage.getBytes(StandardCharsets.UTF_8);
+
+				System.out.println("SERVER: Broadcasting voting results: " + resultsMessage);
+
+				// Send to all clients
+				for (ClientInfo clientInfo : clientAddresses) {
+					try {
+						DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
+								clientInfo.getPort());
+
+						// Send multiple times to ensure delivery
+						for (int i = 0; i < 5; i++) {
+							serverSocket.send(packet);
+							Thread.sleep(50);
+						}
+
+						System.out.println("SERVER: Sent voting results to " + clientInfo.getAddress() + ":"
+								+ clientInfo.getPort());
+					} catch (Exception e) {
+						log(logArea, "Error sending results to " + clientInfo.getAddress() + ":" + clientInfo.getPort()
+								+ ": " + e.getMessage());
+					}
+				}
+
+				// Log the results
+				log(logArea, "No one was ejected.");
+
+				// Update local UI if present
+				if (GameWindow.getGameWindowInstance() != null) {
+					MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
+					if (activeMeeting != null) {
+						activeMeeting.showVotingResults(null, voteCounts);
+					}
+				}
+			}
+			meetingVotes.remove(meetingId);
+
+		} catch (Exception e) {
+			log(logArea, "Error broadcasting voting results: " + e.getMessage());
+			System.err.println("SERVER ERROR broadcasting voting results: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -1084,107 +1248,6 @@ public class ServerLogic {
 		} else {
 			System.out.println("SERVER: No one was ejected (no valid votes)");
 			return null;
-		}
-	}
-
-	/**
-	 * Broadcasts voting results to all clients
-	 * 
-	 * @param meetingId The meeting ID
-	 * @param logArea   TextArea for logging
-	 */
-	public static void endMeetingAndBroadcastResults(String meetingId, TextArea logArea) {
-		try {
-			// Calculate results
-			meetingId = "default";
-			String ejectedPlayerKey = calculateVotingResult(meetingId);
-			System.out.println("VOTING RESULT = " + ejectedPlayerKey);
-			// Get vote counts
-			Map<String, String> votesMap = meetingVotes.getOrDefault(meetingId, new HashMap<>());
-			Map<String, Integer> voteCounts = new HashMap<>();
-			for (String targetKey : votesMap.values()) {
-				voteCounts.put(targetKey, voteCounts.getOrDefault(targetKey, 0) + 1);
-			}
-
-			// Handle ejection locally first
-			if (ejectedPlayerKey != null) {
-				// If local player was ejected
-				if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
-					PlayerLogic.setStatus("dead");
-					System.out.println("SERVER: Local player (you) has been ejected");
-				}
-				// If another player was ejected
-				else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
-					PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
-					if (player != null) {
-						player.setStatus("dead");
-						System.out.println("SERVER: Player " + player.getName() + " has been ejected");
-					}
-				}
-			}
-
-			// Create results data JSON
-			JSONObject resultsData = new JSONObject();
-			resultsData.put("ejected", ejectedPlayerKey != null ? ejectedPlayerKey : JSONObject.NULL);
-			resultsData.put("meetingId", "default");
-			resultsData.put("time", System.currentTimeMillis());
-
-			// Convert vote counts to JSON
-			JSONObject votesJson = new JSONObject();
-			for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
-				votesJson.put(entry.getKey(), entry.getValue());
-			}
-			resultsData.put("votes", votesJson);
-
-			String resultsMessage = "/results/" + resultsData.toString();
-			byte[] buf = resultsMessage.getBytes(StandardCharsets.UTF_8);
-
-			System.out.println("SERVER: Broadcasting voting results: " + resultsMessage);
-
-			// Send to all clients
-			for (ClientInfo clientInfo : clientAddresses) {
-				try {
-					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
-							clientInfo.getPort());
-
-					// Send multiple times to ensure delivery
-					for (int i = 0; i < 5; i++) {
-						serverSocket.send(packet);
-						Thread.sleep(50);
-					}
-
-					System.out.println(
-							"SERVER: Sent voting results to " + clientInfo.getAddress() + ":" + clientInfo.getPort());
-				} catch (Exception e) {
-					log(logArea, "Error sending results to " + clientInfo.getAddress() + ":" + clientInfo.getPort()
-							+ ": " + e.getMessage());
-				}
-			}
-
-			// Log the results
-			if (ejectedPlayerKey == null) {
-				log(logArea, "No one was ejected.");
-			} else {
-				String playerName = ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort()) ? PlayerLogic.getName()
-						: GameLogic.playerList.containsKey(ejectedPlayerKey)
-								? GameLogic.playerList.get(ejectedPlayerKey).getName()
-								: "Unknown";
-				log(logArea, playerName + " was ejected.");
-			}
-
-			// Update local UI if present
-			if (GameWindow.getGameWindowInstance() != null) {
-				MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
-				if (activeMeeting != null) {
-					activeMeeting.showVotingResults(ejectedPlayerKey, voteCounts);
-				}
-			}
-			meetingVotes.remove(meetingId);
-
-		} catch (Exception e) {
-			log(logArea, "Error broadcasting voting results: " + e.getMessage());
-			System.err.println("SERVER ERROR broadcasting voting results: " + e.getMessage());
-			e.printStackTrace();
 		}
 	}
 
