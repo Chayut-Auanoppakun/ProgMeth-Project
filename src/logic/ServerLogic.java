@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.Timer;
@@ -775,13 +776,102 @@ public class ServerLogic {
 			// Also trigger meeting locally on the server
 			if (GameWindow.getGameWindowInstance() != null) {
 				Platform.runLater(() -> {
-					GameWindow.getGameWindowInstance().startEmergencyMeeting(reportedPlayerName, reportedCharId);
+					GameWindow.getGameWindowInstance().startEmergencyMeeting(reporterKey, reportedPlayerName,
+							reportedCharId);
 				});
 			}
 
 		} catch (Exception e) {
 			System.err.println("Error in broadcastEmergencyMeeting: " + e.getMessage());
 			e.printStackTrace();
+		}
+	}
+
+	public static void handleVote(String voterKey, String targetKey, String meetingId, TextArea logArea) {
+		try {
+			// Create vote data JSON
+			JSONObject voteData = new JSONObject();
+			voteData.put("voter", voterKey);
+			voteData.put("target", targetKey);
+			voteData.put("meetingId", meetingId);
+			voteData.put("time", System.currentTimeMillis());
+
+			String voteMessage = "/vote/" + voteData.toString();
+			byte[] buf = voteMessage.getBytes(StandardCharsets.UTF_8);
+
+			// Send to all clients
+			for (ClientInfo clientInfo : clientAddresses) {
+				try {
+					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
+							clientInfo.getPort());
+					serverSocket.send(packet);
+				} catch (IOException e) {
+					log(logArea, "Error sending vote to " + clientInfo.getAddress() + ":" + clientInfo.getPort() + ": "
+							+ e.getMessage());
+				}
+			}
+
+			// Log the vote
+			String voterName = voterKey.equals(PlayerLogic.getLocalAddressPort()) ? PlayerLogic.getName()
+					: GameLogic.playerList.get(voterKey).getName();
+
+			String targetName;
+			if (targetKey.equals("skip")) {
+				targetName = "Skip";
+			} else {
+				targetName = targetKey.equals(PlayerLogic.getLocalAddressPort()) ? PlayerLogic.getName()
+						: GameLogic.playerList.get(targetKey).getName();
+			}
+
+			log(logArea, voterName + " voted for " + targetName);
+
+		} catch (Exception e) {
+			log(logArea, "Error handling vote: " + e.getMessage());
+		}
+	}
+
+	public static void broadcastVotingResults(String ejectedPlayerKey, Map<String, Integer> voteResults,
+			String meetingId, TextArea logArea) {
+		try {
+			// Create results data JSON
+			JSONObject resultsData = new JSONObject();
+			resultsData.put("ejected", ejectedPlayerKey != null ? ejectedPlayerKey : JSONObject.NULL);
+			resultsData.put("meetingId", meetingId);
+			resultsData.put("time", System.currentTimeMillis());
+
+			// Convert vote results to JSON
+			JSONObject votesJson = new JSONObject();
+			for (Map.Entry<String, Integer> entry : voteResults.entrySet()) {
+				votesJson.put(entry.getKey(), entry.getValue());
+			}
+			resultsData.put("votes", votesJson);
+
+			String resultsMessage = "/results/" + resultsData.toString();
+			byte[] buf = resultsMessage.getBytes(StandardCharsets.UTF_8);
+
+			// Send to all clients
+			for (ClientInfo clientInfo : clientAddresses) {
+				try {
+					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
+							clientInfo.getPort());
+					serverSocket.send(packet);
+				} catch (IOException e) {
+					log(logArea, "Error sending results to " + clientInfo.getAddress() + ":" + clientInfo.getPort()
+							+ ": " + e.getMessage());
+				}
+			}
+
+			// Log the results
+			if (ejectedPlayerKey == null) {
+				log(logArea, "No one was ejected.");
+			} else {
+				String playerName = ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort()) ? PlayerLogic.getName()
+						: GameLogic.playerList.get(ejectedPlayerKey).getName();
+				log(logArea, playerName + " was ejected.");
+			}
+
+		} catch (Exception e) {
+			log(logArea, "Error broadcasting voting results: " + e.getMessage());
 		}
 	}
 

@@ -20,7 +20,7 @@ public class GameLogic {
 	public static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 	private static boolean prepEnded = false;
 	private static ScheduledExecutorService gameLoopExecutor;
-
+	private int KillCooldown = 25;
 	public enum GameResult {
 		ONGOING, CREWMATE_WIN, IMPOSTER_WIN
 	}
@@ -223,5 +223,13 @@ public class GameLogic {
 
 	public static int getFoundCorpseCount() {
 		return (int) corpseList.values().stream().filter(Corpse::isFound).count();
+	}
+
+	public int getKillCooldown() {
+		return KillCooldown;
+	}
+
+	public void setKillCooldown(int killCooldown) {
+		KillCooldown = killCooldown;
 	}
 }

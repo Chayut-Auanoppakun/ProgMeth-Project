@@ -8,8 +8,10 @@ import java.io.IOException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -23,6 +25,7 @@ import java.net.InetAddress;
 
 import gui.GameWindow;
 import gui.MainMenuPane;
+import gui.MeetingUI;
 import gui.ServerSelectGui;
 
 public class ClientLogic {
@@ -76,7 +79,7 @@ public class ClientLogic {
 			@Override
 			public void run() {
 				Platform.runLater(() -> logUniqueServerIDs(logArea));
-				//System.out.println("Corpse size =" + GameLogic.corpseList.size());
+				// System.out.println("Corpse size =" + GameLogic.corpseList.size());
 			}
 		}, 0, 1000); // 0 delay, 1000 milliseconds (1 seconds) period
 	}
@@ -398,8 +401,8 @@ public class ClientLogic {
 								Platform.runLater(() -> {
 									// Find the GameWindow instance
 									if (GameWindow.getGameWindowInstance() != null) {
-										GameWindow.getGameWindowInstance().startEmergencyMeeting(reportedPlayerName,
-												reportedCharId);
+										GameWindow.getGameWindowInstance().startEmergencyMeeting(reporterKey,
+												reportedPlayerName, reportedCharId);
 									}
 								});
 
@@ -418,6 +421,70 @@ public class ClientLogic {
 							} catch (Exception e) {
 								System.err.println("Error processing meeting message: " + e.getMessage());
 								e.printStackTrace();
+							}
+						} else if (received.startsWith("/vote/")) {
+							try {
+								// Extract vote data
+								String jsonStr = received.substring(6); // Remove "/vote/" prefix
+								JSONObject voteData = new JSONObject(jsonStr);
+
+								String voterKey = voteData.getString("voter");
+								String targetKey = voteData.getString("target");
+								String meetingId = voteData.getString("meetingId");
+
+								// If there's an active meeting UI, update it with this vote
+								if (GameWindow.getGameWindowInstance() != null) {
+									MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
+									if (activeMeeting != null && activeMeeting.getMeetingId().equals(meetingId)) {
+										activeMeeting.receiveVote(voterKey, targetKey);
+									}
+								}
+							} catch (Exception e) {
+								System.err.println("Error processing vote message: " + e.getMessage());
+							}
+						} else if (received.startsWith("/results/")) {
+							try {
+								// Extract results data
+								String jsonStr = received.substring(9); // Remove "/results/" prefix
+								JSONObject resultsData = new JSONObject(jsonStr);
+
+								// Check if ejected is null
+								String ejectedPlayerKey = null;
+								if (!resultsData.isNull("ejected")) {
+									ejectedPlayerKey = resultsData.getString("ejected");
+								}
+
+								String meetingId = resultsData.getString("meetingId");
+
+								// Get vote counts
+								JSONObject votesJson = resultsData.getJSONObject("votes");
+								Map<String, Integer> voteResults = new HashMap<>();
+								for (String key : votesJson.keySet()) {
+									voteResults.put(key, votesJson.getInt(key));
+								}
+
+								// If there's an active meeting UI, update it with the results
+								if (GameWindow.getGameWindowInstance() != null) {
+									MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
+									if (activeMeeting != null && activeMeeting.getMeetingId().equals(meetingId)) {
+										activeMeeting.showVotingResults(ejectedPlayerKey, voteResults);
+									}
+								}
+
+								// Handle player ejection
+								if (ejectedPlayerKey != null) {
+									// If it's the local player
+									if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+										PlayerLogic.setStatus("dead");
+									}
+									// If it's another player
+									else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
+										PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
+										player.setStatus("dead");
+									}
+								}
+							} catch (Exception e) {
+								System.err.println("Error processing voting results: " + e.getMessage());
 							}
 						}
 						// Handle relay messages
