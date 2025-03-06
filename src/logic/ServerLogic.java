@@ -186,7 +186,7 @@ public class ServerLogic {
 			// Extract vote details
 			String voterKey = voteData.getString("voter");
 			String targetKey = voteData.getString("target");
-			String meetingId = voteData.getString("meetingId");
+			String meetingId = "default";
 
 			System.out.println("SERVER: Received vote from " + clientAddress + ":" + clientPort);
 			System.out.println("SERVER: Vote details - Voter: " + voterKey + ", Target: " + targetKey);
@@ -229,9 +229,6 @@ public class ServerLogic {
 
 			String messageType = meetingData.getString("type");
 			String senderKey = clientAddress.getHostAddress() + ":" + clientPort;
-
-			// Get the meeting ID to ensure message is routed to correct meeting
-			String meetingId = meetingData.getString("meetingId");
 
 			// Handle different types of meeting messages
 			switch (messageType) {
@@ -285,7 +282,7 @@ public class ServerLogic {
 				}
 
 				// Relay the chat message to appropriate clients
-				relayMeetingChatToClients(senderKey, senderName, chatMessage, meetingId, senderStatus, timestamp,
+				relayMeetingChatToClients(senderKey, senderName, chatMessage, "default", senderStatus, timestamp,
 						isGhostMessage, logArea);
 				break;
 			default:
@@ -305,7 +302,7 @@ public class ServerLogic {
 			relayData.put("type", "chat");
 			relayData.put("name", senderName);
 			relayData.put("message", message);
-			relayData.put("meetingId", meetingId);
+			relayData.put("meetingId", "default");
 			relayData.put("status", senderStatus);
 			relayData.put("timestamp", timestamp);
 			relayData.put("isGhostMessage", isGhostMessage);
@@ -938,6 +935,7 @@ public class ServerLogic {
 	 */
 	public static void handleVote(String voterKey, String targetKey, String meetingId, TextArea logArea) {
 		try {
+			meetingId = "default";
 			// Ensure meetingVotes map exists for this meeting
 			meetingVotes.putIfAbsent(meetingId, new ConcurrentHashMap<>());
 			Map<String, String> votes = meetingVotes.get(meetingId);
@@ -962,12 +960,13 @@ public class ServerLogic {
 			System.out.println(
 					"SERVER: Received vote from " + voterKey + " for " + targetKey + " in meeting " + meetingId);
 			System.out.println("SERVER: Current votes in meeting: " + votes);
+			System.out.println("Total votes : " + votes.size());
 
 			// Create vote data JSON to broadcast to clients
 			JSONObject voteData = new JSONObject();
 			voteData.put("voter", voterKey);
 			voteData.put("target", targetKey);
-			voteData.put("meetingId", meetingId);
+			voteData.put("meetingId", "default");
 			voteData.put("time", System.currentTimeMillis());
 			// Add a unique vote ID to help clients identify duplicate messages
 			voteData.put("voteId", voterKey + "_" + System.currentTimeMillis());
@@ -1030,6 +1029,7 @@ public class ServerLogic {
 	 * @return The key of the ejected player, or null if no one was ejected
 	 */
 	public static String calculateVotingResult(String meetingId) {
+		meetingId = "default";
 		Map<String, String> votesMap = meetingVotes.getOrDefault(meetingId, new HashMap<>());
 
 		// If no votes, no one is ejected
@@ -1103,8 +1103,9 @@ public class ServerLogic {
 	public static void endMeetingAndBroadcastResults(String meetingId, TextArea logArea) {
 		try {
 			// Calculate results
+			meetingId = "default";
 			String ejectedPlayerKey = calculateVotingResult(meetingId);
-
+			System.out.println("VOTING RESULT = " + ejectedPlayerKey);
 			// Get vote counts
 			Map<String, String> votesMap = meetingVotes.getOrDefault(meetingId, new HashMap<>());
 			Map<String, Integer> voteCounts = new HashMap<>();
@@ -1132,7 +1133,7 @@ public class ServerLogic {
 			// Create results data JSON
 			JSONObject resultsData = new JSONObject();
 			resultsData.put("ejected", ejectedPlayerKey != null ? ejectedPlayerKey : JSONObject.NULL);
-			resultsData.put("meetingId", meetingId);
+			resultsData.put("meetingId", "default");
 			resultsData.put("time", System.currentTimeMillis());
 
 			// Convert vote counts to JSON

@@ -593,58 +593,7 @@ public class MeetingUI extends StackPane {
 
 		return headerBox;
 	}
-
-	/**
-	 * Creates the chat section similar to ServerSelectGui
-	 */
-	private VBox createChatSection() {
-		VBox chatBox = new VBox(5);
-		chatBox.setPadding(new Insets(10, 0, 0, 0));
-
-		// Chat header
-		Text chatHeader = new Text("DISCUSSION");
-		chatHeader.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
-		chatHeader.setFill(Color.LIGHTBLUE);
-
-		// Chat area
-		chatArea = new TextArea();
-		chatArea.setPrefHeight(100);
-		chatArea.setEditable(false);
-		chatArea.setWrapText(true);
-		chatArea.setStyle("-fx-control-inner-background: #2a2a2a; " + "-fx-text-fill: white; "
-				+ "-fx-font-family: 'Monospace'; " + "-fx-border-color: #555555; " + "-fx-border-width: 1px;");
-
-		// Input area
-		HBox inputBox = new HBox(5);
-
-		messageInput = new TextField();
-		messageInput.setPrefHeight(30);
-		messageInput.setPromptText("Type your message...");
-		messageInput.setStyle("-fx-background-color: #2a2a2a; " + "-fx-text-fill: white; "
-				+ "-fx-font-family: 'Monospace'; " + "-fx-border-color: #555555; " + "-fx-border-width: 1px;");
-		HBox.setHgrow(messageInput, Priority.ALWAYS);
-
-		sendButton = new Button("Send");
-		sendButton.setPrefHeight(30);
-		sendButton.setStyle(
-				"-fx-background-color: #1e90ff; " + "-fx-text-fill: white; " + "-fx-font-family: 'Monospace'; "
-						+ "-fx-font-weight: bold; " + "-fx-border-color: #87cefa; " + "-fx-border-width: 1px;");
-
-		sendButton.setOnAction(e -> {
-			sendChatMessage();
-		});
-
-		// Handle Enter key in message input
-		messageInput.setOnAction(e -> sendChatMessage());
-
-		inputBox.getChildren().addAll(messageInput, sendButton);
-
-		// Add all to chat box
-		chatBox.getChildren().addAll(chatHeader, chatArea, inputBox);
-
-		return chatBox;
-	}
-
+	
 	/**
 	 * Sends the current message in the input field
 	 */
@@ -947,7 +896,7 @@ public class MeetingUI extends StackPane {
 
 			if (votingTimeSeconds <= 0) {
 				endVoting();
-				
+
 			}
 		});
 
@@ -1068,6 +1017,7 @@ public class MeetingUI extends StackPane {
 	 * Handles a vote received from the server
 	 */
 	public void receiveVote(String voterKey, String targetKey) {
+		System.out.println("I GOT THE VOTE");
 		Platform.runLater(() -> {
 			try {
 
@@ -1085,7 +1035,6 @@ public class MeetingUI extends StackPane {
 
 				// Mark this voter as processed
 				processedVoterKeys.add(voterKey);
-				checkAllPlayersVoted();
 
 				System.out.println("MEETING UI: Processing vote from " + voterKey + " for " + targetKey);
 
@@ -1117,7 +1066,7 @@ public class MeetingUI extends StackPane {
 					// Add chat message
 					String voterName = getPlayerNameByKey(voterKey);
 					String targetName = getPlayerNameByKey(targetKey);
-
+					checkAllPlayersVoted();
 					addChatMessage("SYSTEM", voterName + " voted for " + targetName);
 				} else {
 					System.err.println("MEETING UI: Could not find player card for target: " + targetKey);
@@ -1150,7 +1099,7 @@ public class MeetingUI extends StackPane {
 			// Calculate results
 			ServerLogic.endMeetingAndBroadcastResults(meetingId, chatArea);
 		}
-
+		System.out.println("FLAG CHECK");
 		// For clients: wait for server to send results
 		// The results will be displayed when the server sends them
 		ensureProperClosing();

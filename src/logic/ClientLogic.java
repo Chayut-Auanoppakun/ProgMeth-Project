@@ -431,22 +431,6 @@ public class ClientLogic {
 									String reportedPlayerName = meetingData.optString("reportedPlayer", null);
 									int reportedCharId = meetingData.getInt("reportedCharId");
 
-//									// Start emergency meeting UI on this client if it doesn't exist
-//									GameWindow gameWindowInstance = GameWindow.getGameWindowInstance();
-//									if (gameWindowInstance != null) {
-//										Platform.runLater(() -> {
-//											// Check if meeting UI already exists
-//											MeetingUI activeMeeting = gameWindowInstance.getActiveMeetingUI();
-//											if (activeMeeting == null) {
-//												System.out.println("NO MEETING STARTING NEW ONE");
-//												gameWindowInstance.startEmergencyMeeting(reporterKey,
-//														reportedPlayerName, reportedCharId);
-//											}
-//										});
-//									} else {
-//										System.out.println(
-//												"Cannot start emergency meeting - GameWindow instance is null");
-//									}
 									Platform.runLater(() -> {
 										GameWindow.getGameWindowInstance().startEmergencyMeeting(reporterKey,
 												reportedPlayerName, reportedCharId);
@@ -464,7 +448,6 @@ public class ClientLogic {
 
 								String voterKey = voteData.getString("voter");
 								String targetKey = voteData.getString("target");
-								String meetingId = voteData.getString("meetingId");
 
 								// Extract voteId to identify duplicates - if not present, create one
 								String voteId = voteData.has("voteId") ? voteData.getString("voteId")
@@ -488,20 +471,15 @@ public class ClientLogic {
 								}
 
 								System.out.println("CLIENT: Received vote data - Voter: " + voterKey + ", Target: "
-										+ targetKey + ", Meeting: " + meetingId);
+										+ targetKey);
 
 								// If there's an active meeting UI, update it with this vote
 								if (GameWindow.getGameWindowInstance() != null) {
 									MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
 									if (activeMeeting != null) {
 										// Only process the vote if it's for the active meeting
-										if (activeMeeting.getMeetingId().equals(meetingId)) {
 											System.out.println("CLIENT: Updating meeting UI with vote");
 											activeMeeting.receiveVote(voterKey, targetKey);
-										} else {
-											System.err.println("CLIENT: Received vote for wrong meeting ID - expected: "
-													+ activeMeeting.getMeetingId() + ", got: " + meetingId);
-										}
 									} else {
 										System.err.println("CLIENT: Received vote but no active meeting UI found");
 									}

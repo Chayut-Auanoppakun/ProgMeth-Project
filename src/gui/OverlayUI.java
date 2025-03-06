@@ -29,7 +29,7 @@ import server.PlayerInfo;
  * This class handles creating and updating the UI elements that appear during
  * gameplay.
  */
-public class OverlayUI {
+public class OverlayUI extends Pane {
 	// UI Components
 	private Pane overlayPane;
 	private Rectangle taskProgressBar; // Now using Rectangle instead of ProgressBar
