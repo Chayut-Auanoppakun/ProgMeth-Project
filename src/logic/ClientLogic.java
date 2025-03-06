@@ -31,6 +31,8 @@ import gui.ServerSelectGui;
 public class ClientLogic {
 	private static final Set<String> serverSet = new HashSet<>();
 	private static final List<String> serverList = new ArrayList<>();
+	private static Set<String> processedVotes = new HashSet<>();
+
 	private static String lastLoggedData = "";
 	private static DatagramSocket clientSocket;
 	private static InetAddress connectedServerAddress;
@@ -386,8 +388,6 @@ public class ClientLogic {
 
 						else if (received.startsWith("/meeting/")) {
 							try {
-
-								GameWindow gameWindow = GameWindow.getGameWindowInstance();
 								String jsonStr = received.substring(9); // Remove "/meeting/" prefix
 								JSONObject meetingData = new JSONObject(jsonStr);
 
@@ -399,56 +399,55 @@ public class ClientLogic {
 									String senderName = meetingData.getString("name");
 									String message = meetingData.getString("message");
 									String status = meetingData.optString("status", "crewmate");
+									boolean isGhostMessage = meetingData.optBoolean("isGhostMessage", false);
 
-									System.out.println("Client processing chat message for meeting: " + meetingId);
-
-									if (gameWindow != null) {
-										MeetingUI activeMeeting = gameWindow.getActiveMeetingUI();
-
-										if (activeMeeting != null) {
-											activeMeeting.receiveChatMessage(senderName, message, status);
+									// Check if this is a ghost message and if we should display it
+									boolean shouldDisplay = true;
+									if (isGhostMessage) {
+										// If ghost message, only show to other ghosts
+										if (!"dead".equals(PlayerLogic.getStatus())) {
+											shouldDisplay = false;
 										}
+									}
+
+									if (shouldDisplay) {
+										System.out.println("Client processing chat message for meeting: " + meetingId);
+
+										GameWindow gameWindowInstance = GameWindow.getGameWindowInstance();
+										if (gameWindowInstance != null) {
+											MeetingUI activeMeeting = gameWindowInstance.getActiveMeetingUI();
+
+											if (activeMeeting != null) {
+												activeMeeting.receiveChatMessage(senderName, message, status);
+											}
+										}
+									} else {
+										System.out
+												.println("Client ignoring ghost message (player is alive): " + message);
 									}
 								} else {
 									// Extract meeting details
 									String reporterKey = meetingData.getString("reporter");
 									String reportedPlayerName = meetingData.optString("reportedPlayer", null);
 									int reportedCharId = meetingData.getInt("reportedCharId");
-
-
+									
 									// Start emergency meeting UI on this client if it doesn't exist
-									if (gameWindow != null) {
+									GameWindow gameWindowInstance = GameWindow.getGameWindowInstance();
+									if (gameWindowInstance != null) {
 										Platform.runLater(() -> {
 											// Check if meeting UI already exists
-											MeetingUI activeMeeting = gameWindow.getActiveMeetingUI();
-
+											MeetingUI activeMeeting = gameWindowInstance.getActiveMeetingUI();
 											// If no active meeting, start a new one
 											if (activeMeeting == null) {
-												gameWindow.startEmergencyMeeting(reporterKey, reportedPlayerName,
-														reportedCharId);
+												gameWindowInstance.startEmergencyMeeting(reporterKey,
+														reportedPlayerName, reportedCharId);
 											}
 										});
+									} else {
+										System.out.println(
+												"Cannot start emergency meeting - GameWindow instance is null");
 									}
 								}
-								// Optionally, you can add specific logic based on meeting type
-								switch (meetingType) {
-								case "BODY_REPORT":
-									System.out.println("Body report triggered meeting");
-									break;
-								case "EMERGENCY_BUTTON":
-									System.out.println("Emergency button triggered meeting");
-									break;
-								case "SABOTAGE":
-									System.out.println("Sabotage triggered meeting");
-									break;
-								case "Start":
-									System.out.println("Start meeting triggered");
-									// Additional start meeting logic if needed
-									break;
-								default:
-									System.out.println("Unknown meeting type: " + meetingType);
-								}
-
 							} catch (Exception e) {
 								System.err.println("Error processing meeting message: " + e.getMessage());
 								e.printStackTrace();
@@ -461,18 +460,51 @@ public class ClientLogic {
 
 								String voterKey = voteData.getString("voter");
 								String targetKey = voteData.getString("target");
+								String meetingId = voteData.getString("meetingId");
+
+								// Extract voteId to identify duplicates - if not present, create one
+								String voteId = voteData.has("voteId") ? voteData.getString("voteId")
+										: voterKey + "_" + (voteData.has("time") ? voteData.getLong("time")
+												: System.currentTimeMillis());
+
+								// Check if this vote has already been processed
+								if (processedVotes.contains(voteId)) {
+									System.out.println("CLIENT: Ignoring duplicate vote from " + voterKey);
+									return;
+								}
+
+								// Mark this vote as processed
+								processedVotes.add(voteId);
+
+								// Limit the size of processedVotes to prevent memory issues
+								if (processedVotes.size() > 1000) {
+									// Remove oldest votes (just keep the latest 500)
+									processedVotes = processedVotes.stream().skip(processedVotes.size() - 500)
+											.collect(java.util.stream.Collectors.toSet());
+								}
+
+								System.out.println("CLIENT: Received vote data - Voter: " + voterKey + ", Target: "
+										+ targetKey + ", Meeting: " + meetingId);
 
 								// If there's an active meeting UI, update it with this vote
 								if (GameWindow.getGameWindowInstance() != null) {
 									MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
-
-									// Remove the meeting ID check entirely
 									if (activeMeeting != null) {
-										activeMeeting.receiveVote(voterKey, targetKey);
+										// Only process the vote if it's for the active meeting
+										if (activeMeeting.getMeetingId().equals(meetingId)) {
+											System.out.println("CLIENT: Updating meeting UI with vote");
+											activeMeeting.receiveVote(voterKey, targetKey);
+										} else {
+											System.err.println("CLIENT: Received vote for wrong meeting ID - expected: "
+													+ activeMeeting.getMeetingId() + ", got: " + meetingId);
+										}
+									} else {
+										System.err.println("CLIENT: Received vote but no active meeting UI found");
 									}
 								}
 							} catch (Exception e) {
-								System.err.println("Error processing vote message: " + e.getMessage());
+								System.err.println("CLIENT ERROR: Failed to process vote message: " + e.getMessage());
+								e.printStackTrace();
 							}
 						} else if (received.startsWith("/results/")) {
 							try {
@@ -480,10 +512,30 @@ public class ClientLogic {
 								String jsonStr = received.substring(9); // Remove "/results/" prefix
 								JSONObject resultsData = new JSONObject(jsonStr);
 
+								// Create a unique ID for this results message
+								String resultsId = resultsData.has("meetingId")
+										? resultsData.getString("meetingId") + "_"
+												+ (resultsData.has("time") ? resultsData.getLong("time") : 0)
+										: "results_" + System.currentTimeMillis();
+
+								// Check if this results message has already been processed
+								if (processedVotes.contains(resultsId)) {
+									System.out.println("CLIENT: Ignoring duplicate results message");
+									return;
+								}
+
+								// Mark this results message as processed
+								processedVotes.add(resultsId);
+
+								System.out.println("CLIENT: Received voting results: " + jsonStr);
+
 								// Check if ejected is null
 								String ejectedPlayerKey = null;
 								if (!resultsData.isNull("ejected")) {
 									ejectedPlayerKey = resultsData.getString("ejected");
+									System.out.println("CLIENT: Player ejected: " + ejectedPlayerKey);
+								} else {
+									System.out.println("CLIENT: No player ejected");
 								}
 
 								String meetingId = resultsData.getString("meetingId");
@@ -495,28 +547,36 @@ public class ClientLogic {
 									voteResults.put(key, votesJson.getInt(key));
 								}
 
-								// If there's an active meeting UI, update it with the results
-								if (GameWindow.getGameWindowInstance() != null) {
-									MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
-									if (activeMeeting != null && activeMeeting.getMeetingId().equals(meetingId)) {
-										activeMeeting.showVotingResults(ejectedPlayerKey, voteResults);
-									}
-								}
+								System.out.println("CLIENT: Vote counts: " + voteResults);
 
 								// Handle player ejection
 								if (ejectedPlayerKey != null) {
 									// If it's the local player
 									if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+										System.out.println("CLIENT: You were ejected!");
 										PlayerLogic.setStatus("dead");
 									}
 									// If it's another player
 									else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
 										PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
-										player.setStatus("dead");
+										if (player != null) {
+											System.out.println("CLIENT: " + player.getName() + " was ejected");
+											player.setStatus("dead");
+										}
+									}
+								}
+
+								// If there's an active meeting UI, update it with the results
+								if (GameWindow.getGameWindowInstance() != null) {
+									MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
+									if (activeMeeting != null && activeMeeting.getMeetingId().equals(meetingId)) {
+										System.out.println("CLIENT: Updating meeting UI with voting results");
+										activeMeeting.showVotingResults(ejectedPlayerKey, voteResults);
 									}
 								}
 							} catch (Exception e) {
-								System.err.println("Error processing voting results: " + e.getMessage());
+								System.err.println("CLIENT ERROR: Failed to process voting results: " + e.getMessage());
+								e.printStackTrace();
 							}
 						}
 						// Handle relay messages
@@ -551,6 +611,7 @@ public class ClientLogic {
 			}
 		});
 		receiveThread.start();
+
 	}
 
 	private static void startPingThread(TextArea logArea) {

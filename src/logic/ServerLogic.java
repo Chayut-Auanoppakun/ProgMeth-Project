@@ -13,6 +13,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,8 @@ public class ServerLogic {
 	private static Thread serverThread;
 	private static Set<ClientInfo> clientAddresses = new HashSet<>();
 	private static ConcurrentHashMap<ClientInfo, AtomicInteger> clientPingCount = new ConcurrentHashMap<>();
+	private static ConcurrentHashMap<String, Map<String, String>> meetingVotes = new ConcurrentHashMap<>();
+	private static Set<String> recentChatMessages = new HashSet<>();
 	private static Timer pingCheckTimer;
 	private static int readyPlayers = 0;
 	private static boolean isRunning = false;
@@ -236,27 +239,55 @@ public class ServerLogic {
 				// Meeting chat message
 				String chatMessage = meetingData.getString("message");
 				String senderName = meetingData.getString("name");
+				String senderStatus = meetingData.optString("status", "crewmate");
+				boolean isGhostMessage = meetingData.optBoolean("isGhostMessage", false);
+
+				// Get timestamp for deduplication if available
+				long timestamp = meetingData.has("timestamp") ? meetingData.getLong("timestamp")
+						: System.currentTimeMillis();
+
+				// Create a unique message ID for server-side deduplication
+				String messageId = senderName + ":" + chatMessage + ":" + timestamp;
+
+				// Check if this is a duplicate on the server side
+				if (recentChatMessages.contains(messageId)) {
+					System.out.println("SERVER: Ignoring duplicate chat message: " + messageId);
+					return;
+				}
+
+				// Add to recent messages
+				recentChatMessages.add(messageId);
+
+				// Limit cache size
+				if (recentChatMessages.size() > 100) {
+					// Keep only the most recent 50 messages
+					recentChatMessages = recentChatMessages.stream().skip(recentChatMessages.size() - 50)
+							.collect(java.util.stream.Collectors.toSet());
+				}
 
 				// Log the message
-				// In ServerLogic.java, modify the handleMeetingMessage method:
+				if (isGhostMessage) {
+					System.out.println("SERVER: Ghost " + senderName + " sent ghost message: " + chatMessage);
+				} else {
+					System.out.println("SERVER: " + senderName + " sent message: " + chatMessage);
+				}
 
-				if (GameWindow.getGameWindowInstance() != null) {
-					MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
-
-					// Remove the meeting ID check entirely
-					if (activeMeeting != null) {
-						// Display the message in the server's MeetingUI
-						activeMeeting.receiveChatMessage(senderName, chatMessage,
-								meetingData.optString("status", "crewmate"));
+				// If server is a ghost, display ghost messages or if it's a regular message
+				boolean serverIsGhost = "dead".equals(PlayerLogic.getStatus());
+				if (!isGhostMessage || serverIsGhost) {
+					// Display the message in the server's MeetingUI if appropriate
+					if (GameWindow.getGameWindowInstance() != null) {
+						MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
+						if (activeMeeting != null) {
+							activeMeeting.receiveChatMessage(senderName, chatMessage, senderStatus);
+						}
 					}
 				}
 
-				// Relay the chat message to all other clients
-				relayMeetingChatToClients(senderKey, senderName, chatMessage, meetingId, logArea);
+				// Relay the chat message to appropriate clients
+				relayMeetingChatToClients(senderKey, senderName, chatMessage, meetingId, senderStatus, timestamp,
+						isGhostMessage, logArea);
 				break;
-
-			// Add other meeting message types as needed
-
 			default:
 				log(logArea, "Unknown meeting message type: " + messageType);
 				break;
@@ -267,32 +298,47 @@ public class ServerLogic {
 	}
 
 	private static void relayMeetingChatToClients(String senderKey, String senderName, String message, String meetingId,
-			TextArea logArea) {
+			String senderStatus, long timestamp, boolean isGhostMessage, TextArea logArea) {
 		try {
-			// Create JSON for the relay message
+// Create JSON for the relay message
 			JSONObject relayData = new JSONObject();
 			relayData.put("type", "chat");
 			relayData.put("name", senderName);
 			relayData.put("message", message);
 			relayData.put("meetingId", meetingId);
+			relayData.put("status", senderStatus);
+			relayData.put("timestamp", timestamp);
+			relayData.put("isGhostMessage", isGhostMessage);
 
 			String relayMessage = "/meeting/" + relayData.toString();
 			byte[] buf = relayMessage.getBytes(StandardCharsets.UTF_8);
 
-			// Send to all connected clients except sender
+// Send to appropriate connected clients
 			for (ClientInfo clientInfo : clientAddresses) {
 				String clientKey = clientInfo.getAddress().getHostAddress() + ":" + clientInfo.getPort();
 
-				// Skip the sender to avoid echoing back
-				if (!clientKey.equals(senderKey)) {
-					try {
-						DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
-								clientInfo.getPort());
-						serverSocket.send(packet);
-					} catch (IOException e) {
-						log(logArea, "Error relaying meeting message to " + clientInfo.getAddress() + ":"
-								+ clientInfo.getPort() + ": " + e.getMessage());
+// Skip the sender to avoid echoing back
+				if (clientKey.equals(senderKey)) {
+					continue;
+				}
+
+// For ghost messages, only send to other ghosts
+				if (isGhostMessage) {
+// Check if this client is a ghost
+					PlayerInfo clientPlayer = GameLogic.playerList.get(clientKey);
+					if (clientPlayer == null || !"dead".equals(clientPlayer.getStatus())) {
+// Skip living players for ghost messages
+						continue;
 					}
+				}
+
+				try {
+					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
+							clientInfo.getPort());
+					serverSocket.send(packet);
+				} catch (IOException e) {
+					log(logArea, "Error relaying meeting message to " + clientInfo.getAddress() + ":"
+							+ clientInfo.getPort() + ": " + e.getMessage());
 				}
 			}
 		} catch (Exception e) {
@@ -825,30 +871,6 @@ public class ServerLogic {
 			broadcastEmergencyMeeting(reporterKey, corpse.getPlayerName(), corpse.getCharacterID());
 		}
 	}
-//
-//	private static void broadcastBodyReport(String reporterKey, String corpsePlayerKey) {
-//		try {
-//			JSONObject reportJSON = new JSONObject();
-//			reportJSON.put("reporter", reporterKey);
-//			reportJSON.put("deadBody", corpsePlayerKey);
-//
-//			String message = "/report/" + reportJSON.toString();
-//			byte[] buf = message.getBytes(StandardCharsets.UTF_8);
-//
-//			// Send to all connected clients
-//			for (ClientInfo clientInfo : clientAddresses) {
-//				try {
-//					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
-//							clientInfo.getPort());
-//					serverSocket.send(packet);
-//				} catch (IOException e) {
-//					System.err.println("Error broadcasting body report: " + e.getMessage());
-//				}
-//			}
-//		} catch (Exception e) {
-//			System.err.println("Error in broadcastBodyReport: " + e.getMessage());
-//		}
-//	}
 
 	private static void broadcastEmergencyMeeting(String reporterKey, String reportedPlayerName, int reportedCharId) {
 		try {
@@ -898,14 +920,57 @@ public class ServerLogic {
 		}
 	}
 
+	/**
+	 * Handles a vote from a client
+	 * 
+	 * @param voterKey  The key of the voting player
+	 * @param targetKey The key of the target player (or "skip")
+	 * @param meetingId The unique ID of the meeting
+	 * @param logArea   TextArea for logging
+	 */
+	/**
+	 * Handles a vote from a client
+	 * 
+	 * @param voterKey  The key of the voting player
+	 * @param targetKey The key of the target player (or "skip")
+	 * @param meetingId The unique ID of the meeting
+	 * @param logArea   TextArea for logging
+	 */
 	public static void handleVote(String voterKey, String targetKey, String meetingId, TextArea logArea) {
 		try {
-			// Create vote data JSON
+			// Ensure meetingVotes map exists for this meeting
+			meetingVotes.putIfAbsent(meetingId, new ConcurrentHashMap<>());
+			Map<String, String> votes = meetingVotes.get(meetingId);
+
+			// Check for duplicate vote - if already voted for the same target, ignore
+			String existingVote = votes.get(voterKey);
+			if (existingVote != null && existingVote.equals(targetKey)) {
+				System.out.println(
+						"SERVER: Duplicate vote received from " + voterKey + " for " + targetKey + " - ignoring");
+				return;
+			}
+
+			// If player already voted for someone else, log the vote change
+			if (existingVote != null && !existingVote.equals(targetKey)) {
+				System.out.println(
+						"SERVER: Player " + voterKey + " changed vote from " + existingVote + " to " + targetKey);
+			}
+
+			// Store vote
+			votes.put(voterKey, targetKey);
+
+			System.out.println(
+					"SERVER: Received vote from " + voterKey + " for " + targetKey + " in meeting " + meetingId);
+			System.out.println("SERVER: Current votes in meeting: " + votes);
+
+			// Create vote data JSON to broadcast to clients
 			JSONObject voteData = new JSONObject();
 			voteData.put("voter", voterKey);
 			voteData.put("target", targetKey);
 			voteData.put("meetingId", meetingId);
 			voteData.put("time", System.currentTimeMillis());
+			// Add a unique vote ID to help clients identify duplicate messages
+			voteData.put("voteId", voterKey + "_" + System.currentTimeMillis());
 
 			String voteMessage = "/vote/" + voteData.toString();
 			byte[] buf = voteMessage.getBytes(StandardCharsets.UTF_8);
@@ -916,7 +981,13 @@ public class ServerLogic {
 					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
 							clientInfo.getPort());
 					serverSocket.send(packet);
-				} catch (IOException e) {
+
+					// Send multiple times to ensure delivery
+					for (int i = 0; i < 2; i++) {
+						Thread.sleep(30);
+						serverSocket.send(packet);
+					}
+				} catch (Exception e) {
 					log(logArea, "Error sending vote to " + clientInfo.getAddress() + ":" + clientInfo.getPort() + ": "
 							+ e.getMessage());
 				}
@@ -924,41 +995,149 @@ public class ServerLogic {
 
 			// Log the vote
 			String voterName = voterKey.equals(PlayerLogic.getLocalAddressPort()) ? PlayerLogic.getName()
-					: GameLogic.playerList.get(voterKey).getName();
+					: GameLogic.playerList.containsKey(voterKey) ? GameLogic.playerList.get(voterKey).getName()
+							: "Unknown";
 
 			String targetName;
 			if (targetKey.equals("skip")) {
 				targetName = "Skip";
 			} else {
 				targetName = targetKey.equals(PlayerLogic.getLocalAddressPort()) ? PlayerLogic.getName()
-						: GameLogic.playerList.get(targetKey).getName();
+						: GameLogic.playerList.containsKey(targetKey) ? GameLogic.playerList.get(targetKey).getName()
+								: "Unknown";
 			}
+
+			// Update the local meeting UI if present
 			if (GameWindow.getGameWindowInstance() != null) {
 				MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
-
-				// Remove the meeting ID check entirely
 				if (activeMeeting != null) {
-					activeMeeting.receiveChatMessage(voterName, voterName + " voted for " + targetName, "player");
+					activeMeeting.receiveVote(voterKey, targetKey);
+					activeMeeting.addChatMessage("SYSTEM", voterName + " voted for " + targetName);
 				}
 			}
 
 		} catch (Exception e) {
 			log(logArea, "Error handling vote: " + e.getMessage());
+			System.err.println("SERVER ERROR handling vote: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
-	public static void broadcastVotingResults(String ejectedPlayerKey, Map<String, Integer> voteResults,
-			String meetingId, TextArea logArea) {
+	/**
+	 * Calculates voting results for a specific meeting
+	 * 
+	 * @param meetingId The meeting ID
+	 * @return The key of the ejected player, or null if no one was ejected
+	 */
+	public static String calculateVotingResult(String meetingId) {
+		Map<String, String> votesMap = meetingVotes.getOrDefault(meetingId, new HashMap<>());
+
+		// If no votes, no one is ejected
+		if (votesMap.isEmpty()) {
+			System.out.println("SERVER: No votes were cast in meeting " + meetingId);
+			return null;
+		}
+
+		// Count votes for each target
+		Map<String, Integer> voteCounts = new HashMap<>();
+		for (String targetKey : votesMap.values()) {
+			voteCounts.put(targetKey, voteCounts.getOrDefault(targetKey, 0) + 1);
+		}
+
+		System.out.println("SERVER: Vote counts for meeting " + meetingId + ": " + voteCounts);
+
+		// Find player with most votes
+		String mostVotedPlayer = null;
+		int highestVotes = 0;
+		boolean hasTie = false;
+
+		// First pass to find highest vote count
+		for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
+			if (!entry.getKey().equals("skip") && entry.getValue() > highestVotes) {
+				highestVotes = entry.getValue();
+				mostVotedPlayer = entry.getKey();
+				hasTie = false;
+			} else if (!entry.getKey().equals("skip") && entry.getValue() == highestVotes) {
+				// We have a tie between player votes
+				hasTie = true;
+			}
+		}
+
+		// Handle skip votes
+		int skipVotes = voteCounts.getOrDefault("skip", 0);
+
+		// Check for tie with skip or if skip has most votes
+		if (skipVotes > highestVotes) {
+			// Skip wins outright
+			System.out.println("SERVER: Skip won the vote with " + skipVotes + " votes");
+			return null; // No one is ejected
+		} else if (skipVotes == highestVotes && highestVotes > 0) {
+			// Skip ties with highest player vote
+			System.out.println("SERVER: Skip tied with player votes at " + skipVotes + " votes");
+			return null; // No one is ejected in a tie
+		}
+
+		// Check if there's a tie between players
+		if (hasTie) {
+			System.out.println("SERVER: There was a tie between players with " + highestVotes + " votes each");
+			return null; // No one is ejected in a tie
+		}
+
+		// Return the player with the most votes if they exist and have at least one
+		// vote
+		if (mostVotedPlayer != null && highestVotes > 0) {
+			System.out.println("SERVER: " + mostVotedPlayer + " was ejected with " + highestVotes + " votes");
+			return mostVotedPlayer;
+		} else {
+			System.out.println("SERVER: No one was ejected (no valid votes)");
+			return null;
+		}
+	}
+
+	/**
+	 * Broadcasts voting results to all clients
+	 * 
+	 * @param meetingId The meeting ID
+	 * @param logArea   TextArea for logging
+	 */
+	public static void endMeetingAndBroadcastResults(String meetingId, TextArea logArea) {
 		try {
+			// Calculate results
+			String ejectedPlayerKey = calculateVotingResult(meetingId);
+
+			// Get vote counts
+			Map<String, String> votesMap = meetingVotes.getOrDefault(meetingId, new HashMap<>());
+			Map<String, Integer> voteCounts = new HashMap<>();
+			for (String targetKey : votesMap.values()) {
+				voteCounts.put(targetKey, voteCounts.getOrDefault(targetKey, 0) + 1);
+			}
+
+			// Handle ejection locally first
+			if (ejectedPlayerKey != null) {
+				// If local player was ejected
+				if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+					PlayerLogic.setStatus("dead");
+					System.out.println("SERVER: Local player (you) has been ejected");
+				}
+				// If another player was ejected
+				else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
+					PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
+					if (player != null) {
+						player.setStatus("dead");
+						System.out.println("SERVER: Player " + player.getName() + " has been ejected");
+					}
+				}
+			}
+
 			// Create results data JSON
 			JSONObject resultsData = new JSONObject();
 			resultsData.put("ejected", ejectedPlayerKey != null ? ejectedPlayerKey : JSONObject.NULL);
 			resultsData.put("meetingId", meetingId);
 			resultsData.put("time", System.currentTimeMillis());
 
-			// Convert vote results to JSON
+			// Convert vote counts to JSON
 			JSONObject votesJson = new JSONObject();
-			for (Map.Entry<String, Integer> entry : voteResults.entrySet()) {
+			for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
 				votesJson.put(entry.getKey(), entry.getValue());
 			}
 			resultsData.put("votes", votesJson);
@@ -966,13 +1145,23 @@ public class ServerLogic {
 			String resultsMessage = "/results/" + resultsData.toString();
 			byte[] buf = resultsMessage.getBytes(StandardCharsets.UTF_8);
 
+			System.out.println("SERVER: Broadcasting voting results: " + resultsMessage);
+
 			// Send to all clients
 			for (ClientInfo clientInfo : clientAddresses) {
 				try {
 					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
 							clientInfo.getPort());
-					serverSocket.send(packet);
-				} catch (IOException e) {
+
+					// Send multiple times to ensure delivery
+					for (int i = 0; i < 5; i++) {
+						serverSocket.send(packet);
+						Thread.sleep(50);
+					}
+
+					System.out.println(
+							"SERVER: Sent voting results to " + clientInfo.getAddress() + ":" + clientInfo.getPort());
+				} catch (Exception e) {
 					log(logArea, "Error sending results to " + clientInfo.getAddress() + ":" + clientInfo.getPort()
 							+ ": " + e.getMessage());
 				}
@@ -983,12 +1172,25 @@ public class ServerLogic {
 				log(logArea, "No one was ejected.");
 			} else {
 				String playerName = ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort()) ? PlayerLogic.getName()
-						: GameLogic.playerList.get(ejectedPlayerKey).getName();
+						: GameLogic.playerList.containsKey(ejectedPlayerKey)
+								? GameLogic.playerList.get(ejectedPlayerKey).getName()
+								: "Unknown";
 				log(logArea, playerName + " was ejected.");
 			}
 
+			// Update local UI if present
+			if (GameWindow.getGameWindowInstance() != null) {
+				MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
+				if (activeMeeting != null) {
+					activeMeeting.showVotingResults(ejectedPlayerKey, voteCounts);
+				}
+			}
+			meetingVotes.remove(meetingId);
+
 		} catch (Exception e) {
 			log(logArea, "Error broadcasting voting results: " + e.getMessage());
+			System.err.println("SERVER ERROR broadcasting voting results: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 

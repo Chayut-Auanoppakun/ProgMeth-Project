@@ -6,16 +6,22 @@ import java.net.DatagramSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.json.JSONObject;
 
+import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.PathTransition;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -43,6 +49,13 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.paint.Stop;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.CubicCurveTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -71,6 +84,9 @@ public class MeetingUI extends StackPane {
 
 	// Game Data
 	private Map<String, PlayerVoteCard> playerCards = new HashMap<>();
+	private Set<String> processedChatMessages = new HashSet<>();
+	private long lastLocalMessageTimestamp = 0;
+	private Set<String> processedVoterKeys = new HashSet<>();
 	private List<String> playerKeys = new ArrayList<>();
 	private int votingTimeSeconds = 60;
 	private Timeline votingTimer;
@@ -157,27 +173,109 @@ public class MeetingUI extends StackPane {
 	}
 
 	private void applyDeadPlayerUI() {
-		// Add ghost overlay to the entire UI
+		// Add ethereal background effect
 		Rectangle ghostOverlay = new Rectangle(getWidth(), getHeight());
-		ghostOverlay.setFill(Color.rgb(0, 0, 150, 0.2)); // Slight blue tint
+
+		// Create a more subtle and eerie ghost effect with radial gradient
+		RadialGradient etherealGlow = new RadialGradient(0, 0, 0.5, 0.5, 1.0, true, CycleMethod.NO_CYCLE,
+				new Stop(0, Color.rgb(20, 20, 80, 0.0)), new Stop(0.8, Color.rgb(30, 30, 120, 0.1)),
+				new Stop(1.0, Color.rgb(50, 50, 150, 0.25)));
+
+		ghostOverlay.setFill(etherealGlow);
 		getChildren().add(1, ghostOverlay); // Add between background and panel
 
-		// Add ghost text label
-		Text ghostLabel = new Text("GHOST - SPECTATING ONLY");
-		ghostLabel.setFont(Font.font("Monospace", FontWeight.BOLD, 18));
-		ghostLabel.setFill(Color.rgb(180, 180, 255));
-		ghostLabel.setStroke(Color.BLACK);
-		ghostLabel.setStrokeWidth(1);
-		ghostLabel.setEffect(new DropShadow(10, Color.BLACK));
+		// Add subtle ghost particles in the background
+		createGhostParticles();
 
-		StackPane ghostLabelPane = new StackPane(ghostLabel);
-		ghostLabelPane.setPadding(new Insets(10));
-		ghostLabelPane.setStyle("-fx-background-color: rgba(0, 0, 50, 0.7); -fx-background-radius: 5;");
-		getChildren().add(ghostLabelPane);
+		// Apply ethereal glow effect to main panel
+		DropShadow ghostGlow = new DropShadow();
+		ghostGlow.setColor(Color.rgb(130, 130, 255, 0.7));
+		ghostGlow.setRadius(15);
+		ghostGlow.setSpread(0.4);
+		mainPanel.setEffect(ghostGlow);
 
-		// Position at bottom of screen
-		StackPane.setAlignment(ghostLabelPane, Pos.BOTTOM_CENTER);
-		StackPane.setMargin(ghostLabelPane, new Insets(0, 0, 30, 0));
+		// Change border color of the main panel to a ghostly blue
+		mainPanel.setBorder(new Border(new BorderStroke(Color.rgb(140, 140, 255, 0.7), // Ethereal blue border
+				BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(3))));
+
+		// Apply a subtle animation to the panel to make it feel ethereal
+		Timeline pulseAnimation = new Timeline(
+				new KeyFrame(Duration.ZERO, new KeyValue(mainPanel.opacityProperty(), 0.92),
+						new KeyValue(ghostOverlay.opacityProperty(), 0.7)),
+				new KeyFrame(Duration.seconds(3), new KeyValue(mainPanel.opacityProperty(), 0.97),
+						new KeyValue(ghostOverlay.opacityProperty(), 0.9)),
+				new KeyFrame(Duration.seconds(6), new KeyValue(mainPanel.opacityProperty(), 0.92),
+						new KeyValue(ghostOverlay.opacityProperty(), 0.7)));
+		pulseAnimation.setCycleCount(Animation.INDEFINITE);
+		pulseAnimation.play();
+	}
+
+	private void createGhostParticles() {
+		// Create a pane for the ghost particles
+		Pane particlePane = new Pane();
+		particlePane.setPrefSize(getWidth(), getHeight());
+		particlePane.setMouseTransparent(true);
+
+		// Create a number of subtle ghost particles
+		Random random = new Random();
+		for (int i = 0; i < 12; i++) {
+			// Create particle
+			Circle particle = new Circle();
+			particle.setRadius(random.nextDouble() * 2 + 1);
+			particle.setFill(Color.rgb(180, 180, 255, 0.3));
+
+			// Random starting position
+			double startX = random.nextDouble() * getWidth();
+			double startY = random.nextDouble() * getHeight();
+			particle.setCenterX(startX);
+			particle.setCenterY(startY);
+
+			// Add glow effect
+			DropShadow glow = new DropShadow();
+			glow.setColor(Color.rgb(150, 150, 255, 0.6));
+			glow.setRadius(4);
+			particle.setEffect(glow);
+
+			// Add to pane
+			particlePane.getChildren().add(particle);
+
+			// Create floating animation
+			double endX = startX + (random.nextDouble() * 100 - 50);
+			double endY = startY - (random.nextDouble() * 100 + 50); // Always float upward
+
+			// Duration between 10-20 seconds for slow, eerie movement
+			double duration = 10 + random.nextDouble() * 10;
+
+			// Create path transition
+			Path path = new Path();
+			path.getElements().add(new MoveTo(startX, startY));
+
+			// Add control points for curved path
+			double controlX1 = startX + (random.nextDouble() * 100 - 50);
+			double controlY1 = startY - (random.nextDouble() * 50);
+			double controlX2 = endX - (random.nextDouble() * 100 - 50);
+			double controlY2 = endY + (random.nextDouble() * 50);
+
+			path.getElements().add(new CubicCurveTo(controlX1, controlY1, controlX2, controlY2, endX, endY));
+
+			PathTransition transition = new PathTransition();
+			transition.setDuration(Duration.seconds(duration));
+			transition.setPath(path);
+			transition.setNode(particle);
+			transition.setCycleCount(Animation.INDEFINITE);
+
+			// Add fade in/out during movement
+			FadeTransition fade = new FadeTransition(Duration.seconds(duration), particle);
+			fade.setFromValue(0.1);
+			fade.setToValue(0.5);
+			fade.setCycleCount(Animation.INDEFINITE);
+			fade.setAutoReverse(true);
+
+			// Play animations
+			transition.play();
+			fade.play();
+		}
+		getChildren().add(1, particlePane);
 	}
 
 	/**
@@ -323,99 +421,149 @@ public class MeetingUI extends StackPane {
 	}
 
 	private VBox createChatSection(boolean isPlayerDead) {
-		VBox chatBox = new VBox(5);
-		chatBox.setPadding(new Insets(10, 0, 0, 0));
+	    VBox chatBox = new VBox(5);
+	    chatBox.setPadding(new Insets(10, 0, 0, 0));
 
-		// Chat header with different text for dead players
-		Text chatHeader;
-		if (isPlayerDead) {
-			chatHeader = new Text("SPECTATOR CHAT (GHOST)");
-			chatHeader.setFill(Color.rgb(150, 150, 255)); // Ghostly blue
-		} else {
-			chatHeader = new Text("DISCUSSION");
-			chatHeader.setFill(Color.LIGHTBLUE);
-		}
-		chatHeader.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
+	    // Chat header with different text and styling for dead players
+	    Text chatHeader;
+	    if (isPlayerDead) {
+	        chatHeader = new Text("ETHEREAL COMMUNICATION");
+	        chatHeader.setFill(Color.rgb(180, 180, 255)); // Brighter ghostly blue
+	        
+	        // Add a subtle glow effect to the header
+	        DropShadow headerGlow = new DropShadow();
+	        headerGlow.setColor(Color.rgb(140, 140, 255, 0.8));
+	        headerGlow.setRadius(10);
+	        headerGlow.setSpread(0.4);
+	        chatHeader.setEffect(headerGlow);
+	    } else {
+	        chatHeader = new Text("DISCUSSION");
+	        chatHeader.setFill(Color.LIGHTBLUE);
+	    }
+	    chatHeader.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
 
-		// Chat area
-		chatArea = new TextArea();
-		chatArea.setPrefHeight(100);
-		chatArea.setEditable(false);
-		chatArea.setWrapText(true);
+	    // Chat area
+	    chatArea = new TextArea();
+	    chatArea.setPrefHeight(100);
+	    chatArea.setEditable(false);
+	    chatArea.setWrapText(true);
 
-		// Different styling for dead players
-		if (isPlayerDead) {
-			chatArea.setStyle("-fx-control-inner-background: #2a2a40; " + // Slightly bluer background
-					"-fx-text-fill: #aaaaff; " + // Bluer text
-					"-fx-font-family: 'Monospace'; " + "-fx-border-color: #5555aa; " + // Bluer border
-					"-fx-border-width: 1px; " + "-fx-opacity: 0.9;"); // Slightly transparent
-		} else {
-			chatArea.setStyle("-fx-control-inner-background: #2a2a2a; " + "-fx-text-fill: white; "
-					+ "-fx-font-family: 'Monospace'; " + "-fx-border-color: #555555; " + "-fx-border-width: 1px;");
-		}
+	    // Enhanced styling for dead players
+	    if (isPlayerDead) {
+	        chatArea.setStyle(
+	            "-fx-control-inner-background: rgba(25, 25, 50, 0.9); " +  // Darker blue background with transparency
+	            "-fx-text-fill: rgba(180, 180, 255, 0.9); " +              // Brighter ghostly text
+	            "-fx-font-family: 'Monospace'; " +
+	            "-fx-border-color: rgba(100, 100, 200, 0.8); " +           // More visible border
+	            "-fx-border-width: 1.5px; " +                              // Slightly thicker border
+	            "-fx-background-radius: 5px; " +                           // Rounded corners
+	            "-fx-border-radius: 5px; "                                 // Rounded corners for border
+	        );
+	    } else {
+	        chatArea.setStyle("-fx-control-inner-background: #2a2a2a; " + "-fx-text-fill: white; "
+	                + "-fx-font-family: 'Monospace'; " + "-fx-border-color: #555555; " + "-fx-border-width: 1px;");
+	    }
 
-		// Input area - only for alive players
-		HBox inputBox = new HBox(5);
+	    // Input area - enhanced for ghost players
+	    HBox inputBox = new HBox(5);
 
-		messageInput = new TextField();
-		messageInput.setPrefHeight(30);
-		messageInput.setPromptText(isPlayerDead ? "Ghosts cannot speak to the living..." : "Type your message...");
+	    messageInput = new TextField();
+	    messageInput.setPrefHeight(30);
+	    
+	    // Enhanced styling for ghost chat input
+	    if (isPlayerDead) {
+	        messageInput.setPromptText("Communicate with the beyond...");
+	        messageInput.setStyle(
+	            "-fx-background-color: rgba(40, 40, 80, 0.8); " +          // Dark blue with transparency
+	            "-fx-text-fill: rgba(200, 200, 255, 0.9); " +              // Bright ghostly text
+	            "-fx-font-family: 'Monospace'; " +
+	            "-fx-border-color: rgba(120, 120, 220, 0.7); " +           // Ghostly border
+	            "-fx-border-width: 1.5px; " +                              // Slightly thicker border
+	            "-fx-background-radius: 5px; " +                           // Rounded corners
+	            "-fx-border-radius: 5px; "                                 // Rounded corners for border
+	        );
+	    } else {
+	        messageInput.setPromptText("Type your message...");
+	        messageInput.setStyle("-fx-background-color: #2a2a2a; " + "-fx-text-fill: white; "
+	                + "-fx-font-family: 'Monospace'; " + "-fx-border-color: #555555; " + "-fx-border-width: 1px;");
+	    }
+	    HBox.setHgrow(messageInput, Priority.ALWAYS);
 
-		if (isPlayerDead) {
-			messageInput.setDisable(true);
-			messageInput.setStyle("-fx-background-color: #3a3a4a; " + // Bluer background
-					"-fx-text-fill: #8888aa; " + // Ghostly text
-					"-fx-font-family: 'Monospace'; " + "-fx-border-color: #5555aa; " + // Bluer border
-					"-fx-border-width: 1px; " + "-fx-opacity: 0.7;"); // More transparent
-		} else {
-			messageInput.setStyle("-fx-background-color: #2a2a2a; " + "-fx-text-fill: white; "
-					+ "-fx-font-family: 'Monospace'; " + "-fx-border-color: #555555; " + "-fx-border-width: 1px;");
-		}
-		HBox.setHgrow(messageInput, Priority.ALWAYS);
+	    sendButton = new Button("Send");
+	    sendButton.setPrefHeight(30);
 
-		sendButton = new Button("Send");
-		sendButton.setPrefHeight(30);
+	    if (isPlayerDead) {
+	        sendButton.setStyle(
+	            "-fx-background-color: rgba(80, 80, 180, 0.8); " +         // Bright ghostly blue
+	            "-fx-text-fill: rgba(220, 220, 255, 0.9); " +              // Almost white text
+	            "-fx-font-family: 'Monospace'; " +
+	            "-fx-font-weight: bold; " +
+	            "-fx-border-color: rgba(140, 140, 220, 0.7); " +           // Ghostly border
+	            "-fx-border-width: 1.5px; " +                              // Slightly thicker border
+	            "-fx-background-radius: 5px; " +                           // Rounded corners
+	            "-fx-border-radius: 5px; " +                               // Rounded corners for border
+	            "-fx-effect: dropshadow(three-pass-box, rgba(120, 120, 255, 0.5), 5, 0, 0, 0);" // Ghostly glow
+	        );
+	        
+	        // Add hover effect for ghost button
+	        sendButton.setOnMouseEntered(e -> 
+	            sendButton.setStyle(
+	                "-fx-background-color: rgba(100, 100, 220, 0.9); " +   // Brighter on hover
+	                "-fx-text-fill: white; " +
+	                "-fx-font-family: 'Monospace'; " +
+	                "-fx-font-weight: bold; " +
+	                "-fx-border-color: rgba(160, 160, 255, 0.8); " +
+	                "-fx-border-width: 1.5px; " +
+	                "-fx-background-radius: 5px; " +
+	                "-fx-border-radius: 5px; " +
+	                "-fx-effect: dropshadow(three-pass-box, rgba(140, 140, 255, 0.6), 8, 0, 0, 0);"
+	            )
+	        );
+	        
+	        sendButton.setOnMouseExited(e -> 
+	            sendButton.setStyle(
+	                "-fx-background-color: rgba(80, 80, 180, 0.8); " +
+	                "-fx-text-fill: rgba(220, 220, 255, 0.9); " +
+	                "-fx-font-family: 'Monospace'; " +
+	                "-fx-font-weight: bold; " +
+	                "-fx-border-color: rgba(140, 140, 220, 0.7); " +
+	                "-fx-border-width: 1.5px; " +
+	                "-fx-background-radius: 5px; " +
+	                "-fx-border-radius: 5px; " +
+	                "-fx-effect: dropshadow(three-pass-box, rgba(120, 120, 255, 0.5), 5, 0, 0, 0);"
+	            )
+	        );
+	    } else {
+	        sendButton.setStyle(
+	                "-fx-background-color: #1e90ff; " + "-fx-text-fill: white; " + "-fx-font-family: 'Monospace'; "
+	                        + "-fx-font-weight: bold; " + "-fx-border-color: #87cefa; " + "-fx-border-width: 1px;");
+	    }
 
-		if (isPlayerDead) {
-			sendButton.setDisable(true);
-			sendButton.setStyle("-fx-background-color: #5555aa; " + // Bluer background
-					"-fx-text-fill: #aaaaff; " + // Ghostly text
-					"-fx-font-family: 'Monospace'; " + "-fx-font-weight: bold; " + "-fx-border-color: #7777aa; " + // Bluer
-																													// border
-					"-fx-border-width: 1px; " + "-fx-opacity: 0.7;"); // More transparent
-		} else {
-			sendButton.setStyle(
-					"-fx-background-color: #1e90ff; " + "-fx-text-fill: white; " + "-fx-font-family: 'Monospace'; "
-							+ "-fx-font-weight: bold; " + "-fx-border-color: #87cefa; " + "-fx-border-width: 1px;");
-		}
+	    sendButton.setOnAction(e -> sendChatMessage());
+	    messageInput.setOnAction(e -> sendChatMessage());
 
-		sendButton.setOnAction(e -> {
-			if (!isPlayerDead) {
-				sendChatMessage();
-			}
-		});
+	    inputBox.getChildren().addAll(messageInput, sendButton);
 
-		// Handle Enter key in message input - only for alive players
-		if (!isPlayerDead) {
-			messageInput.setOnAction(e -> sendChatMessage());
-		}
+	    // Add all to chat box
+	    chatBox.getChildren().addAll(chatHeader, chatArea, inputBox);
 
-		inputBox.getChildren().addAll(messageInput, sendButton);
+	    // Subtle information for dead players
+	    if (isPlayerDead) {
+	        Text ghostInfo = new Text("Only souls of the departed can see your messages");
+	        ghostInfo.setFont(Font.font("Monospace", FontWeight.NORMAL, 12));
+	        ghostInfo.setFill(Color.rgb(160, 160, 255, 0.8)); // Ghostly blue
+	        ghostInfo.setTextAlignment(TextAlignment.CENTER);
+	        
+	        // Add subtle glow
+	        DropShadow textGlow = new DropShadow();
+	        textGlow.setColor(Color.rgb(100, 100, 220, 0.6));
+	        textGlow.setRadius(5);
+	        ghostInfo.setEffect(textGlow);
+	        
+	        chatBox.getChildren().add(ghostInfo);
+	    }
 
-		// Add all to chat box
-		chatBox.getChildren().addAll(chatHeader, chatArea, inputBox);
-
-		// Additional info for dead players
-		if (isPlayerDead) {
-			Text ghostInfo = new Text("Dead players can only observe. The living cannot see your messages.");
-			ghostInfo.setFont(Font.font("Monospace", FontWeight.NORMAL, 12));
-			ghostInfo.setFill(Color.rgb(150, 150, 255)); // Ghostly blue
-			ghostInfo.setTextAlignment(TextAlignment.CENTER);
-
-			chatBox.getChildren().add(ghostInfo);
-		}
-
-		return chatBox;
+	    return chatBox;
 	}
 
 	/**
@@ -520,33 +668,55 @@ public class MeetingUI extends StackPane {
 	private void sendChatMessage() {
 		String message = messageInput.getText().trim();
 		if (!message.isEmpty()) {
-			// Get local player name
+			// Get local player name and status
 			String playerName = PlayerLogic.getName();
+			String playerStatus = PlayerLogic.getStatus();
+			boolean isGhost = "dead".equals(playerStatus);
 
-			// Display message locally first
-			addChatMessage(playerName, message);
+			// Generate a timestamp for this message
+			long timestamp = System.currentTimeMillis();
+			// Store the timestamp for deduplication
+			lastLocalMessageTimestamp = timestamp;
+
+			// Create a unique message ID
+			String messageId = playerName + ":" + message + ":" + timestamp;
+
+			// Add to processed set to prevent duplication when it comes back from server
+			processedChatMessages.add(messageId);
+
+			// Display message locally
+			addChatMessage(playerName, message, playerStatus);
 
 			try {
-				// Create meeting-specific JSON message
+				// Create meeting-specific JSON message with the timestamp
 				JSONObject meetingChatData = new JSONObject();
 				meetingChatData.put("type", "chat");
 				meetingChatData.put("name", playerName);
 				meetingChatData.put("message", message);
 				meetingChatData.put("meetingId", meetingId);
-				meetingChatData.put("status", PlayerLogic.getStatus()); // Include player status
+				meetingChatData.put("status", playerStatus);
+				meetingChatData.put("timestamp", timestamp); // Add timestamp for deduplication
+				meetingChatData.put("isGhostMessage", isGhost); // Flag if it's a ghost message
 
 				String meetingMessage = "/meeting/" + meetingChatData.toString();
 
 				// Send message based on client/server role
 				if (MainMenuPane.getState() == State.SERVER) {
-					// If server, handle locally and broadcast to all clients
-
-					// First, update our own chat
-					addChatMessage(playerName, message);
-
-					// Then broadcast to all clients
+					// If server, broadcast to appropriate clients
 					for (ClientInfo clientInfo : ServerLogic.getConnectedClients()) {
 						try {
+							// Skip sending ghost messages to living players
+							if (isGhost) {
+								String clientKey = clientInfo.getAddress().getHostAddress() + ":"
+										+ clientInfo.getPort();
+								PlayerInfo targetPlayer = GameLogic.playerList.get(clientKey);
+
+								// Only send to other ghosts
+								if (targetPlayer == null || !"dead".equals(targetPlayer.getStatus())) {
+									continue; // Skip living players
+								}
+							}
+
 							DatagramSocket socket = ServerLogic.getServerSocket();
 							if (socket != null) {
 								byte[] buf = meetingMessage.getBytes(StandardCharsets.UTF_8);
@@ -559,7 +729,7 @@ public class MeetingUI extends StackPane {
 						}
 					}
 				} else {
-					// If client, send to server using existing ClientLogic
+					// If client, send to server
 					ClientLogic.sendMessage(meetingMessage, null);
 				}
 			} catch (Exception e) {
@@ -571,23 +741,135 @@ public class MeetingUI extends StackPane {
 		}
 	}
 
-	public void receiveChatMessage(String playerName, String message, String playerStatus) {
+	/**
+	 * Updated addChatMessage method to support ghost messages This should replace
+	 * the current addChatMessage method in MeetingUI.java
+	 */
+	public void addChatMessage(String playerName, String message, String playerStatus) {
 	    Platform.runLater(() -> {
-	        // Check if the chat area is properly initialized
-	        if (chatArea == null) {
-	            System.err.println("Chat area is null in MeetingUI");
-	            return;
+	        try {
+	            String timestamp = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+
+	            // Create a message ID for deduplication
+	            String messageId = playerName + ":" + message + ":" + System.currentTimeMillis();
+	            
+	            // If this is from us and very similar to a recent message, don't add it
+	            if (playerName.equals(PlayerLogic.getName())) {
+	                String lastMessage = chatArea.getText();
+	                String[] lines = lastMessage.split("\n");
+	                for (String line : lines) {
+	                    if (line.contains(playerName + ": " + message)) {
+	                        System.out.println("MEETING UI: Similar message already displayed, ignoring");
+	                        return;
+	                    }
+	                }
+	            }
+
+	            // Check if this is a ghost message
+	            boolean isGhostMessage = "dead".equals(playerStatus);
+	            
+	            // Check if the local player is a ghost
+	            boolean localPlayerIsGhost = "dead".equals(PlayerLogic.getStatus());
+	            
+	            // If this is a ghost message and local player is NOT a ghost, don't show it
+	            if (isGhostMessage && !localPlayerIsGhost && !"SYSTEM".equals(playerName)) {
+	                System.out.println("Not showing ghost message to living player: " + message);
+	                return;
+	            }
+
+	            // Format message based on sender status
+	            String formattedMessage;
+	            if ("SYSTEM".equals(playerName)) {
+	                formattedMessage = "[" + timestamp + "] " + playerName + ": " + message + "\n";
+	            } else if (isGhostMessage) {
+	                // Enhanced ghost message format with more subtle indication
+	                formattedMessage = "[" + timestamp + "] " + playerName + " \uD83D\uDC7B: " + message + "\n";
+	                
+	                // If we're also a ghost, apply color styling directly using CSS
+	                if (localPlayerIsGhost) {
+	                    // Since TextArea doesn't support inline styles, we need to identify ghost messages
+	                    // by their format when styling the overall display
+	                }
+	            } else {
+	                formattedMessage = "[" + timestamp + "] " + playerName + ": " + message + "\n";
+	            }
+
+	            // Add to chat area
+	            chatArea.appendText(formattedMessage);
+	            chatArea.setScrollTop(Double.MAX_VALUE); // Scroll to bottom
+	        } catch (Exception e) {
+	            System.err.println("Error adding chat message: " + e.getMessage());
+	            e.printStackTrace();
 	        }
-	        
-	        // Debug print to verify the method is being called
-	        System.out.println("MeetingUI received message: " + playerName + ": " + message);
-	        
-	        // Format and add the message to the chat area
-	        String timestamp = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
-	        String formattedMessage = "[" + timestamp + "] " + playerName + ": " + message + "\n";
-	        chatArea.appendText(formattedMessage);
-	        chatArea.setScrollTop(Double.MAX_VALUE); // Scroll to bottom
 	    });
+	}
+	public void receiveChatMessage(String playerName, String message, String playerStatus) {
+		Platform.runLater(() -> {
+			try {
+				// Check if the chat area is properly initialized
+				if (chatArea == null) {
+					System.err.println("Chat area is null in MeetingUI");
+					return;
+				}
+
+				// Check if this is a ghost message
+				boolean isGhostMessage = "dead".equals(playerStatus);
+
+				// Check if the local player is a ghost
+				boolean localPlayerIsGhost = "dead".equals(PlayerLogic.getStatus());
+
+				// If this is a ghost message and local player is NOT a ghost, don't show it
+				if (isGhostMessage && !localPlayerIsGhost && !"SYSTEM".equals(playerName)) {
+					System.out.println("Not showing ghost message to living player: " + message);
+					return;
+				}
+
+				// Create a message ID for deduplication
+				String messageId = playerName + ":" + message + ":" + lastLocalMessageTimestamp;
+
+				// Check if this is our own message that we've already displayed
+				if (processedChatMessages.contains(messageId)) {
+					System.out.println("MEETING UI: Ignoring duplicate chat message: " + messageId);
+					return;
+				}
+
+				// If the message is from us but doesn't match our last timestamp,
+				// it could be a different message or one from a previous session
+				if (playerName.equals(PlayerLogic.getName())
+						&& System.currentTimeMillis() - lastLocalMessageTimestamp < 10000) {
+					// If it's a recent message from us, check if the content is similar
+					String lastMessage = chatArea.getText();
+					String[] lines = lastMessage.split("\n");
+					for (String line : lines) {
+						if (line.contains(playerName + ": " + message)) {
+							System.out.println("MEETING UI: Similar message already displayed, ignoring");
+							return;
+						}
+					}
+				}
+
+				// Format and add the message to the chat area
+				String timestamp = java.time.LocalTime.now()
+						.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+				String formattedMessage = "[" + timestamp + "] ";
+
+				// Format differently based on player status
+				if ("SYSTEM".equals(playerName)) {
+					formattedMessage += playerName + ": " + message + "\n";
+				} else if (isGhostMessage) {
+					formattedMessage += "👻 " + playerName + " (GHOST): " + message + "\n";
+				} else {
+					formattedMessage += playerName + ": " + message + "\n";
+				}
+
+				// Add to chat
+				chatArea.appendText(formattedMessage);
+				chatArea.setScrollTop(Double.MAX_VALUE); // Scroll to bottom
+			} catch (Exception e) {
+				System.err.println("MEETING UI ERROR: Failed to receive chat message: " + e.getMessage());
+				e.printStackTrace();
+			}
+		});
 	}
 
 	/**
@@ -596,10 +878,22 @@ public class MeetingUI extends StackPane {
 	public void addChatMessage(String playerName, String message) {
 		Platform.runLater(() -> {
 			String timestamp = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+			// Create a message ID for deduplication
+			String messageId = playerName + ":" + message + ":" + System.currentTimeMillis();
 
+			// If this is from us and very similar to a recent message, don't add it
+			if (playerName.equals(PlayerLogic.getName())) {
+				String lastMessage = chatArea.getText();
+				String[] lines = lastMessage.split("\n");
+				for (String line : lines) {
+					if (line.contains(playerName + ": " + message)) {
+						System.out.println("MEETING UI: Similar message already displayed, ignoring");
+						return;
+					}
+				}
+			}
 			// Check if the message is from a dead player
 			boolean isDeadMessage = false;
-
 			// System messages always show for everyone
 			boolean isSystemMessage = "SYSTEM".equals(playerName);
 
@@ -620,7 +914,6 @@ public class MeetingUI extends StackPane {
 					}
 				}
 			}
-
 			// Format message differently based on sender status
 			String formattedMessage;
 			if (isSystemMessage) {
@@ -630,7 +923,6 @@ public class MeetingUI extends StackPane {
 			} else {
 				formattedMessage = "[" + timestamp + "] " + playerName + ": " + message + "\n";
 			}
-
 			// Add to chat area
 			chatArea.appendText(formattedMessage);
 			chatArea.setScrollTop(Double.MAX_VALUE); // Scroll to bottom
@@ -705,31 +997,25 @@ public class MeetingUI extends StackPane {
 	 */
 	private void confirmVote(String targetPlayerKey) {
 		if (!hasVoted && !"dead".equals(PlayerLogic.getStatus())) {
-			// Record the vote
+			// Record local vote state
+			selectedPlayerKey = targetPlayerKey;
 			playerVotes.put(PlayerLogic.getLocalAddressPort(), targetPlayerKey);
-
-			// Update vote count
-			int currentVotes = votes.getOrDefault(targetPlayerKey, 0);
-			votes.put(targetPlayerKey, currentVotes + 1);
-
-			// Show vote indicator
-			playerCards.get(targetPlayerKey).addVote(PlayerLogic.getCharID());
-
-			// Mark as voted
 			hasVoted = true;
+
+			// Disable the skip button since we've voted
+			skipVoteButton.setDisable(true);
 
 			// Send vote to server
 			if (MainMenuPane.getState() == State.SERVER) {
-				// If server, handle the vote locally and broadcast to clients
+				// If server, handle the vote locally via ServerLogic
 				ServerLogic.handleVote(PlayerLogic.getLocalAddressPort(), targetPlayerKey, meetingId, null);
 			} else {
 				// If client, send vote to server
 				sendVoteToServer(targetPlayerKey);
 			}
 
-			// Display confirmation in chat
-			String targetName = getPlayerNameByKey(targetPlayerKey);
-			addChatMessage("SYSTEM", "You voted for " + targetName);
+			// The vote UI will update when the server broadcasts the vote to all clients
+			// This ensures all clients see consistent voting state
 		}
 	}
 
@@ -766,27 +1052,18 @@ public class MeetingUI extends StackPane {
 				selectedPlayerKey = null;
 			}
 
-			// Record skip vote
+			// Record skip vote locally
 			playerVotes.put(PlayerLogic.getLocalAddressPort(), "skip");
-
-			// Update skip vote count
-			int currentSkips = votes.getOrDefault("skip", 0);
-			votes.put("skip", currentSkips + 1);
-
-			// Mark as voted
 			hasVoted = true;
 
 			// Send vote to server
 			if (MainMenuPane.getState() == State.SERVER) {
-				// If server, handle the vote locally and broadcast to clients
+				// If server, handle the vote directly
 				ServerLogic.handleVote(PlayerLogic.getLocalAddressPort(), "skip", meetingId, null);
 			} else {
 				// If client, send vote to server
 				sendVoteToServer("skip");
 			}
-
-			// Display confirmation in chat
-			addChatMessage("SYSTEM", "You skipped voting");
 
 			// Disable skip button
 			skipVoteButton.setDisable(true);
@@ -805,40 +1082,61 @@ public class MeetingUI extends StackPane {
 	 */
 	public void receiveVote(String voterKey, String targetKey) {
 		Platform.runLater(() -> {
-			// Update vote count
-			int currentVotes = votes.getOrDefault(targetKey, 0);
-			votes.put(targetKey, currentVotes + 1);
-
-			// Record who voted for whom
-			playerVotes.put(voterKey, targetKey);
-
-			// If it's a skip vote
-			if ("skip".equals(targetKey)) {
-				// Add chat message
-				String voterName = getPlayerNameByKey(voterKey);
-				addChatMessage("SYSTEM", voterName + " skipped voting");
-				return;
-			}
-
-			// Check if the target exists in our player cards
-			if (playerCards.containsKey(targetKey)) {
-				// Get voter's character ID
-				int voterCharId;
-				if (voterKey.equals(PlayerLogic.getLocalAddressPort())) {
-					voterCharId = PlayerLogic.getCharID();
-				} else {
-					PlayerInfo voter = GameLogic.playerList.get(voterKey);
-					voterCharId = voter != null ? voter.getCharacterID() : 0;
+			try {
+				// Check if this vote has already been processed for this voter
+				if (processedVoterKeys.contains(voterKey)) {
+					// Check if the vote is the same as before
+					String previousVote = playerVotes.get(voterKey);
+					if (previousVote != null && previousVote.equals(targetKey)) {
+						System.out.println("MEETING UI: Ignoring duplicate vote from " + voterKey);
+						return;
+					}
+					// If vote is different, allow the change
+					System.out.println("MEETING UI: Player " + voterKey + " changed vote from " + previousVote + " to "
+							+ targetKey);
 				}
 
-				// Show vote icon
-				playerCards.get(targetKey).addVote(voterCharId);
+				// Mark this voter as processed
+				processedVoterKeys.add(voterKey);
 
-				// Add chat message
-				String voterName = getPlayerNameByKey(voterKey);
-				String targetName = getPlayerNameByKey(targetKey);
+				System.out.println("MEETING UI: Processing vote from " + voterKey + " for " + targetKey);
 
-				addChatMessage("SYSTEM", voterName + " voted for " + targetName);
+				// Record who voted for whom
+				playerVotes.put(voterKey, targetKey);
+
+				// If it's a skip vote
+				if ("skip".equals(targetKey)) {
+					// Add chat message
+					String voterName = getPlayerNameByKey(voterKey);
+					addChatMessage("SYSTEM", voterName + " skipped voting");
+					return;
+				}
+
+				// Check if the target exists in our player cards
+				if (playerCards.containsKey(targetKey)) {
+					// Get voter's character ID
+					int voterCharId;
+					if (voterKey.equals(PlayerLogic.getLocalAddressPort())) {
+						voterCharId = PlayerLogic.getCharID();
+					} else {
+						PlayerInfo voter = GameLogic.playerList.get(voterKey);
+						voterCharId = voter != null ? voter.getCharacterID() : 0;
+					}
+
+					// Show vote icon
+					playerCards.get(targetKey).addVote(voterCharId);
+
+					// Add chat message
+					String voterName = getPlayerNameByKey(voterKey);
+					String targetName = getPlayerNameByKey(targetKey);
+
+					addChatMessage("SYSTEM", voterName + " voted for " + targetName);
+				} else {
+					System.err.println("MEETING UI: Could not find player card for target: " + targetKey);
+				}
+			} catch (Exception e) {
+				System.err.println("MEETING UI ERROR: Failed to process vote: " + e.getMessage());
+				e.printStackTrace();
 			}
 		});
 	}
@@ -862,26 +1160,7 @@ public class MeetingUI extends StackPane {
 		// For server: calculate results and broadcast
 		if (MainMenuPane.getState() == State.SERVER) {
 			// Calculate results
-			String ejectedPlayerKey = calculateVotingResult();
-
-			// Broadcast results to all clients
-			ServerLogic.broadcastVotingResults(ejectedPlayerKey, votes, meetingId, null);
-
-			// Handle ejection
-			if (ejectedPlayerKey != null) {
-				// If local player was ejected
-				if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
-					PlayerLogic.setStatus("dead");
-				}
-				// If another player was ejected
-				else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
-					PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
-					player.setStatus("dead");
-				}
-			}
-
-			// Show the results locally
-			showVotingResults(ejectedPlayerKey);
+			ServerLogic.endMeetingAndBroadcastResults(meetingId, chatArea);
 		}
 
 		// For clients: wait for server to send results
@@ -889,129 +1168,132 @@ public class MeetingUI extends StackPane {
 	}
 
 	/**
-	 * Calculates the result of the voting
-	 */
-	private String calculateVotingResult() {
-		// Find the player with the most votes
-		String mostVotedPlayer = null;
-		int highestVotes = 0;
-
-		for (Map.Entry<String, Integer> entry : votes.entrySet()) {
-			if (entry.getValue() > highestVotes) {
-				highestVotes = entry.getValue();
-				mostVotedPlayer = entry.getKey();
-			}
-		}
-
-		// Check for tie with skip
-		int skipVotes = votes.getOrDefault("skip", 0);
-		if (skipVotes >= highestVotes) {
-			return null; // No one is ejected in a tie or if skips win
-		}
-
-		return mostVotedPlayer;
-	}
-
-	/**
 	 * Shows the voting results
 	 */
-	public void showVotingResults(String ejectedPlayerKey) {
+	public void showVotingResults(String ejectedPlayerKey, Map<String, Integer> voteResults) {
 		Platform.runLater(() -> {
-			// Create results display
-			VBox resultsBox = new VBox(20);
-			resultsBox.setAlignment(Pos.CENTER);
-			resultsBox.setPadding(new Insets(20));
-			resultsBox.setBackground(
-					new Background(new BackgroundFill(Color.rgb(0, 0, 0, 0.8), new CornerRadii(10), Insets.EMPTY)));
+			try {
+				System.out.println("CLIENT UI: Showing voting results - Ejected: "
+						+ (ejectedPlayerKey != null ? ejectedPlayerKey : "None") + ", Votes: " + voteResults);
 
-			// Results text
-			Text resultsText;
-			if (ejectedPlayerKey == null) {
-				resultsText = new Text("No one was ejected (Skipped)");
-			} else {
-				String playerName = getPlayerNameByKey(ejectedPlayerKey);
-				resultsText = new Text(playerName + " was ejected");
-			}
+				// Store vote results
+				this.votes = new HashMap<>(voteResults);
 
-			resultsText.setFont(Font.font("Monospace", FontWeight.BOLD, 28));
-			resultsText.setFill(Color.WHITE);
-
-			// Add to results box
-			resultsBox.getChildren().add(resultsText);
-
-			// If a player was ejected, show if they were an impostor
-			if (ejectedPlayerKey != null) {
-				String roleText;
-				boolean wasImpostor = false;
-
-				if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
-					wasImpostor = PlayerLogic.getStatus().equals("imposter");
-					roleText = wasImpostor ? PlayerLogic.getName() + " was an Impostor."
-							: PlayerLogic.getName() + " was not an Impostor.";
-				} else {
-					PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
-					wasImpostor = player != null && player.getStatus().equals("imposter");
-					roleText = wasImpostor ? player.getName() + " was an Impostor."
-							: player.getName() + " was not an Impostor.";
+				// Handle ejection
+				if (ejectedPlayerKey != null) {
+					// If it's the local player
+					if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+						PlayerLogic.setStatus("dead");
+						System.out.println("CLIENT: You were ejected!");
+					}
+					// If it's another player
+					else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
+						PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
+						if (player != null) {
+							player.setStatus("dead");
+							System.out.println("CLIENT: Player " + player.getName() + " was ejected!");
+						}
+					}
 				}
 
-				Text imposterText = new Text(roleText);
-				imposterText.setFont(Font.font("Monospace", FontWeight.BOLD, 22));
-				imposterText.setFill(wasImpostor ? Color.rgb(255, 100, 100) : Color.rgb(100, 255, 100));
+				// Create results display
+				VBox resultsBox = new VBox(20);
+				resultsBox.setAlignment(Pos.CENTER);
+				resultsBox.setPadding(new Insets(20));
+				resultsBox.setBackground(
+						new Background(new BackgroundFill(Color.rgb(0, 0, 0, 0.8), new CornerRadii(10), Insets.EMPTY)));
 
-				resultsBox.getChildren().add(imposterText);
-			}
-
-			// Add vote counts
-			Text voteCounts = new Text("Votes: ");
-			voteCounts.setFont(Font.font("Monospace", FontWeight.NORMAL, 18));
-			voteCounts.setFill(Color.WHITE);
-
-			StringBuilder voteDetails = new StringBuilder();
-			for (Map.Entry<String, Integer> entry : votes.entrySet()) {
-				if (entry.getKey().equals("skip")) {
-					voteDetails.append("Skip: ").append(entry.getValue()).append("\n");
+				// Results text
+				Text resultsText;
+				if (ejectedPlayerKey == null) {
+					resultsText = new Text("No one was ejected (Skipped or Tie)");
 				} else {
-					String playerName = getPlayerNameByKey(entry.getKey());
-					voteDetails.append(playerName).append(": ").append(entry.getValue()).append("\n");
+					String playerName = getPlayerNameByKey(ejectedPlayerKey);
+					resultsText = new Text(playerName + " was ejected");
 				}
-			}
 
-			Text voteDetailsText = new Text(voteDetails.toString());
-			voteDetailsText.setFont(Font.font("Monospace", FontWeight.NORMAL, 16));
-			voteDetailsText.setFill(Color.WHITE);
+				resultsText.setFont(Font.font("Monospace", FontWeight.BOLD, 28));
+				resultsText.setFill(Color.WHITE);
 
-			resultsBox.getChildren().addAll(voteCounts, voteDetailsText);
+				// Add to results box
+				resultsBox.getChildren().add(resultsText);
 
-			// Add the results to the meeting UI
-			mainPanel.setCenter(resultsBox);
+				// If a player was ejected, show if they were an impostor
+				if (ejectedPlayerKey != null) {
+					String roleText;
+					boolean wasImpostor = false;
 
-			// Animate results appearance
-			FadeTransition fadeIn = new FadeTransition(Duration.millis(500), resultsBox);
-			fadeIn.setFromValue(0);
-			fadeIn.setToValue(1);
-			fadeIn.play();
+					if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+						wasImpostor = PlayerLogic.getStatus().equals("imposter");
+						roleText = wasImpostor ? PlayerLogic.getName() + " was an Impostor."
+								: PlayerLogic.getName() + " was not an Impostor.";
+					} else {
+						PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
+						wasImpostor = player != null && player.getStatus().equals("imposter");
+						roleText = wasImpostor ? player.getName() + " was an Impostor."
+								: player.getName() + " was not an Impostor.";
+					}
 
-			// Schedule closing the meeting UI after showing results
-			if (executor != null && !executor.isShutdown()) {
-				executor.schedule(() -> Platform.runLater(this::closeMeetingUI), 7, TimeUnit.SECONDS);
-			} else {
-				// Fallback if executor is already shut down
-				Timeline closingTimer = new Timeline(new KeyFrame(Duration.seconds(7), e -> closeMeetingUI()));
-				closingTimer.play();
+					Text imposterText = new Text(roleText);
+					imposterText.setFont(Font.font("Monospace", FontWeight.BOLD, 22));
+					imposterText.setFill(wasImpostor ? Color.rgb(255, 100, 100) : Color.rgb(100, 255, 100));
+
+					resultsBox.getChildren().add(imposterText);
+				}
+
+				// Add vote counts
+				Text voteCounts = new Text("Votes: ");
+				voteCounts.setFont(Font.font("Monospace", FontWeight.NORMAL, 18));
+				voteCounts.setFill(Color.WHITE);
+
+				StringBuilder voteDetails = new StringBuilder();
+				for (Map.Entry<String, Integer> entry : votes.entrySet()) {
+					if (entry.getKey().equals("skip")) {
+						voteDetails.append("Skip: ").append(entry.getValue()).append("\n");
+					} else {
+						String playerName = getPlayerNameByKey(entry.getKey());
+						voteDetails.append(playerName).append(": ").append(entry.getValue()).append("\n");
+					}
+				}
+
+				Text voteDetailsText = new Text(voteDetails.toString());
+				voteDetailsText.setFont(Font.font("Monospace", FontWeight.NORMAL, 16));
+				voteDetailsText.setFill(Color.WHITE);
+
+				resultsBox.getChildren().addAll(voteCounts, voteDetailsText);
+
+				// Add the results to the meeting UI
+				mainPanel.setCenter(resultsBox);
+
+				// Animate results appearance
+				FadeTransition fadeIn = new FadeTransition(Duration.millis(500), resultsBox);
+				fadeIn.setFromValue(0);
+				fadeIn.setToValue(1);
+				fadeIn.play();
+
+				// Schedule closing the meeting UI after showing results
+				if (executor != null && !executor.isShutdown()) {
+					executor.schedule(() -> Platform.runLater(this::closeMeetingUI), 7, TimeUnit.SECONDS);
+				} else {
+					// Fallback if executor is already shut down
+					Timeline closingTimer = new Timeline(new KeyFrame(Duration.seconds(7), e -> closeMeetingUI()));
+					closingTimer.play();
+				}
+			} catch (Exception e) {
+				System.err.println("CLIENT UI ERROR: Failed to show voting results: " + e.getMessage());
+				e.printStackTrace();
 			}
 		});
 	}
 
-	/**
-	 * Add a vote result handler for when results are received from the server
-	 */
-	public void showVotingResults(String ejectedPlayerKey, Map<String, Integer> voteResults) {
-		// Update our local vote counts with the server's data
-		this.votes = voteResults;
-
-		// Show the results
-		showVotingResults(ejectedPlayerKey);
+	private void debugPrintVotes() {
+		System.out.println("===== MEETING UI VOTE DEBUG =====");
+		System.out.println("Meeting ID: " + meetingId);
+		System.out.println("Player votes: " + playerVotes);
+		System.out.println("Vote counts: " + votes);
+		System.out.println("Has voted: " + hasVoted);
+		System.out.println("Selected player: " + selectedPlayerKey);
+		System.out.println("================================");
 	}
 
 	/**
@@ -1297,65 +1579,62 @@ public class MeetingUI extends StackPane {
 	 * {@link Cloneable the meeting UI
 	 */
 	private void closeMeetingUI() {
-	    // Fade out animation
-	    FadeTransition fadeOut = new FadeTransition(Duration.millis(500), this);
-	    fadeOut.setFromValue(1);
-	    fadeOut.setToValue(0);
-	    fadeOut.setOnFinished(event -> {
-	        try {
-	            // Remove from parent if we have one
-	            if (getParent() != null) {
-	                // Check parent type before casting
-	                if (getParent() instanceof Pane) {
-	                    ((Pane) getParent()).getChildren().remove(this);
-	                } else if (getParent() instanceof Group) {
-	                    ((Group) getParent()).getChildren().remove(this);
-	                } else {
-	                    // Use reflection for unknown parent types
-	                    java.lang.reflect.Method getChildrenMethod = 
-	                        getParent().getClass().getMethod("getChildren");
-	                    Object childrenList = getChildrenMethod.invoke(getParent());
-	                    
-	                    if (childrenList instanceof javafx.collections.ObservableList) {
-	                        ((javafx.collections.ObservableList<?>) childrenList).remove(this);
-	                    }
-	                }
-	            }
+		// Fade out animation
+		FadeTransition fadeOut = new FadeTransition(Duration.millis(500), this);
+		fadeOut.setFromValue(1);
+		fadeOut.setToValue(0);
+		fadeOut.setOnFinished(event -> {
+			try {
+				// Remove from parent if we have one
+				if (getParent() != null) {
+					// Check parent type before casting
+					if (getParent() instanceof Pane) {
+						((Pane) getParent()).getChildren().remove(this);
+					} else if (getParent() instanceof Group) {
+						((Group) getParent()).getChildren().remove(this);
+					} else {
+						// Use reflection for unknown parent types
+						java.lang.reflect.Method getChildrenMethod = getParent().getClass().getMethod("getChildren");
+						Object childrenList = getChildrenMethod.invoke(getParent());
 
-	            // Clear reference in GameWindow
-	            if (gameWindow != null) {
-	                gameWindow.clearActiveMeetingUI();
-	            }
-	        } catch (Exception e) {
-	            System.err.println("Error closing meeting UI: " + e.getMessage());
-	            e.printStackTrace();
+						if (childrenList instanceof javafx.collections.ObservableList) {
+							((javafx.collections.ObservableList<?>) childrenList).remove(this);
+						}
+					}
+				}
 
-	            // Emergency fallback - force remove from parent on the JavaFX thread
-	            if (getParent() != null) {
-	                Platform.runLater(() -> {
-	                    try {
-	                        if (getParent() instanceof Group) {
-	                            ((Group) getParent()).getChildren().remove(this);
-	                        } else if (getParent() instanceof Pane) {
-	                            ((Pane) getParent()).getChildren().remove(this);
-	                        } else {
-	                            System.err.println("Unknown parent type: " + getParent().getClass().getName());
-	                        }
-	                    } catch (Exception ex) {
-	                        System.err.println("Emergency removal failed: " + ex.getMessage());
-	                    }
-	                });
-	            }
-	        } finally {
-	            // Shutdown executor if it exists and is not already shut down
-	            if (executor != null && !executor.isShutdown()) {
-	                executor.shutdownNow();
-	            }
-	        }
-	    });
-	    fadeOut.play();
+				// Clear reference in GameWindow
+				if (gameWindow != null) {
+					gameWindow.clearActiveMeetingUI();
+				}
+			} catch (Exception e) {
+				System.err.println("Error closing meeting UI: " + e.getMessage());
+				e.printStackTrace();
+
+				// Emergency fallback - force remove from parent on the JavaFX thread
+				if (getParent() != null) {
+					Platform.runLater(() -> {
+						try {
+							if (getParent() instanceof Group) {
+								((Group) getParent()).getChildren().remove(this);
+							} else if (getParent() instanceof Pane) {
+								((Pane) getParent()).getChildren().remove(this);
+							} else {
+								System.err.println("Unknown parent type: " + getParent().getClass().getName());
+							}
+						} catch (Exception ex) {
+							System.err.println("Emergency removal failed: " + ex.getMessage());
+						}
+					});
+				}
+			} finally {
+				// Shutdown executor if it exists and is not already shut down
+				if (executor != null && !executor.isShutdown()) {
+					executor.shutdownNow();
+				}
+			}
+		});
+		fadeOut.play();
 	}
-	
-	
 
 }
