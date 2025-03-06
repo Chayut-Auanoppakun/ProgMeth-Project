@@ -480,10 +480,10 @@ public class ServerLogic {
 		String name = json.getString("name");
 		int charID = json.getInt("charID");
 		boolean isReady = json.getBoolean("playerReady");
-
+		double taskFinish = json.getDouble("task");
 		// Update or create player info
 		String clientKey = packet.getAddress().getHostAddress() + ":" + packet.getPort();
-		updatePlayerInfo(clientKey, packet, posX, posY, direction, isMoving, name, charID, isReady);
+		updatePlayerInfo(clientKey, packet, posX, posY, direction, isMoving, name, charID, isReady, taskFinish);
 
 		// Prepare and send response with all player data
 		sendPlayerDataResponse(packet);
@@ -493,7 +493,7 @@ public class ServerLogic {
 	 * Updates player information in the global player list
 	 */
 	private static void updatePlayerInfo(String clientKey, DatagramPacket packet, double posX, double posY,
-			int direction, boolean isMoving, String name, int charID, boolean isReady) {
+			int direction, boolean isMoving, String name, int charID, boolean isReady, double taskfinished) {
 		PlayerInfo playerInfo = GameLogic.playerList.get(clientKey);
 		if (playerInfo == null) {
 			// New player - create new player info
@@ -501,6 +501,7 @@ public class ServerLogic {
 			int randomChar = random.nextInt(9);
 			playerInfo = new PlayerInfo(packet.getAddress(), packet.getPort(), name, 0, 0, false, 0, "crewmate",
 					randomChar);
+			playerInfo.setTaskPercent(taskfinished);
 			GameLogic.playerList.put(clientKey, playerInfo);
 		} else {
 			// Existing player - update data
@@ -510,6 +511,7 @@ public class ServerLogic {
 			playerInfo.setMoving(isMoving);
 			playerInfo.setCharacterID(charID);
 			playerInfo.setReady(isReady);
+			playerInfo.setTaskPercent(taskfinished);
 		}
 	}
 
@@ -530,6 +532,7 @@ public class ServerLogic {
 			serverData.put("charID", PlayerLogic.getCharID());
 			serverData.put("prepEnded", GameLogic.isPrepEnded());
 			serverData.put("Status", PlayerLogic.getStatus());
+			serverData.put("task", PlayerLogic.getTaskPercent());
 
 			responseJson.put(serverKey, serverData);
 
@@ -545,6 +548,8 @@ public class ServerLogic {
 				playerData.put("charID", info.getCharacterID());
 				playerData.put("prepEnded", GameLogic.isPrepEnded());
 				playerData.put("Status", info.getStatus());
+				playerData.put("task", info.getTaskPercent());
+
 				responseJson.put(key, playerData);
 			}
 
@@ -854,10 +859,6 @@ public class ServerLogic {
 		PlayerInfo reporter = GameLogic.playerList.get(reporterKey);
 		Corpse corpse = GameLogic.getCorpse(corpsePlayerKey);
 		System.out.println("List of Corpses = " + GameLogic.corpseList.size());
-//		if (corpse == null || reporter == null) {
-//			log(logArea, "Invalid body report");
-//			return;
-//		}
 		System.out.println(corpse.getPlayerName() + " has been found");
 		// Mark body as found if not already found
 		if (!corpse.isFound()) {
@@ -917,14 +918,6 @@ public class ServerLogic {
 		}
 	}
 
-	/**
-	 * Handles a vote from a client
-	 * 
-	 * @param voterKey  The key of the voting player
-	 * @param targetKey The key of the target player (or "skip")
-	 * @param meetingId The unique ID of the meeting
-	 * @param logArea   TextArea for logging
-	 */
 	/**
 	 * Handles a vote from a client
 	 * 

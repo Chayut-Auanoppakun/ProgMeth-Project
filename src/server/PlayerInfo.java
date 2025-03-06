@@ -10,8 +10,8 @@ public class PlayerInfo extends ClientInfo {
 	private int Direction;
 	private boolean isMoving;
 	private int CharacterID;
-	boolean isReady = false;
-	
+	private boolean isReady = false;
+	private double taskPercent = 0;
 	// New attributes for body tracking
 	private boolean isFound = false;
 	
@@ -25,6 +25,14 @@ public class PlayerInfo extends ClientInfo {
 		this.Direction = Direction;
 		this.status = status;
 		this.CharacterID = CharID;
+	}
+
+	public double getTaskPercent() {
+		return taskPercent;
+	}
+
+	public void setTaskPercent(double taskPercent) {
+		this.taskPercent = taskPercent;
 	}
 
 	public boolean isFound() {

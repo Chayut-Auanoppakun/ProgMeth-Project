@@ -167,7 +167,7 @@ public class GameWindow {
 
 	// === Animation Timer ===
 	private AnimationTimer timer;
-
+	private long lastchecktask = 0;
 	// === Player Size ===
 	private final double PLAYER_RADIUS = 10;
 
@@ -233,7 +233,8 @@ public class GameWindow {
 				}
 
 				if (GameLogic.isPrepEnded() != PrepEnd) { // RUN AFTER PREP END ONCE
-
+					// 5 task for now
+					PlayerLogic.randomizeTasks(GameLogic.getTaskAmount());
 					PrepEnd = GameLogic.isPrepEnded();
 					updateUIForPrepPhase();
 					GameLogic.autoImposterCount(); // For now, automatically set imposter count to be 1/4 of player size
@@ -247,18 +248,23 @@ public class GameWindow {
 				if (!GameLogic.isPrepEnded() && prepPhaseGui != null) {
 					updatePrepPhasePlayerCount();
 				}
-				if (GameLogic.isPrepEnded() && overlayManager != null) {
+				if (GameLogic.isPrepEnded() && overlayManager != null) { // update overlay
 					overlayManager.updateTaskProgress();
 					overlayManager.updatePlayerRoleUI();
 					overlayManager.updateButtonStates();
 				}
-				
+
 				keylogger();
 				updateMovement(now);
-				update();
+				updateCamera();
 				render();
 				displayFPS();
 				checkPlayerStateChange();
+				if (System.currentTimeMillis() - lastchecktask > 1000) {
+					lastchecktask = System.currentTimeMillis();
+					PlayerLogic.updateTaskPercent();
+					System.out.println("Total Task % = " + getTotalPercentage());
+				}
 
 				if (PlayerLogic.getMoving()) {
 					animation.play();
@@ -570,11 +576,6 @@ public class GameWindow {
 		gc.setFill(Color.WHITE);
 		gc.setFont(new Font("Arial", 20));
 		gc.fillText("FPS: " + fps, 10, 20);
-	}
-
-	private void update() {
-		// Update camera position based on current player position
-		updateCamera();
 	}
 
 	private void updateCamera() {
@@ -1083,22 +1084,20 @@ public class GameWindow {
 
 						// Attempt to open the task
 						boolean taskOpened = TaskLogic.openTask(eventId, taskContainer);
+
 						try {
 							root.getChildren().remove(taskContainer); // Remove taskContainer first
 						} catch (Exception e) {
 							// TODO: handle exception
 						}
-						root.getChildren().add(taskContainer);    // Re-add it to ensure it’s on top
+
+						root.getChildren().add(taskContainer); // Re-add it to ensure it’s on top
 						if (taskOpened) {
 							System.out.println("Task opened: " + eventId);
 							// You might want to disable player movement here or add other effects
 							// PlayerLogic.setMovementEnabled(false);
 						} else {
 							System.out.println("Failed to open task: " + eventId);
-							// Maybe show a notification that this task is already completed
-							if (TaskLogic.isTaskCompleted(eventId)) {
-								showTaskCompletedMessage();
-							}
 						}
 					} else {
 						System.out.println("No interactive object nearby");
@@ -2485,7 +2484,7 @@ public class GameWindow {
 		String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
 
 		// If we're colliding with an event object and it's not completed yet
-		if (!eventId.isEmpty() && !TaskLogic.isTaskCompleted(eventId)) {
+		if (!eventId.isEmpty()) {
 			return true;
 		}
 
@@ -2590,10 +2589,6 @@ public class GameWindow {
 						System.out.println("Task opened: " + eventId);
 					} else {
 						System.out.println("Failed to open task: " + eventId);
-						// Maybe show a notification that this task is already completed
-						if (TaskLogic.isTaskCompleted(eventId)) {
-							showTaskCompletedMessage();
-						}
 					}
 				} else {
 					System.out.println("No interactive object nearby");
@@ -2672,9 +2667,22 @@ public class GameWindow {
 		// TODO Auto-generated method stub
 		return screenHeight;
 	}
+
 	public static double getScreenwidth() {
 		// TODO Auto-generated method stub
 		return screenWidth;
 	}
 
+	public static double getTotalPercentage() {
+		double totalCompleted = 0;
+		totalCompleted += PlayerLogic.getTaskPercent();
+		for (String key : GameLogic.playerList.keySet()) {
+			PlayerInfo info = GameLogic.playerList.get(key);
+			totalCompleted += Math.round(info.getTaskPercent());
+		}
+		if (totalCompleted > 100) {
+			totalCompleted = 100;
+		}
+		return totalCompleted;
+	}
 }

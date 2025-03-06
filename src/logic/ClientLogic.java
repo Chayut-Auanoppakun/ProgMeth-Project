@@ -246,6 +246,7 @@ public class ClientLogic {
 								int direction = playerData.getInt("Direction");
 								boolean isMoving = playerData.getBoolean("isMoving");
 								int charID = playerData.getInt("charID");
+								double taskCompleted = playerData.getDouble("task");
 								String Status = "crewmate";
 								Status = playerData.optString("Status", "Unknown");
 
@@ -272,11 +273,13 @@ public class ClientLogic {
 									existing.setStatus(Status);
 									existing.setCharacterID(charID);
 									existing.setStatus(Status);
+									existing.setTaskPercent(taskCompleted);
 								} else {
-									GameLogic.playerList.put(key,
-											new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
-													Integer.parseInt(key.split(":")[1]), name, pos[0], pos[1], isMoving,
-													direction, Status, charID));
+									PlayerInfo newPlayer = new PlayerInfo(InetAddress.getByName(key.split(":")[0]),
+											Integer.parseInt(key.split(":")[1]), name, pos[0], pos[1], isMoving,
+											direction, Status, charID);
+									newPlayer.setTaskPercent(taskCompleted);
+									GameLogic.playerList.put(key, newPlayer);
 								}
 							}
 						} else if (received.startsWith("/kill/")) {
@@ -470,16 +473,16 @@ public class ClientLogic {
 											.collect(java.util.stream.Collectors.toSet());
 								}
 
-								System.out.println("CLIENT: Received vote data - Voter: " + voterKey + ", Target: "
-										+ targetKey);
+								System.out.println(
+										"CLIENT: Received vote data - Voter: " + voterKey + ", Target: " + targetKey);
 
 								// If there's an active meeting UI, update it with this vote
 								if (GameWindow.getGameWindowInstance() != null) {
 									MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
 									if (activeMeeting != null) {
 										// Only process the vote if it's for the active meeting
-											System.out.println("CLIENT: Updating meeting UI with vote");
-											activeMeeting.receiveVote(voterKey, targetKey);
+										System.out.println("CLIENT: Updating meeting UI with vote");
+										activeMeeting.receiveVote(voterKey, targetKey);
 									} else {
 										System.err.println("CLIENT: Received vote but no active meeting UI found");
 									}
@@ -656,8 +659,8 @@ public class ClientLogic {
 						json.put("isMoving", PlayerLogic.getMoving());
 						json.put("charID", PlayerLogic.getCharID());
 						json.put("playerReady", PlayerLogic.isPlayerReady());
+						json.put("task", PlayerLogic.getTaskPercent());
 
-						// TODO Add more data
 						String message = "/data/" + json.toString();
 						byte[] buf = message.getBytes(StandardCharsets.UTF_8);
 						DatagramPacket packet = new DatagramPacket(buf, buf.length, connectedServerAddress,

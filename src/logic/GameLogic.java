@@ -20,9 +20,18 @@ public class GameLogic {
 	public static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 	private static boolean prepEnded = false;
 	private static ScheduledExecutorService gameLoopExecutor;
-	private int KillCooldown = 25;
+	private static int KillCooldown = 25;
+	private static int taskAmount = 5;
 	public enum GameResult {
 		ONGOING, CREWMATE_WIN, IMPOSTER_WIN
+	}
+
+	public static int getTaskAmount() {
+		return taskAmount;
+	}
+
+	public static  void setTaskAmount(int ntaskAmount) {
+		taskAmount = ntaskAmount;
 	}
 
 	public GameLogic() {
@@ -189,21 +198,6 @@ public class GameLogic {
 		return corpse;
 	}
 
-	public static String findReportableCorpseNearby(double x, double y, double maxDistance) {
-		for (Corpse corpse : corpseList.values()) {
-			// Check for corpses that haven't been found yet
-			if (!corpse.isFound()) {
-				double dx = corpse.getX() - x;
-				double dy = corpse.getY() - y;
-				double distance = Math.sqrt(dx * dx + dy * dy);
-
-				if (distance <= maxDistance) {
-					return corpse.getPlayerKey();
-				}
-			}
-		}
-		return null;
-	}
 
 	public static Corpse getCorpse(String playerKey) {
 		return corpseList.get(playerKey);

@@ -315,7 +315,7 @@ public class OverlayUI extends Pane {
 			return;
 
 		// Get current task completion percentage
-		double progressValue = TaskLogic.getTaskCompletionPercentage() / 100.0;
+		double progressValue = GameWindow.getTotalPercentage();
 		String progressText = String.format("%.0f%%", progressValue * 100);
 
 		// Update UI on JavaFX thread

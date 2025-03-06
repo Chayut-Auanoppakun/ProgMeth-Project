@@ -3,6 +3,9 @@ package logic;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Set;
 
 import gui.MainMenuPane;
 
@@ -18,9 +21,29 @@ public class PlayerLogic {
 	private static boolean isPlayerReady = false;
 	private static String status = "crewmate";
 	private static boolean playdeadsound = false;
+	private static Set<Integer> tasks = new HashSet<>();
+	
+	
+	public static Set<Integer> getTasks() {
+		return tasks;
+	}
+
+	public static void setTasks(Set<Integer> tasks) {
+		PlayerLogic.tasks = tasks;
+	}
+
+	private static double taskPercent = 0;
+
+	public static double getTaskPercent() {
+		return taskPercent;
+	}
+
+	public static void setTaskPercent(double taskPercent) {
+		PlayerLogic.taskPercent = taskPercent;
+	}
 
 	public static String getStatus() {
-		//System.out.println("Sending out Status : " + status);
+		// System.out.println("Sending out Status : " + status);
 		return status;
 	}
 
@@ -36,6 +59,11 @@ public class PlayerLogic {
 		}
 	}
 
+	public static void updateTaskPercent() {
+		int taskfinished = GameLogic.getTaskAmount() - tasks.size();
+		taskPercent = taskfinished / GameLogic.getTaskAmount() * 100;
+	}
+	
 	public static boolean isPlayerReady() {
 		return isPlayerReady;
 	}
@@ -108,6 +136,14 @@ public class PlayerLogic {
 			e.printStackTrace();
 			return "unknown:0";
 		}
+	}
+
+	public static void randomizeTasks(int Amount) {
+		Random random = new Random();
+		while (tasks.size() < Amount) {
+			tasks.add(random.nextInt(1, 13)); // 1-13
+		}
+		System.out.println("Random Tasks : " + tasks);
 	}
 
 }
