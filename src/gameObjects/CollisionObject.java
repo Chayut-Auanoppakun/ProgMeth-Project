@@ -9,6 +9,6 @@ public class CollisionObject extends BaseObject {
     @Override
     public String toString() {
     	// TODO Auto-generated method stub
-    	return super.toString();
+    	return "This is collision Object";
     }
 }

@@ -386,33 +386,69 @@ public class ClientLogic {
 
 						else if (received.startsWith("/meeting/")) {
 							try {
+
+								GameWindow gameWindow = GameWindow.getGameWindowInstance();
 								String jsonStr = received.substring(9); // Remove "/meeting/" prefix
 								JSONObject meetingData = new JSONObject(jsonStr);
 
 								System.out.println("Client received meeting message: " + jsonStr);
+								String meetingType = meetingData.optString("type", "null");
 
-								if (meetingData.has("type") && "chat".equals(meetingData.getString("type"))) {
+								if (meetingType.equals("chat")) {
 									String meetingId = meetingData.getString("meetingId");
 									String senderName = meetingData.getString("name");
 									String message = meetingData.getString("message");
 									String status = meetingData.optString("status", "crewmate");
 
 									System.out.println("Client processing chat message for meeting: " + meetingId);
-									System.out.println(
-											"Have game window? " + (GameWindow.getGameWindowInstance() != null));
 
-									// In ClientLogic.java, in the "/meeting/" handler:
+									if (gameWindow != null) {
+										MeetingUI activeMeeting = gameWindow.getActiveMeetingUI();
 
-									if (GameWindow.getGameWindowInstance() != null) {
-										MeetingUI activeMeeting = GameWindow.getGameWindowInstance()
-												.getActiveMeetingUI();
-
-										// Remove the meeting ID check entirely
 										if (activeMeeting != null) {
 											activeMeeting.receiveChatMessage(senderName, message, status);
 										}
 									}
+								} else {
+									// Extract meeting details
+									String reporterKey = meetingData.getString("reporter");
+									String reportedPlayerName = meetingData.optString("reportedPlayer", null);
+									int reportedCharId = meetingData.getInt("reportedCharId");
+
+
+									// Start emergency meeting UI on this client if it doesn't exist
+									if (gameWindow != null) {
+										Platform.runLater(() -> {
+											// Check if meeting UI already exists
+											MeetingUI activeMeeting = gameWindow.getActiveMeetingUI();
+
+											// If no active meeting, start a new one
+											if (activeMeeting == null) {
+												gameWindow.startEmergencyMeeting(reporterKey, reportedPlayerName,
+														reportedCharId);
+											}
+										});
+									}
 								}
+								// Optionally, you can add specific logic based on meeting type
+								switch (meetingType) {
+								case "BODY_REPORT":
+									System.out.println("Body report triggered meeting");
+									break;
+								case "EMERGENCY_BUTTON":
+									System.out.println("Emergency button triggered meeting");
+									break;
+								case "SABOTAGE":
+									System.out.println("Sabotage triggered meeting");
+									break;
+								case "Start":
+									System.out.println("Start meeting triggered");
+									// Additional start meeting logic if needed
+									break;
+								default:
+									System.out.println("Unknown meeting type: " + meetingType);
+								}
+
 							} catch (Exception e) {
 								System.err.println("Error processing meeting message: " + e.getMessage());
 								e.printStackTrace();

@@ -2418,7 +2418,7 @@ public class GameWindow {
 					"Reporting corpse of " + closestCorpse.getPlayerName() + " at distance " + closestDistance);
 
 			// Mark the corpse as found (will hide it from rendering)
-			closestCorpse.setFound(true);
+			//closestCorpse.setFound(true);
 
 			// Play report sound
 			SoundLogic.playSound("assets/sounds/alarm_emergencymeeting.wav", 0);
@@ -2431,34 +2431,11 @@ public class GameWindow {
 			// Send report based on game mode (server or client)
 			if (MainMenuPane.getState().equals(State.SERVER)) {
 				// For server: handle the report locally and broadcast to all clients
+				System.out.println("CALLING HANDLE BODY REPORT");
 				ServerLogic.handleBodyReport(reporterKey, closestCorpseKey, ServerSelectGui.getLogArea());
 
-				// Additionally, broadcast a special emergency meeting message to all clients
-				try {
-					JSONObject meetingData = new JSONObject();
-					meetingData.put("reporter", reporterKey);
-					meetingData.put("reportedPlayer", reportedPlayerName);
-					meetingData.put("reportedCharId", reportedCharId);
-					meetingData.put("time", System.currentTimeMillis());
-
-					String meetingMessage = "/report/" + meetingData.toString();
-
-					// Broadcast to all clients
-					for (ClientInfo clientInfo : ServerLogic.getConnectedClients()) {
-						DatagramSocket socket = ServerLogic.getServerSocket();
-						if (socket != null) {
-							byte[] buf = meetingMessage.getBytes(StandardCharsets.UTF_8);
-							DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
-									clientInfo.getPort());
-							socket.send(packet);
-						}
-					}
-
-					System.out.println("Emergency meeting broadcast to all clients");
-				} catch (Exception e) {
-					System.err.println("Error broadcasting emergency meeting: " + e.getMessage());
-				}
 			} else if (MainMenuPane.getState().equals(State.CLIENT)) {
+				closestCorpse.setFound(true);
 				// For client: send the report to the server
 				JSONObject reportData = new JSONObject();
 				reportData.put("reporter", reporterKey);

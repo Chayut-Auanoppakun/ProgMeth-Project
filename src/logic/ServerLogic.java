@@ -241,14 +241,14 @@ public class ServerLogic {
 				// In ServerLogic.java, modify the handleMeetingMessage method:
 
 				if (GameWindow.getGameWindowInstance() != null) {
-				    MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
-				    
-				    // Remove the meeting ID check entirely
-				    if (activeMeeting != null) {
-				        // Display the message in the server's MeetingUI
-				        activeMeeting.receiveChatMessage(senderName, chatMessage, 
-				            meetingData.optString("status", "crewmate"));
-				    }
+					MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
+
+					// Remove the meeting ID check entirely
+					if (activeMeeting != null) {
+						// Display the message in the server's MeetingUI
+						activeMeeting.receiveChatMessage(senderName, chatMessage,
+								meetingData.optString("status", "crewmate"));
+					}
 				}
 
 				// Relay the chat message to all other clients
@@ -810,48 +810,45 @@ public class ServerLogic {
 	public static void handleBodyReport(String reporterKey, String corpsePlayerKey, TextArea logArea) {
 		PlayerInfo reporter = GameLogic.playerList.get(reporterKey);
 		Corpse corpse = GameLogic.getCorpse(corpsePlayerKey);
-
-		if (corpse == null || reporter == null) {
-			log(logArea, "Invalid body report");
-			return;
-		}
-
+		System.out.println("List of Corpses = " + GameLogic.corpseList.size());
+//		if (corpse == null || reporter == null) {
+//			log(logArea, "Invalid body report");
+//			return;
+//		}
+		System.out.println(corpse.getPlayerName() + " has been found");
 		// Mark body as found if not already found
 		if (!corpse.isFound()) {
 			corpse.setFound(true);
-			log(logArea, reporter.getName() + " reported " + corpse.getPlayerName() + "'s body");
+			// log(logArea, reporter.getName() + " reported " + corpse.getPlayerName() + "'s
+			// body");
 
-			// Broadcast body report to all clients
-			broadcastBodyReport(reporterKey, corpsePlayerKey);
-
-			// Additionally, broadcast emergency meeting to all clients
 			broadcastEmergencyMeeting(reporterKey, corpse.getPlayerName(), corpse.getCharacterID());
 		}
 	}
-
-	private static void broadcastBodyReport(String reporterKey, String corpsePlayerKey) {
-		try {
-			JSONObject reportJSON = new JSONObject();
-			reportJSON.put("reporter", reporterKey);
-			reportJSON.put("deadBody", corpsePlayerKey);
-
-			String message = "/report/" + reportJSON.toString();
-			byte[] buf = message.getBytes(StandardCharsets.UTF_8);
-
-			// Send to all connected clients
-			for (ClientInfo clientInfo : clientAddresses) {
-				try {
-					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
-							clientInfo.getPort());
-					serverSocket.send(packet);
-				} catch (IOException e) {
-					System.err.println("Error broadcasting body report: " + e.getMessage());
-				}
-			}
-		} catch (Exception e) {
-			System.err.println("Error in broadcastBodyReport: " + e.getMessage());
-		}
-	}
+//
+//	private static void broadcastBodyReport(String reporterKey, String corpsePlayerKey) {
+//		try {
+//			JSONObject reportJSON = new JSONObject();
+//			reportJSON.put("reporter", reporterKey);
+//			reportJSON.put("deadBody", corpsePlayerKey);
+//
+//			String message = "/report/" + reportJSON.toString();
+//			byte[] buf = message.getBytes(StandardCharsets.UTF_8);
+//
+//			// Send to all connected clients
+//			for (ClientInfo clientInfo : clientAddresses) {
+//				try {
+//					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
+//							clientInfo.getPort());
+//					serverSocket.send(packet);
+//				} catch (IOException e) {
+//					System.err.println("Error broadcasting body report: " + e.getMessage());
+//				}
+//			}
+//		} catch (Exception e) {
+//			System.err.println("Error in broadcastBodyReport: " + e.getMessage());
+//		}
+//	}
 
 	private static void broadcastEmergencyMeeting(String reporterKey, String reportedPlayerName, int reportedCharId) {
 		try {
@@ -866,6 +863,7 @@ public class ServerLogic {
 			byte[] buf = meetingMessage.getBytes(StandardCharsets.UTF_8);
 
 			// Send to all connected clients
+			System.out.println(clientAddresses.size());
 			for (ClientInfo clientInfo : clientAddresses) {
 				try {
 					DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
@@ -873,7 +871,7 @@ public class ServerLogic {
 					serverSocket.send(packet);
 
 					// Send multiple times to reduce chance of packet loss
-					for (int i = 0; i < 2; i++) {
+					for (int i = 0; i < 5; i++) {
 						Thread.sleep(50); // Short delay between retransmissions
 						serverSocket.send(packet);
 					}
@@ -936,12 +934,12 @@ public class ServerLogic {
 						: GameLogic.playerList.get(targetKey).getName();
 			}
 			if (GameWindow.getGameWindowInstance() != null) {
-			    MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
-			    
-			    // Remove the meeting ID check entirely
-			    if (activeMeeting != null) {
-			        activeMeeting.receiveChatMessage(voterName, voterName + " voted for " + targetName, "player");
-			    }
+				MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
+
+				// Remove the meeting ID check entirely
+				if (activeMeeting != null) {
+					activeMeeting.receiveChatMessage(voterName, voterName + " voted for " + targetName, "player");
+				}
 			}
 
 		} catch (Exception e) {
