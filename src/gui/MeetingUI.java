@@ -1636,5 +1636,4 @@ public class MeetingUI extends StackPane {
 		});
 		fadeOut.play();
 	}
-
 }
