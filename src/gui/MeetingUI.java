@@ -593,7 +593,7 @@ public class MeetingUI extends StackPane {
 
 		return headerBox;
 	}
-	
+
 	/**
 	 * Sends the current message in the input field
 	 */
@@ -1017,7 +1017,6 @@ public class MeetingUI extends StackPane {
 	 * Handles a vote received from the server
 	 */
 	public void receiveVote(String voterKey, String targetKey) {
-		System.out.println("I GOT THE VOTE");
 		Platform.runLater(() -> {
 			try {
 
@@ -1169,7 +1168,9 @@ public class MeetingUI extends StackPane {
 	}
 
 	/**
-	 * Shows the voting results
+	 * Modified version of the showVotingResults method in MeetingUI class This
+	 * version properly handles ejections by flagging players as ejected rather than
+	 * just killed. It skips showing ejection text in the meeting UI.
 	 */
 	public void showVotingResults(String ejectedPlayerKey, Map<String, Integer> voteResults) {
 		Platform.runLater(() -> {
@@ -1180,10 +1181,16 @@ public class MeetingUI extends StackPane {
 				// Store vote results
 				this.votes = new HashMap<>(voteResults);
 
+				// Create a flag to track ejection state for the local player
+				boolean localPlayerEjected = false;
+				boolean wasLocalPlayerImposter = false;
+
 				// Handle ejection
 				if (ejectedPlayerKey != null) {
 					// If it's the local player
 					if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+						localPlayerEjected = true;
+						wasLocalPlayerImposter = "imposter".equals(PlayerLogic.getStatus());
 						PlayerLogic.setStatus("dead");
 						System.out.println("CLIENT: You were ejected!");
 					}
@@ -1191,56 +1198,62 @@ public class MeetingUI extends StackPane {
 					else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
 						PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
 						if (player != null) {
+							// Check if player was an imposter before marking as dead
+							boolean wasImposter = "imposter".equals(player.getStatus());
 							player.setStatus("dead");
 							System.out.println("CLIENT: Player " + player.getName() + " was ejected!");
 						}
 					}
+
+					// Store the ejection state for use when the meeting UI closes
+					boolean finalWasImposter = false;
+
+					if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+						// For local player, we need to check before we changed status to "dead"
+						finalWasImposter = wasLocalPlayerImposter;
+					} else {
+						// For other players, we need to check before status was changed to "dead"
+						// Get from server broadcast for clients, or handle directly on server
+						PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
+
+						// Check status directly - NOTE: This won't work if the status has already
+						// changed
+						// to "dead", so the server needs to broadcast the correct info
+						finalWasImposter = player != null && player.getStatus().contains("imposter");
+					}
+
+					// Add a custom callback to the GameWindow class when closing the meeting UI
+					if (gameWindow != null) {
+						gameWindow.setEjectionInfo(ejectedPlayerKey, finalWasImposter);
+					}
+
+					// Close meeting UI quickly to show ejection screen
+					if (executor != null && !executor.isShutdown()) {
+						executor.schedule(() -> Platform.runLater(this::closeMeetingUI), 1, TimeUnit.SECONDS);
+					} else {
+						// Fallback if executor is already shut down
+						Timeline closingTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> closeMeetingUI()));
+						closingTimer.play();
+					}
+
+					// Skip showing ejection text in meeting UI
+					return;
 				}
 
-				// Create results display
+				// Create results display only for no ejection case
 				VBox resultsBox = new VBox(20);
 				resultsBox.setAlignment(Pos.CENTER);
 				resultsBox.setPadding(new Insets(20));
 				resultsBox.setBackground(
 						new Background(new BackgroundFill(Color.rgb(0, 0, 0, 0.8), new CornerRadii(10), Insets.EMPTY)));
 
-				// Results text
-				Text resultsText;
-				if (ejectedPlayerKey == null) {
-					resultsText = new Text("No one was ejected (Skipped or Tie)");
-				} else {
-					String playerName = getPlayerNameByKey(ejectedPlayerKey);
-					resultsText = new Text(playerName + " was ejected");
-				}
-
+				// Results text for skip/tie only
+				Text resultsText = new Text("No one was ejected (Skipped or Tie)");
 				resultsText.setFont(Font.font("Monospace", FontWeight.BOLD, 28));
 				resultsText.setFill(Color.WHITE);
 
 				// Add to results box
 				resultsBox.getChildren().add(resultsText);
-
-				// If a player was ejected, show if they were an impostor
-				if (ejectedPlayerKey != null) {
-					String roleText;
-					boolean wasImpostor = false;
-
-					if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
-						wasImpostor = PlayerLogic.getStatus().equals("imposter");
-						roleText = wasImpostor ? PlayerLogic.getName() + " was an Impostor."
-								: PlayerLogic.getName() + " was not an Impostor.";
-					} else {
-						PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
-						wasImpostor = player != null && player.getStatus().equals("imposter");
-						roleText = wasImpostor ? player.getName() + " was an Impostor."
-								: player.getName() + " was not an Impostor.";
-					}
-
-					Text imposterText = new Text(roleText);
-					imposterText.setFont(Font.font("Monospace", FontWeight.BOLD, 22));
-					imposterText.setFill(wasImpostor ? Color.rgb(255, 100, 100) : Color.rgb(100, 255, 100));
-
-					resultsBox.getChildren().add(imposterText);
-				}
 
 				// Add vote counts
 				Text voteCounts = new Text("Votes: ");
@@ -1272,7 +1285,8 @@ public class MeetingUI extends StackPane {
 				fadeIn.setToValue(1);
 				fadeIn.play();
 
-				// Schedule closing the meeting UI after showing results
+				// Schedule closing the meeting UI after showing results (longer delay for no
+				// ejection)
 				if (executor != null && !executor.isShutdown()) {
 					executor.schedule(() -> Platform.runLater(this::closeMeetingUI), 7, TimeUnit.SECONDS);
 				} else {
@@ -1576,9 +1590,6 @@ public class MeetingUI extends StackPane {
 		}
 	}
 
-	/**
-	 * {@link Cloneable the meeting UI
-	 */
 	private void closeMeetingUI() {
 		// First clean up resources
 		if (votingTimer != null) {
@@ -1611,6 +1622,8 @@ public class MeetingUI extends StackPane {
 						// Reset references in GameWindow
 						if (gameWindow != null) {
 							gameWindow.clearActiveMeetingUI();
+							// Call the new method to handle post-meeting transitions
+							gameWindow.handleMeetingClosed();
 						}
 
 						// Remove from parent
@@ -1661,6 +1674,8 @@ public class MeetingUI extends StackPane {
 						// Reset reference in GameWindow
 						if (gameWindow != null) {
 							gameWindow.clearActiveMeetingUI();
+							// Call the new method to handle post-meeting transitions
+							gameWindow.handleMeetingClosed();
 						}
 
 						System.out.println("Meeting UI removed through emergency cleanup");

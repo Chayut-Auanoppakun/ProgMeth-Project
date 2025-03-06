@@ -21,6 +21,7 @@ import javafx.animation.AnimationTimer;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
+import javafx.animation.RotateTransition;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
 import javafx.animation.Transition;
@@ -56,6 +57,7 @@ import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
+import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -105,12 +107,19 @@ public class GameWindow {
 	private static long lastFpressed = 0;
 	private static long lastRpressed = 0;
 	private static boolean MeetingOpen = false;
+
 	// === Player Properties ===
 	private static double playerX = 980; // Starting Position
 	private static double playerY = 3616; // Starting Position
 	private static double speed = 130; // Movement speed in units per second
 	private ImageView playerIMG;
 	private Animation animation;
+	private boolean wasAlive = true; // Add as a class field
+
+	// === Eject State ===
+	private String pendingEjectedPlayerKey = null;
+	private boolean pendingEjectedWasImposter = false;
+	private boolean playerWasEjected = false;
 
 	// === Player Rendering and Animation ===
 	private static final int FRAME_WIDTH = 48;
@@ -668,7 +677,7 @@ public class GameWindow {
 			if (renderGhost == playerIsDead) {
 				// For ghost rendering, check if we already have a corpse for this player
 				boolean hasCorpse = GameLogic.corpseList.containsKey(key);
-				hasCorpse = false; // TODO
+				// hasCorpse = false; // TODO
 				// When rendering ghosts, only add if the player has moved from their corpse
 				// position
 				if (!renderGhost || !hasCorpse
@@ -1001,7 +1010,7 @@ public class GameWindow {
 			Direction = 2;
 			moved = true;
 		}
-		if (dx != 0 && dy != 0) { //cap diag speed
+		if (dx != 0 && dy != 0) { // cap diag speed
 			dx /= Math.sqrt(2);
 			dy /= Math.sqrt(2);
 		}
@@ -1010,14 +1019,14 @@ public class GameWindow {
 			if (dx != 0) {
 				if (!checkCollision(playerX + dx, playerY)) {
 					playerX += dx;
-				} 
+				}
 			}
 
 			// Move vertically
 			if (dy != 0) {
 				if (!checkCollision(playerX, playerY + dy)) {
 					playerY += dy;
-				} 
+				}
 			}
 		} else { // if dead - no collision checks
 			playerX += dx;
@@ -2128,18 +2137,23 @@ public class GameWindow {
 	/**
 	 * Check for player death and show the death panel
 	 */
-	private boolean wasAlive = true; // Add as a class field
 
 	private void checkPlayerStateChange() {
 		boolean isAlive = !"dead".equalsIgnoreCase(PlayerLogic.getStatus());
 
 		// Check if player just died
 		if (wasAlive && !isAlive) {
-			// Get the killer character ID - replace with your implementation
-			int killerCharId = getKillerCharacterId();
+			// Don't show death panel if the player was ejected
+			if (!playerWasEjected) {
+				// Get the killer character ID
+				int killerCharId = getKillerCharacterId();
 
-			// Show death panel
-			Platform.runLater(() -> showDeathPanel(killerCharId));
+				// Show death panel
+				Platform.runLater(() -> showDeathPanel(killerCharId));
+			} else {
+				// Reset the ejection flag
+				playerWasEjected = false;
+			}
 		}
 
 		// Update state tracker
@@ -2682,5 +2696,306 @@ public class GameWindow {
 			totalCompleted = 100;
 		}
 		return totalCompleted;
+	}
+
+	private void showEjectionPanel(String ejectedPlayerKey, boolean wasImposter) {
+		// Create panel container
+		StackPane ejectionPanel = new StackPane();
+		ejectionPanel.setPrefSize(screenWidth, screenHeight);
+
+		// Add semi-transparent dark background with stars (space-like)
+		Rectangle darkOverlay = new Rectangle(screenWidth, screenHeight);
+		darkOverlay.setFill(new Color(0, 0, 0, 0.85)); // Dark overlay for space effect
+
+		// Create content container styled to match the game theme
+		VBox contentBox = new VBox(20);
+		contentBox.setAlignment(Pos.CENTER);
+		contentBox.setPrefWidth(600);
+		contentBox.setPrefHeight(500);
+		contentBox.setMaxWidth(600);
+		contentBox.setMaxHeight(500);
+		contentBox.setPadding(new Insets(25));
+
+		// Use the same dark blue-gray background as CharacterSelectGui
+		contentBox.setStyle("-fx-background-color: rgba(30, 30, 50, 0.95);");
+
+		// Create border with blue accent color
+		contentBox.setBorder(new Border(new BorderStroke(Paint.valueOf("#1e90ff"), // Blue border color
+				BorderStrokeStyle.SOLID, new CornerRadii(0), // Sharp corners
+				new BorderWidths(3))));
+
+		// Get player name
+		String playerName = "Unknown";
+		if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+			playerName = PlayerLogic.getName();
+		} else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
+			playerName = GameLogic.playerList.get(ejectedPlayerKey).getName();
+		}
+
+		// Ejection title text
+		Text title = new Text(playerName + " WAS EJECTED");
+		title.setFill(Paint.valueOf("#ff6347")); // Tomato red
+		title.setFont(Font.font("Monospace", FontWeight.BOLD, 28));
+		title.setTextAlignment(TextAlignment.CENTER);
+
+		// Shadow effect for title text to make it pop
+		title.setStyle("-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 3, 0, 0, 0);");
+
+		// Get character ID for ejected player
+		int charId = 0;
+		if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+			charId = PlayerLogic.getCharID();
+		} else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
+			charId = GameLogic.playerList.get(ejectedPlayerKey).getCharacterID();
+		}
+
+		// Display the ejected character
+		String profilePath = String.format("/player/profile/%02d.png", (charId + 1));
+		ImageView profileView = new ImageView();
+		try {
+			Image profileImage = new Image(getClass().getResourceAsStream(profilePath));
+			profileView.setImage(profileImage);
+		} catch (Exception e) {
+			System.err.println("Error loading profile image: " + e.getMessage());
+		}
+
+		// Set size for character image
+		profileView.setFitWidth(150);
+		profileView.setFitHeight(200);
+		profileView.setPreserveRatio(true);
+
+		// Add styling to match game aesthetics
+		profileView.setStyle("-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 5, 0, 0, 1);"
+				+ "-fx-border-color: #1e90ff;" + "-fx-border-width: 2px;" + "-fx-background-color: #2a2a3a;");
+
+		// Add rotation animation for ejected player (floating in space)
+		RotateTransition rotateTransition = new RotateTransition(Duration.seconds(10), profileView);
+		rotateTransition.setByAngle(360);
+		rotateTransition.setCycleCount(Animation.INDEFINITE);
+		rotateTransition.setInterpolator(Interpolator.LINEAR);
+		rotateTransition.play();
+
+		// Create text for imposter status
+		Text statusText = new Text(
+				wasImposter ? playerName + " was an Impostor." : playerName + " was not an Impostor.");
+		statusText.setFont(Font.font("Monospace", FontWeight.BOLD, 22));
+		statusText.setFill(wasImposter ? Color.rgb(255, 100, 100) : Color.rgb(100, 255, 100));
+		statusText.setTextAlignment(TextAlignment.CENTER);
+
+		// Create text about remaining imposters
+		Text remainingText = new Text();
+		if (wasImposter) {
+			int remainingImposters = 0;
+			for (String key : GameLogic.playerList.keySet()) {
+				PlayerInfo player = GameLogic.playerList.get(key);
+				if ("imposter".equals(player.getStatus()) && !"dead".equals(player.getStatus())) {
+					remainingImposters++;
+				}
+			}
+
+			// Also check if local player is an imposter
+			if ("imposter".equals(PlayerLogic.getStatus()) && !"dead".equals(PlayerLogic.getStatus())
+					&& !ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+				remainingImposters++;
+			}
+
+			if (remainingImposters == 1) {
+				remainingText.setText("1 Impostor remains.");
+			} else {
+				remainingText.setText(remainingImposters + " Impostors remain.");
+			}
+		} else {
+			// For crewmates, calculate remaining crewmates vs impostors
+			int remainingCrewmates = 0;
+			int remainingImposters = 0;
+
+			for (String key : GameLogic.playerList.keySet()) {
+				PlayerInfo player = GameLogic.playerList.get(key);
+				if (!"dead".equals(player.getStatus())) {
+					if ("imposter".equals(player.getStatus())) {
+						remainingImposters++;
+					} else {
+						remainingCrewmates++;
+					}
+				}
+			}
+
+			// Also check local player
+			if (!"dead".equals(PlayerLogic.getStatus())
+					&& !ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+				if ("imposter".equals(PlayerLogic.getStatus())) {
+					remainingImposters++;
+				} else {
+					remainingCrewmates++;
+				}
+			}
+
+			// Create the message
+			remainingText
+					.setText("Remaining: " + remainingCrewmates + " Crewmates, " + remainingImposters + " Impostors");
+		}
+
+		remainingText.setFont(Font.font("Monospace", FontWeight.NORMAL, 18));
+		remainingText.setFill(Color.LIGHTGRAY);
+		remainingText.setTextAlignment(TextAlignment.CENTER);
+
+		// Continue button
+		Button continueButton = new Button("CONTINUE");
+
+		// Match the button style with game's theme
+		String baseButtonStyle = "-fx-background-color: #1e90ff;" + "-fx-text-fill: white;"
+				+ "-fx-font-family: 'Monospace';" + "-fx-font-size: 16px;" + "-fx-font-weight: bold;"
+				+ "-fx-padding: 10 20 10 20;" + "-fx-border-color: #87cefa;" + "-fx-border-width: 2px;"
+				+ "-fx-background-radius: 0;" + "-fx-border-radius: 0;"
+				+ "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 5, 0, 0, 1);";
+
+		String hoverButtonStyle = "-fx-background-color: #00bfff;" + "-fx-text-fill: white;"
+				+ "-fx-font-family: 'Monospace';" + "-fx-font-size: 16px;" + "-fx-font-weight: bold;"
+				+ "-fx-padding: 10 20 10 20;" + "-fx-border-color: #b0e2ff;" + "-fx-border-width: 2px;"
+				+ "-fx-background-radius: 0;" + "-fx-border-radius: 0;"
+				+ "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 8, 0, 0, 1);";
+
+		continueButton.setStyle(baseButtonStyle);
+		continueButton.setPrefWidth(250);
+
+		// Add hover effects
+		continueButton.setOnMouseEntered(e -> continueButton.setStyle(hoverButtonStyle));
+		continueButton.setOnMouseExited(e -> continueButton.setStyle(baseButtonStyle));
+
+		// Button action to close the panel
+		continueButton.setOnAction(e -> {
+			FadeTransition fadeOut = new FadeTransition(Duration.millis(500), ejectionPanel);
+			fadeOut.setFromValue(1);
+			fadeOut.setToValue(0);
+			fadeOut.setOnFinished(event -> root.getChildren().remove(ejectionPanel));
+			fadeOut.play();
+		});
+
+		// Space styling: add starfield
+		Pane starField = createStarField(screenWidth, screenHeight);
+
+		// Add all elements to the content box
+		contentBox.getChildren().addAll(title, profileView, statusText, remainingText, continueButton);
+
+		// Add elements to the panel (stars in back, overlay, then content)
+		ejectionPanel.getChildren().addAll(starField, darkOverlay, contentBox);
+
+		// Add panel to the root with animation
+		ejectionPanel.setOpacity(0);
+		root.getChildren().add(ejectionPanel);
+
+		// Create fade-in animation
+		FadeTransition fadeIn = new FadeTransition(Duration.millis(800), ejectionPanel);
+		fadeIn.setFromValue(0);
+		fadeIn.setToValue(1);
+		fadeIn.play();
+
+		// Play ejection sound
+		SoundLogic.playSound("assets/sounds/ejection.wav", 0);
+	}
+
+	private Pane createStarField(double width, double height) {
+		Pane starField = new Pane();
+		starField.setPrefSize(width, height);
+
+		Random random = new Random();
+
+		// Create stars of different sizes
+		for (int i = 0; i < 200; i++) {
+			double starSize = random.nextDouble() * 2 + 1; // 1-3 pixel stars
+			Circle star = new Circle(starSize);
+
+			// Randomize star positions
+			star.setCenterX(random.nextDouble() * width);
+			star.setCenterY(random.nextDouble() * height);
+
+			// Set star color (white to light blue)
+			double blueHue = random.nextDouble() * 0.3; // 0-0.3 blue tint
+			star.setFill(Color.rgb(255, 255 - (int) (blueHue * 255), 255 - (int) (blueHue * 100)));
+
+			// Add a subtle glow effect
+			DropShadow glow = new DropShadow();
+			glow.setColor(Color.ALICEBLUE);
+			glow.setRadius(1.5);
+			star.setEffect(glow);
+
+			// Make some stars twinkle
+			if (random.nextBoolean()) {
+				FadeTransition twinkle = new FadeTransition(Duration.seconds(random.nextDouble() * 3 + 1), star);
+				twinkle.setFromValue(0.4 + random.nextDouble() * 0.6);
+				twinkle.setToValue(1.0);
+				twinkle.setCycleCount(Animation.INDEFINITE);
+				twinkle.setAutoReverse(true);
+				twinkle.play();
+			}
+
+			starField.getChildren().add(star);
+		}
+
+		return starField;
+	}
+
+	public void setEjectionInfo(String ejectedPlayerKey, boolean wasImposter) {
+		System.out.println("Setting ejection info - Player: " + ejectedPlayerKey + ", Was Imposter: " + wasImposter);
+
+		this.pendingEjectedPlayerKey = ejectedPlayerKey;
+		this.pendingEjectedWasImposter = wasImposter;
+
+		// Set a flag to indicate player was ejected, not killed
+		if (ejectedPlayerKey != null && ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+			this.playerWasEjected = true;
+		}
+
+		// If this player is not the local player, broadcast the ejection info to all
+		// clients
+		if (MainMenuPane.getState().equals(State.SERVER) && ejectedPlayerKey != null
+				&& !ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+
+			// Create ejection data to broadcast
+			try {
+				JSONObject ejectionData = new JSONObject();
+				ejectionData.put("type", "ejection");
+				ejectionData.put("ejectedPlayer", ejectedPlayerKey);
+				ejectionData.put("wasImposter", wasImposter);
+
+				String ejectionMessage = "/ejection/" + ejectionData.toString();
+
+				// Broadcast to all clients
+				for (ClientInfo clientInfo : ServerLogic.getConnectedClients()) {
+					try {
+						DatagramSocket socket = ServerLogic.getServerSocket();
+						if (socket != null) {
+							byte[] buf = ejectionMessage.getBytes(StandardCharsets.UTF_8);
+							DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
+									clientInfo.getPort());
+
+							// Send multiple times to ensure delivery
+							for (int i = 0; i < 3; i++) {
+								socket.send(packet);
+								Thread.sleep(50);
+							}
+						}
+					} catch (Exception e) {
+						System.err.println("Error broadcasting ejection info: " + e.getMessage());
+					}
+				}
+			} catch (Exception e) {
+				System.err.println("Error creating ejection broadcast: " + e.getMessage());
+			}
+		}
+	}
+
+	public void handleMeetingClosed() {
+		System.out.println("Meeting closed - Pending ejection: "
+				+ (pendingEjectedPlayerKey != null ? pendingEjectedPlayerKey : "None"));
+
+		// Check if we need to show an ejection panel
+		if (pendingEjectedPlayerKey != null) {
+			showEjectionPanel(pendingEjectedPlayerKey, pendingEjectedWasImposter);
+
+			// Clear the pending ejection info
+			pendingEjectedPlayerKey = null;
+			pendingEjectedWasImposter = false;
+		}
 	}
 }

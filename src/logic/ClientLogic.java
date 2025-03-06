@@ -566,6 +566,36 @@ public class ClientLogic {
 								System.err.println("CLIENT ERROR: Failed to process voting results: " + e.getMessage());
 								e.printStackTrace();
 							}
+						} else if (received.startsWith("/ejection/")) {
+							try {
+								// Extract ejection data
+								String jsonStr = received.substring(10); // Remove "/ejection/" prefix
+								JSONObject ejectionData = new JSONObject(jsonStr);
+
+								String ejectedPlayerKey = ejectionData.getString("ejectedPlayer");
+								boolean wasImposter = ejectionData.getBoolean("wasImposter");
+
+								System.out.println("CLIENT: Received ejection notification - Player: "
+										+ ejectedPlayerKey + ", Was Imposter: " + wasImposter);
+
+								// Mark player as dead
+								if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
+									PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
+									if (player != null) {
+										player.setStatus("dead");
+									}
+								}
+
+								// If we have a GameWindow instance, set the ejection info
+								if (GameWindow.getGameWindowInstance() != null) {
+									GameWindow.getGameWindowInstance().setEjectionInfo(ejectedPlayerKey, wasImposter);
+								}
+
+							} catch (Exception e) {
+								System.err
+										.println("CLIENT ERROR: Failed to process ejection message: " + e.getMessage());
+								e.printStackTrace();
+							}
 						}
 						// Handle relay messages
 						else if (received.startsWith("/r/")) {
