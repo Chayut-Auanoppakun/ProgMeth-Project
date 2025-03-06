@@ -162,6 +162,9 @@ public class ServerLogic {
 		} else if (received.startsWith("/report/")) {
 			handleReportMessage(received, clientAddress, clientPort, logArea);
 
+		} else if (received.startsWith("/meeting/")) {
+			// New handler for meeting-specific messages
+			handleMeetingMessage(received, clientAddress, clientPort, logArea);
 		} else {
 			handleChatMessage(received, clientAddress, clientPort, logArea);
 		}
@@ -184,6 +187,78 @@ public class ServerLogic {
 		} catch (Exception e) {
 			System.err.println("SERVER ERROR: Failed to process kill message: " + e.getMessage());
 			e.printStackTrace();
+		}
+	}
+
+	private static void handleMeetingMessage(String received, InetAddress clientAddress, int clientPort,
+			TextArea logArea) {
+		try {
+			// Extract the JSON data from the message
+			String jsonStr = received.substring(9); // Remove "/meeting/" prefix
+			JSONObject meetingData = new JSONObject(jsonStr);
+
+			String messageType = meetingData.getString("type");
+			String senderKey = clientAddress.getHostAddress() + ":" + clientPort;
+
+			// Get the meeting ID to ensure message is routed to correct meeting
+			String meetingId = meetingData.getString("meetingId");
+
+			// Handle different types of meeting messages
+			switch (messageType) {
+			case "chat":
+				// Meeting chat message
+				String chatMessage = meetingData.getString("message");
+				String senderName = meetingData.getString("name");
+
+				// Log the message
+				log(logArea, "[Meeting " + meetingId + "] " + senderName + ": " + chatMessage);
+
+				// Relay the chat message to all other clients
+				relayMeetingChatToClients(senderKey, senderName, chatMessage, meetingId, logArea);
+				break;
+
+			// Add other meeting message types as needed
+
+			default:
+				log(logArea, "Unknown meeting message type: " + messageType);
+				break;
+			}
+		} catch (Exception e) {
+			log(logArea, "Error handling meeting message: " + e.getMessage());
+		}
+	}
+
+	private static void relayMeetingChatToClients(String senderKey, String senderName, String message, String meetingId,
+			TextArea logArea) {
+		try {
+			// Create JSON for the relay message
+			JSONObject relayData = new JSONObject();
+			relayData.put("type", "chat");
+			relayData.put("name", senderName);
+			relayData.put("message", message);
+			relayData.put("meetingId", meetingId);
+
+			String relayMessage = "/meeting/" + relayData.toString();
+			byte[] buf = relayMessage.getBytes(StandardCharsets.UTF_8);
+
+			// Send to all connected clients except sender
+			for (ClientInfo clientInfo : clientAddresses) {
+				String clientKey = clientInfo.getAddress().getHostAddress() + ":" + clientInfo.getPort();
+
+				// Skip the sender to avoid echoing back
+				if (!clientKey.equals(senderKey)) {
+					try {
+						DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
+								clientInfo.getPort());
+						serverSocket.send(packet);
+					} catch (IOException e) {
+						log(logArea, "Error relaying meeting message to " + clientInfo.getAddress() + ":"
+								+ clientInfo.getPort() + ": " + e.getMessage());
+					}
+				}
+			}
+		} catch (Exception e) {
+			log(logArea, "Error building relay message: " + e.getMessage());
 		}
 	}
 

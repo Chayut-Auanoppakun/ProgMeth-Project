@@ -173,7 +173,7 @@ public class GameWindow {
 
 	// === Buttons and ui ===
 	private Button characterSelectButton;
-	private CharaterSelectgui characterSelectGui;
+	private CharacterSelectgui characterSelectGui;
 	private boolean characterSelectVisible = false;
 	private boolean PrepEnd = false;
 
@@ -237,7 +237,7 @@ public class GameWindow {
 					PrepEnd = GameLogic.isPrepEnded();
 					updateUIForPrepPhase();
 					GameLogic.autoImposterCount(); // For now, automatically set imposter count to be 1/4 of player size
-					System.out.println(GameLogic.getImposterCount());
+					//System.out.println(GameLogic.getImposterCount());
 					if (MainMenuPane.getState().equals(logic.State.SERVER)) {
 						ServerLogic.randomizeImposters();
 					}
@@ -250,7 +250,7 @@ public class GameWindow {
 				if (GameLogic.isPrepEnded() && overlayManager != null) {
 					overlayManager.updateTaskProgress();
 					overlayManager.updatePlayerRoleUI();
-					overlayManager.updateButtonStates(); // Add this new line
+					overlayManager.updateButtonStates();
 				}
 				keylogger();
 				updateMovement(now);
@@ -403,7 +403,7 @@ public class GameWindow {
 
 		if (characterSelectGui == null) {
 			try {
-				characterSelectGui = new CharaterSelectgui(this::onCharacterSelected);
+				characterSelectGui = new CharacterSelectgui(this::onCharacterSelected);
 
 				// Set the initial position completely off-screen
 				// Don't use translateX here - we'll animate it later
@@ -517,8 +517,8 @@ public class GameWindow {
 						double height = object.getHeight();
 
 						// Debug: Print collision object coordinates
-						System.out.println(
-								"Collision Object: x=" + x + ", y=" + y + ", width=" + width + ", height=" + height);
+						//System.out.println(
+						//		"Collision Object: x=" + x + ", y=" + y + ", width=" + width + ", height=" + height);
 
 						tempCollisionObjects.add(new CollisionObject(x, y, width, height));
 					}
@@ -529,7 +529,7 @@ public class GameWindow {
 		collisionObjects.addAll(tempCollisionObjects);
 		initializeSpatialGrid();
 
-		System.out.println("Loaded " + collisionObjects.size() + " collision objects");
+		//System.out.println("Loaded " + collisionObjects.size() + " collision objects");
 	}
 
 	private void loadEventObjects() {
@@ -549,8 +549,8 @@ public class GameWindow {
 						double width = object.getWidth();
 						double height = object.getHeight();
 						String id = object.getProperties().getProperty("Event_ID");
-						System.out.println("Event Object: x=" + x + ", y=" + y + ", width=" + width + ", height="
-								+ height + " Event_ID = " + id);
+						//System.out.println("Event Object: x=" + x + ", y=" + y + ", width=" + width + ", height="
+						//		+ height + " Event_ID = " + id);
 						tempEventObjects.add(new eventObject(x, y, width, height, id));
 						// System.out.println("Object ID: " + id + ", " + propertyName + ": " +
 						// propertyValue);
@@ -1159,7 +1159,7 @@ public class GameWindow {
 			return;
 		}
 
-		System.out.println("GAMEWINDOW: Attempting to kill player: " + target.getName());
+		//System.out.println("GAMEWINDOW: Attempting to kill player: " + target.getName());
 
 		try {
 			String killedPlayerKey = target.getAddress().getHostAddress() + ":" + target.getPort();
@@ -1260,8 +1260,8 @@ public class GameWindow {
 			pulse.setOnFinished(e -> fadeOut.play());
 
 			// Log confirmation for debugging
-			System.out.println("Kill animation created at screen position: " + screenX + ", " + screenY);
-			System.out.println("Target world position was: " + worldX + ", " + worldY);
+			//System.out.println("Kill animation created at screen position: " + screenX + ", " + screenY);
+			//System.out.println("Target world position was: " + worldX + ", " + worldY);
 
 		} catch (Exception e) {
 			System.err.println("Error creating kill animation: " + e.getMessage());

@@ -386,41 +386,38 @@ public class ClientLogic {
 
 						else if (received.startsWith("/meeting/")) {
 							try {
-								// Extract and parse JSON data for the emergency meeting
 								String jsonStr = received.substring(9); // Remove "/meeting/" prefix
 								JSONObject meetingData = new JSONObject(jsonStr);
 
-								String reporterKey = meetingData.getString("reporter");
-								String reportedPlayerName = meetingData.getString("reportedPlayer");
-								int reportedCharId = meetingData.getInt("reportedCharId");
+								String messageType = meetingData.getString("type");
+								String meetingId = meetingData.getString("meetingId");
 
-								System.out.println("Emergency meeting received from server: " + reportedPlayerName
-										+ " reported by " + reporterKey);
+								// Get the game window and active meeting UI
+								if (GameWindow.getGameWindowInstance() != null) {
+									MeetingUI activeMeeting = GameWindow.getGameWindowInstance().getActiveMeetingUI();
 
-								// Call the meeting UI for all players (even if they're ghosts)
-								Platform.runLater(() -> {
-									// Find the GameWindow instance
-									if (GameWindow.getGameWindowInstance() != null) {
-										GameWindow.getGameWindowInstance().startEmergencyMeeting(reporterKey,
-												reportedPlayerName, reportedCharId);
-									}
-								});
+									// Only process if we have an active meeting with matching ID
+									if (activeMeeting != null && activeMeeting.getMeetingId().equals(meetingId)) {
 
-								// Mark the associated corpse as found to hide it
-								for (String corpseKey : GameLogic.corpseList.keySet()) {
-									Corpse corpse = GameLogic.corpseList.get(corpseKey);
-									if (corpse.getPlayerName().equals(reportedPlayerName)) {
-										corpse.setFound(true);
-										System.out.println("Marked corpse as found: " + reportedPlayerName);
-										break;
+										if ("chat".equals(messageType)) {
+											// Handle chat message
+											String senderName = meetingData.getString("name");
+											String message = meetingData.getString("message");
+											String senderStatus = meetingData.optString("status", "crewmate"); // Default
+																												// to
+																												// crewmate
+																												// if
+																												// not
+																												// specified
+
+											// Pass to the meeting UI to display
+											activeMeeting.receiveChatMessage(senderName, message, senderStatus);
+										}
+										// Handle other meeting message types as needed
 									}
 								}
-
-								// Play the report sound
-								SoundLogic.playSound("assets/sounds/report.wav", 0);
 							} catch (Exception e) {
 								System.err.println("Error processing meeting message: " + e.getMessage());
-								e.printStackTrace();
 							}
 						} else if (received.startsWith("/vote/")) {
 							try {

@@ -21,7 +21,7 @@ import logic.GameLogic;
 import logic.PlayerLogic;
 import server.PlayerInfo;
 
-public class CharaterSelectgui extends VBox {
+public class CharacterSelectgui extends VBox {
 	private ImageView characterImageView;
 	private int curChar = PlayerLogic.getCharID();
 	private static final String[] CHARACTER_NAMES = { "Alex", "Casey", "Taylor", "Jordan", "Morgan", "Riley", "Avery",
@@ -32,7 +32,7 @@ public class CharaterSelectgui extends VBox {
 	private Button selectButton;
 	private TextField name;
 
-	public CharaterSelectgui(Runnable onCharacterSelectedCallback) {
+	public CharacterSelectgui(Runnable onCharacterSelectedCallback) {
 
 		// Set fixed size
 		setPrefWidth(300);
