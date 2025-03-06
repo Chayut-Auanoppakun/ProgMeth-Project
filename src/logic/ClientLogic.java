@@ -431,22 +431,26 @@ public class ClientLogic {
 									String reportedPlayerName = meetingData.optString("reportedPlayer", null);
 									int reportedCharId = meetingData.getInt("reportedCharId");
 
-									// Start emergency meeting UI on this client if it doesn't exist
-									GameWindow gameWindowInstance = GameWindow.getGameWindowInstance();
-									if (gameWindowInstance != null) {
-										Platform.runLater(() -> {
-											// Check if meeting UI already exists
-											MeetingUI activeMeeting = gameWindowInstance.getActiveMeetingUI();
-											if (activeMeeting == null) {
-												System.out.println("NO MEETING STARTING NEW ONE");
-												gameWindowInstance.startEmergencyMeeting(reporterKey,
-														reportedPlayerName, reportedCharId);
-											}
-										});
-									} else {
-										System.out.println(
-												"Cannot start emergency meeting - GameWindow instance is null");
-									}
+//									// Start emergency meeting UI on this client if it doesn't exist
+//									GameWindow gameWindowInstance = GameWindow.getGameWindowInstance();
+//									if (gameWindowInstance != null) {
+//										Platform.runLater(() -> {
+//											// Check if meeting UI already exists
+//											MeetingUI activeMeeting = gameWindowInstance.getActiveMeetingUI();
+//											if (activeMeeting == null) {
+//												System.out.println("NO MEETING STARTING NEW ONE");
+//												gameWindowInstance.startEmergencyMeeting(reporterKey,
+//														reportedPlayerName, reportedCharId);
+//											}
+//										});
+//									} else {
+//										System.out.println(
+//												"Cannot start emergency meeting - GameWindow instance is null");
+//									}
+									Platform.runLater(() -> {
+										GameWindow.getGameWindowInstance().startEmergencyMeeting(reporterKey,
+												reportedPlayerName, reportedCharId);
+									});
 								}
 							} catch (Exception e) {
 								System.err.println("Error processing meeting message: " + e.getMessage());

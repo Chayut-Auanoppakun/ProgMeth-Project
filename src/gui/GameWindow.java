@@ -104,7 +104,7 @@ public class GameWindow {
 	private static long lastCollisionChanged = 0;
 	private static long lastFpressed = 0;
 	private static long lastRpressed = 0;
-
+	private static boolean MeetingOpen = false;
 	// === Player Properties ===
 	private static double playerX = 980; // Starting Position
 	private static double playerY = 3616; // Starting Position
@@ -237,7 +237,7 @@ public class GameWindow {
 					PrepEnd = GameLogic.isPrepEnded();
 					updateUIForPrepPhase();
 					GameLogic.autoImposterCount(); // For now, automatically set imposter count to be 1/4 of player size
-					//System.out.println(GameLogic.getImposterCount());
+					// System.out.println(GameLogic.getImposterCount());
 					if (MainMenuPane.getState().equals(logic.State.SERVER)) {
 						ServerLogic.randomizeImposters();
 					}
@@ -517,8 +517,9 @@ public class GameWindow {
 						double height = object.getHeight();
 
 						// Debug: Print collision object coordinates
-						//System.out.println(
-						//		"Collision Object: x=" + x + ", y=" + y + ", width=" + width + ", height=" + height);
+						// System.out.println(
+						// "Collision Object: x=" + x + ", y=" + y + ", width=" + width + ", height=" +
+						// height);
 
 						tempCollisionObjects.add(new CollisionObject(x, y, width, height));
 					}
@@ -529,7 +530,8 @@ public class GameWindow {
 		collisionObjects.addAll(tempCollisionObjects);
 		initializeSpatialGrid();
 
-		//System.out.println("Loaded " + collisionObjects.size() + " collision objects");
+		// System.out.println("Loaded " + collisionObjects.size() + " collision
+		// objects");
 	}
 
 	private void loadEventObjects() {
@@ -549,8 +551,9 @@ public class GameWindow {
 						double width = object.getWidth();
 						double height = object.getHeight();
 						String id = object.getProperties().getProperty("Event_ID");
-						//System.out.println("Event Object: x=" + x + ", y=" + y + ", width=" + width + ", height="
-						//		+ height + " Event_ID = " + id);
+						// System.out.println("Event Object: x=" + x + ", y=" + y + ", width=" + width +
+						// ", height="
+						// + height + " Event_ID = " + id);
 						tempEventObjects.add(new eventObject(x, y, width, height, id));
 						// System.out.println("Object ID: " + id + ", " + propertyName + ": " +
 						// propertyValue);
@@ -1159,7 +1162,8 @@ public class GameWindow {
 			return;
 		}
 
-		//System.out.println("GAMEWINDOW: Attempting to kill player: " + target.getName());
+		// System.out.println("GAMEWINDOW: Attempting to kill player: " +
+		// target.getName());
 
 		try {
 			String killedPlayerKey = target.getAddress().getHostAddress() + ":" + target.getPort();
@@ -1260,8 +1264,9 @@ public class GameWindow {
 			pulse.setOnFinished(e -> fadeOut.play());
 
 			// Log confirmation for debugging
-			//System.out.println("Kill animation created at screen position: " + screenX + ", " + screenY);
-			//System.out.println("Target world position was: " + worldX + ", " + worldY);
+			// System.out.println("Kill animation created at screen position: " + screenX +
+			// ", " + screenY);
+			// System.out.println("Target world position was: " + worldX + ", " + worldY);
 
 		} catch (Exception e) {
 			System.err.println("Error creating kill animation: " + e.getMessage());
@@ -2159,6 +2164,13 @@ public class GameWindow {
 	 */
 	public void startEmergencyMeeting(String reporterKey, String reportedPlayerName, int reportedCharacterId) {
 		try {
+			if (MeetingOpen) {
+				System.out.println("An emergency meeting is already in progress, ignoring new request");
+				return;
+			} else {
+				System.out.println("Starting Meeting");
+			}
+			MeetingOpen = true;
 			// Create a full-screen overlay for the meeting
 			Rectangle overlay = new Rectangle(0, 0, screenWidth, screenHeight);
 			// Use RadialGradient for more atmospheric look, matching game theme
@@ -2418,7 +2430,7 @@ public class GameWindow {
 					"Reporting corpse of " + closestCorpse.getPlayerName() + " at distance " + closestDistance);
 
 			// Mark the corpse as found (will hide it from rendering)
-			//closestCorpse.setFound(true);
+			// closestCorpse.setFound(true);
 
 			// Play report sound
 			SoundLogic.playSound("assets/sounds/alarm_emergencymeeting.wav", 0);
@@ -2619,10 +2631,10 @@ public class GameWindow {
 	public void showVotingUI(String reportedPlayerName, int reportedCharacterId, String reporterKey) {
 		// Create the meeting UI
 		MeetingUI meetingUI = new MeetingUI(this, reportedPlayerName, reporterKey);
-
+		System.out.println("CREATE NEW REF");
 		// Store reference
 		this.activeMeetingUI = meetingUI;
-
+		MeetingOpen = true;
 		// Add it to the root node
 		root.getChildren().add(meetingUI);
 
@@ -2636,6 +2648,7 @@ public class GameWindow {
 
 	public void clearActiveMeetingUI() {
 		this.activeMeetingUI = null;
+		MeetingOpen = false;
 	}
 
 	public double getWidth() {
