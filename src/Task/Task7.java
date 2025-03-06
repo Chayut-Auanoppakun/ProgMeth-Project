@@ -65,6 +65,11 @@ public class Task7 extends Task {
         fullyFoldedBlanket.setFitWidth(200);
         fullyFoldedBlanket.setFitHeight(200);
         fullyFoldedBlanket.setVisible(false);
+        
+        ImageView doneFoldingBlanket = new ImageView(new Image("/TaskAsset/Makeabed/done.png"));
+        doneFoldingBlanket.setFitWidth(200);
+        doneFoldingBlanket.setFitHeight(200);
+        doneFoldingBlanket.setVisible(false);
 
         // Handle click events
         unfoldedBlanket.setOnMouseClicked(event -> {
@@ -80,9 +85,12 @@ public class Task7 extends Task {
         });
 
         fullyFoldedBlanket.setOnMouseClicked(event -> {
-            //taskContainer.getChildren().remove(fullyFoldedBlanket);
+            taskContainer.getChildren().remove(fullyFoldedBlanket);
+            doneFoldingBlanket.setVisible(true);
+            taskContainer.getChildren().add(doneFoldingBlanket);
             completeTask();
         });
+        
 
         // Initial blanket
         taskContainer.getChildren().add(unfoldedBlanket);

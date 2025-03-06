@@ -1,6 +1,9 @@
 package gui;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -62,85 +65,97 @@ public class OverlayUI extends Pane {
 	}
 
 	private VBox createTaskListDisplay() {
-	    VBox taskListBox = new VBox(5);
-	    taskListBox.setAlignment(Pos.CENTER_LEFT);
-	    taskListBox.setMaxWidth(300);
+		VBox taskListBox = new VBox(5);
+		taskListBox.setAlignment(Pos.CENTER_LEFT);
+		taskListBox.setMaxWidth(300);
 
-	    // Create stylized backing panel similar to progress bar
-	    Rectangle taskListBg = new Rectangle(300, 100);
-	    taskListBg.setArcWidth(12);
-	    taskListBg.setArcHeight(12);
-	    taskListBg.setFill(Color.rgb(30, 30, 50, 0.85));
-	    taskListBg.setStroke(Color.rgb(70, 130, 180, 0.8));
-	    taskListBg.setStrokeWidth(2);
+		// Create stylized backing panel
+		Rectangle taskListBg = new Rectangle(300, 150);
+		taskListBg.setArcWidth(12);
+		taskListBg.setArcHeight(12);
+		taskListBg.setFill(Color.rgb(30, 30, 50, 0.85));
+		taskListBg.setStroke(Color.rgb(70, 130, 180, 0.8));
+		taskListBg.setStrokeWidth(2);
 
-	    // Add drop shadow for depth
-	    DropShadow dropShadow = new DropShadow();
-	    dropShadow.setRadius(5.0);
-	    dropShadow.setOffsetX(3.0);
-	    dropShadow.setOffsetY(3.0);
-	    dropShadow.setColor(Color.rgb(0, 0, 0, 0.5));
-	    taskListBg.setEffect(dropShadow);
+		// Add drop shadow for depth
+		DropShadow dropShadow = new DropShadow();
+		dropShadow.setRadius(5.0);
+		dropShadow.setOffsetX(3.0);
+		dropShadow.setOffsetY(3.0);
+		dropShadow.setColor(Color.rgb(0, 0, 0, 0.5));
+		taskListBg.setEffect(dropShadow);
 
-	    // Task list title
-	    Text taskListTitle = new Text("Remaining Tasks");
-	    taskListTitle.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
-	    taskListTitle.setFill(Color.WHITE);
+		// Task list title
+		Text taskListTitle = new Text("Remaining Tasks");
+		taskListTitle.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
+		taskListTitle.setFill(Color.WHITE);
 
-	    // Create container for task list content
-	    VBox content = new VBox(8);
-	    content.setAlignment(Pos.CENTER_LEFT);
-	    content.setPadding(new Insets(10));
+		// Create container for task list content
+		VBox content = new VBox(8);
+		content.setAlignment(Pos.CENTER_LEFT);
+		content.setPadding(new Insets(10));
 
-	    // Map of task IDs to their descriptive names
-	    Map<Integer, String> taskDescriptions = new HashMap<>() {{
-	        put(1, "🔧 Fix Electrical Switches");
-	        put(2, "🚽 Unclog Toilet");
-	        put(3, "🔢 Restore Oxygen Systems");
-	        put(4, "🍽️ Wash Dishes");
-	        put(5, "🎣 Go Fishing");
-	        put(6, "🗑️ Take Out Trash");
-	        put(7, "🛏️ Make the Bed");
-	        put(8, "🔌 Repair Wiring");
-	        put(9, "📚 Organize Bookshelf");
-	        put(10, "🌼 Collect Flowers");
-	        put(11, "🧯 Extinguish Fires");
-	        put(12, "🪞 Clean Mirror");
-	        put(13, "🥕 Chop Vegetables");
-	    }};
+		// Enhanced task descriptions with more context and emojis
+		Map<Integer, String> taskDescriptions = new HashMap<>() {
+			{
+				put(1, "> Fix Electrical Switches");
+				put(2, "> Unclog Toilet Plumbing");
+				put(3, "> Enter Passcode");
+				put(4, "> Sanitize Kitchen Dishes");
+				put(5, "> Fishing Equipment Check");
+				put(6, "> Dispose of Waste Bags");
+				put(7, "> Make the bed");
+				put(8, "> Repair Electrical Wiring");
+				put(9, "> Organize books in Library");
+				put(10, "> Collect Botanical Samples");
+				put(11, "> Fire Extinguish");
+				put(12, "> Clean Observatory Mirror");
+				put(13, "> Prepare Nutrition Supplies");
+			}
+		};
 
-	    // Create container for task entries
-	    VBox taskList = new VBox(3);
-	    taskList.setAlignment(Pos.CENTER_LEFT);
+		// Create container for task entries
+		VBox taskList = new VBox(3);
+		taskList.setAlignment(Pos.CENTER_LEFT);
 
-	    // Get the player's current tasks and display them
-	    Set<Integer> playerTasks = PlayerLogic.getTasks();
-	    if (playerTasks.isEmpty()) {
-	        Text noTasksText = new Text("All tasks completed!");
-	        noTasksText.setFont(Font.font("Monospace", FontWeight.BOLD, 12));
-	        noTasksText.setFill(Color.LIGHTGREEN);
-	        taskList.getChildren().add(noTasksText);
-	    } else {
-	        for (Integer taskId : playerTasks) {
-	            Text taskText = new Text(taskDescriptions.get(taskId));
-	            taskText.setFont(Font.font("Monospace", FontWeight.NORMAL, 12));
-	            taskText.setFill(Color.WHITE);
-	            taskList.getChildren().add(taskText);
-	        }
-	    }
+		// Get the player's current tasks
+		Set<Integer> playerTasks = PlayerLogic.getTasks();
 
-	    // Add title and task list to content
-	    content.getChildren().addAll(taskListTitle, taskList);
+		if (playerTasks.isEmpty()) {
+			// Stylized "All tasks completed" message
+			Text noTasksText = new Text("All tasks completed!");
+			noTasksText.setFont(Font.font("Monospace", FontWeight.BOLD, 12));
+			noTasksText.setFill(Color.LIGHTGREEN);
+			taskList.getChildren().add(noTasksText);
+		} else {
+			// Sort tasks to maintain consistent order
+			List<Integer> sortedTasks = new ArrayList<>(playerTasks);
+			Collections.sort(sortedTasks);
 
-	    // Create a StackPane to layer the background and content
-	    StackPane taskListPanel = new StackPane();
-	    taskListPanel.getChildren().addAll(taskListBg, content);
+			for (Integer taskId : sortedTasks) {
+				Text taskText = new Text(taskDescriptions.get(taskId));
+				taskText.setFont(Font.font("Monospace", FontWeight.NORMAL, 12));
 
-	    // Add to main container
-	    taskListBox.getChildren().add(taskListPanel);
+				// Alternate text colors for better readability
+				taskText.setFill(taskId % 2 == 0 ? Color.LIGHTBLUE : Color.WHITE);
 
-	    return taskListBox;
+				taskList.getChildren().add(taskText);
+			}
+		}
+
+		// Add title and task list to content
+		content.getChildren().addAll(taskListTitle, taskList);
+
+		// Create a StackPane to layer the background and content
+		StackPane taskListPanel = new StackPane();
+		taskListPanel.getChildren().addAll(taskListBg, content);
+
+		// Add to main container
+		taskListBox.getChildren().add(taskListPanel);
+
+		return taskListBox;
 	}
+
 	/**
 	 * Initializes the overlay UI components and adds them to the root node.
 	 * 
@@ -233,8 +248,7 @@ public class OverlayUI extends Pane {
 		content.setAlignment(Pos.CENTER_LEFT);
 		content.setPadding(new Insets(10));
 		content.getChildren().addAll(title, progressRow);
-		VBox taskListDisplay = createTaskListDisplay();
-		content.getChildren().add(taskListDisplay);
+
 		progressPanel.getChildren().addAll(progressBg, content);
 
 		taskContainer.getChildren().add(progressPanel);

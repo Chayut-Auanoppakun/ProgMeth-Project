@@ -56,37 +56,70 @@ public class Task9 extends Task {
             "-fx-border-radius: 5px;"
         );
 
-        // Bookshelf background
+        // Bookshelf background - centered in the container
         ImageView bookshelf = new ImageView(new Image("/TaskAsset/TidyBookshelf/bookshelf.png")); 
-        bookshelf.setFitWidth(600);
-        bookshelf.setFitHeight(400);
+        bookshelf.setFitWidth(440); // Adjusted based on image
+        bookshelf.setFitHeight(350); // Adjusted based on image
+        bookshelf.setPreserveRatio(true);
+        bookshelf.setLayoutX(150); // Position on the right side
+        bookshelf.setLayoutY(25);
         taskContainer.getChildren().add(bookshelf);
 
         int bookCount = 3; // Number of books to place
         AtomicInteger remainingBooks = new AtomicInteger(bookCount);
 
-        // Define the empty shelf positions
+        // Define the empty shelf positions - based on your image
         ImageView[] emptyShelves = new ImageView[3];
-        double[] shelfXPositions = {200, 420, 640}; // Spread out across the bookshelf
         
+        // Position the empty shelves as shown in the reference image
+        // First shelf - top row
+        emptyShelves[0] = new ImageView(new Image("/TaskAsset/TidyBookshelf/emptyshelf.png"));
+        emptyShelves[0].setFitWidth(30);
+        emptyShelves[0].setFitHeight(70);
+        emptyShelves[0].setLayoutX(330); // Position in the right side of top shelf
+        emptyShelves[0].setLayoutY(100);
+        
+        // Second shelf - middle row
+        emptyShelves[1] = new ImageView(new Image("/TaskAsset/TidyBookshelf/emptyshelf.png"));
+        emptyShelves[1].setFitWidth(30);
+        emptyShelves[1].setFitHeight(70);
+        emptyShelves[1].setLayoutX(270); // Position in the middle shelf
+        emptyShelves[1].setLayoutY(160);
+        
+        // Third shelf - bottom row
+        emptyShelves[2] = new ImageView(new Image("/TaskAsset/TidyBookshelf/emptyshelf.png"));
+        emptyShelves[2].setFitWidth(30);
+        emptyShelves[2].setFitHeight(70);
+        emptyShelves[2].setLayoutX(390); // Position in the right side of bottom shelf
+        emptyShelves[2].setLayoutY(240);
+        
+        // Add empty shelves to the container
         for (int i = 0; i < 3; i++) {
-            emptyShelves[i] = new ImageView(new Image("/TaskAsset/TidyBookshelf/emptyshelf.png"));
-            emptyShelves[i].setFitWidth(150);
-            emptyShelves[i].setFitHeight(150);
-            emptyShelves[i].setLayoutX(shelfXPositions[i]-190);
-            emptyShelves[i].setLayoutY(250);
             taskContainer.getChildren().add(emptyShelves[i]);
         }
 
-        // Books positioning
+        // Books positioning - on the left side as shown in the reference image
         for (int i = 0; i < bookCount; i++) {
             ImageView book = new ImageView(new Image("/TaskAsset/TidyBookshelf/book.png")); 
-            book.setFitWidth(100);
-            book.setFitHeight(150);
-
-            // Spread out initial book positions
-            double x = 100 + (i * 150);
-            double y = 15; // Lower on the screen
+            book.setFitWidth(25);
+            book.setFitHeight(75);
+            
+            // Position books on the left side in a staggered pattern
+            double x = 75; // Left side of container
+            double y = 175 + (i * 70); // Staggered vertically
+            
+            // Adjust positions to match the reference image
+            if (i == 0) {
+                x = 90;
+                y = 20;
+            } else if (i == 1) {
+                x = 75;
+                y = 120;
+            } else if (i == 2) {
+                x = 90;
+                y = 200;
+            }
+            
             book.setLayoutX(x);
             book.setLayoutY(y);
 
@@ -98,6 +131,7 @@ public class Task9 extends Task {
             book.setOnMousePressed(event -> {
                 offsetX[0] = event.getX();
                 offsetY[0] = event.getY();
+                book.toFront(); // Bring to front when dragging
             });
 
             book.setOnMouseDragged(event -> {
@@ -127,8 +161,7 @@ public class Task9 extends Task {
                         // Snap the book to the center of the empty shelf
                         double shelfX = emptyShelves[j].getLayoutX() + 
                                         (emptyShelves[j].getFitWidth() - book.getFitWidth()) / 2;
-                        double shelfY = emptyShelves[j].getLayoutY() + 
-                                        (emptyShelves[j].getFitHeight() - book.getFitHeight()) / 2;
+                        double shelfY = emptyShelves[j].getLayoutY();
                         
                         book.setLayoutX(shelfX);
                         book.setLayoutY(shelfY);
@@ -163,6 +196,6 @@ public class Task9 extends Task {
 
     @Override
     public boolean isCompleted() {
-        return false; // Placeholder
+        return false; // Handled by the completeTask() method
     }
 }
