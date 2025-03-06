@@ -84,9 +84,13 @@ public class OverlayUI extends Pane {
 		dropShadow.setOffsetY(3.0);
 		dropShadow.setColor(Color.rgb(0, 0, 0, 0.5));
 		taskListBg.setEffect(dropShadow);
-
+		Text taskListTitle = new Text("");
 		// Task list title
-		Text taskListTitle = new Text("Remaining Tasks");
+		if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead")) {
+			taskListTitle.setText("Remaining Tasks");
+		} else {
+			taskListTitle.setText("Fake Tasks");
+		}
 		taskListTitle.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
 		taskListTitle.setFill(Color.WHITE);
 
