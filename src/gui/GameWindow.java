@@ -252,6 +252,7 @@ public class GameWindow {
 					overlayManager.updatePlayerRoleUI();
 					overlayManager.updateButtonStates();
 				}
+				
 				keylogger();
 				updateMovement(now);
 				update();
@@ -283,7 +284,6 @@ public class GameWindow {
 		setupCharacterSelectButton();
 		initializePrepPhaseUI();
 		taskContainer = new Pane();
-		root.getChildren().add(taskContainer);
 		gameWindowInstance = this;
 
 		Scene scene = new Scene(root, screenWidth, screenHeight);
@@ -1083,7 +1083,12 @@ public class GameWindow {
 
 						// Attempt to open the task
 						boolean taskOpened = TaskLogic.openTask(eventId, taskContainer);
-
+						try {
+							root.getChildren().remove(taskContainer); // Remove taskContainer first
+						} catch (Exception e) {
+							// TODO: handle exception
+						}
+						root.getChildren().add(taskContainer);    // Re-add it to ensure it’s on top
 						if (taskOpened) {
 							System.out.println("Task opened: " + eventId);
 							// You might want to disable player movement here or add other effects
@@ -2661,6 +2666,15 @@ public class GameWindow {
 
 	public static GameWindow getGameWindowInstance() {
 		return gameWindowInstance;
+	}
+
+	public static double getScreenheight() {
+		// TODO Auto-generated method stub
+		return screenHeight;
+	}
+	public static double getScreenwidth() {
+		// TODO Auto-generated method stub
+		return screenWidth;
 	}
 
 }

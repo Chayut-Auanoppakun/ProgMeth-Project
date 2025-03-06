@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import gameObjects.eventObject;
+import gui.GameWindow;
 import Task.TaskPane;
 import javafx.scene.layout.Pane;
 
@@ -50,7 +51,7 @@ public class TaskLogic {
 //                           ", T=" + playerTop + ", B=" + playerBottom);
 //            System.out.println("Event Position: (" + eventPosX + ", " + eventPosY + ")");
 //            System.out.println("Event Size: W=" + event.getWidth() + ", H=" + event.getHeight());
-//            
+            
             // Standard rectangle collision detection
             if (playerRight > eventPosX && 
                 playerLeft < eventPosX + event.getWidth() &&
@@ -77,6 +78,8 @@ public class TaskLogic {
         }
         
         // Open the task using the TaskPane
+        parentPane.setLayoutX(GameWindow.getScreenwidth()*0.15);
+        parentPane.setLayoutY(GameWindow.getScreenheight()*0.15);
         return TaskPane.getInstance().openTask(eventId, parentPane);
     }
     
