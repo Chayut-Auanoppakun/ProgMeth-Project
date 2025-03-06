@@ -44,13 +44,13 @@ public class TaskLogic {
             double playerBottom = playerPosY + (PLAYER_HEIGHT / 2);
             
             // Debug output
-            System.out.println("Checking collision:");
-            System.out.println("Player Position: (" + playerPosX + ", " + playerPosY + ")");
-            System.out.println("Player Box: L=" + playerLeft + ", R=" + playerRight + 
-                           ", T=" + playerTop + ", B=" + playerBottom);
-            System.out.println("Event Position: (" + eventPosX + ", " + eventPosY + ")");
-            System.out.println("Event Size: W=" + event.getWidth() + ", H=" + event.getHeight());
-            
+//            System.out.println("Checking collision:");
+//            System.out.println("Player Position: (" + playerPosX + ", " + playerPosY + ")");
+//            System.out.println("Player Box: L=" + playerLeft + ", R=" + playerRight + 
+//                           ", T=" + playerTop + ", B=" + playerBottom);
+//            System.out.println("Event Position: (" + eventPosX + ", " + eventPosY + ")");
+//            System.out.println("Event Size: W=" + event.getWidth() + ", H=" + event.getHeight());
+//            
             // Standard rectangle collision detection
             if (playerRight > eventPosX && 
                 playerLeft < eventPosX + event.getWidth() &&

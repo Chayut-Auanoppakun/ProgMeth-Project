@@ -2465,7 +2465,7 @@ public class GameWindow {
 				reportData.put("corpse", closestCorpseKey);
 				reportData.put("reportedPlayer", reportedPlayerName);
 				reportData.put("reportedCharId", reportedCharId);
-
+				System.out.println("Client send report to server");
 				String reportMessage = "/report/" + reportData.toString();
 				ClientLogic.sendMessage(reportMessage, ServerSelectGui.getLogArea());
 			}

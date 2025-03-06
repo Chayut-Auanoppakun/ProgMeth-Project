@@ -161,12 +161,38 @@ public class ServerLogic {
 			handleKillMessage(received, clientAddress, clientPort, logArea);
 		} else if (received.startsWith("/report/")) {
 			handleReportMessage(received, clientAddress, clientPort, logArea);
-
 		} else if (received.startsWith("/meeting/")) {
 			// New handler for meeting-specific messages
+			System.out.println("RECIEVE MEETING");
 			handleMeetingMessage(received, clientAddress, clientPort, logArea);
+		} else if (received.startsWith("/vote/")) {
+			handleVoteMessage(received, clientAddress, clientPort, logArea);
 		} else {
 			handleChatMessage(received, clientAddress, clientPort, logArea);
+		}
+	}
+
+	private static void handleVoteMessage(String received, InetAddress clientAddress, int clientPort,
+			TextArea logArea) {
+		try {
+			// Extract the JSON data from the message
+			String jsonStr = received.substring(6); // Remove "/vote/" prefix
+			JSONObject voteData = new JSONObject(jsonStr);
+
+			// Extract vote details
+			String voterKey = voteData.getString("voter");
+			String targetKey = voteData.getString("target");
+			String meetingId = voteData.getString("meetingId");
+
+			System.out.println("SERVER: Received vote from " + clientAddress + ":" + clientPort);
+			System.out.println("SERVER: Vote details - Voter: " + voterKey + ", Target: " + targetKey);
+
+			// Process the vote
+			handleVote(voterKey, targetKey, meetingId, logArea);
+		} catch (Exception e) {
+			System.err.println("SERVER ERROR: Failed to process vote message: " + e.getMessage());
+			e.printStackTrace();
+			log(logArea, "Error processing vote: " + e.getMessage());
 		}
 	}
 

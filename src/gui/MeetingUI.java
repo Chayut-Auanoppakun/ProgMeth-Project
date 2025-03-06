@@ -20,6 +20,7 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
@@ -1299,39 +1300,63 @@ public class MeetingUI extends StackPane {
 	 * Closes the meeting UI
 	 */
 	private void closeMeetingUI() {
-		// Fade out animation
-		FadeTransition fadeOut = new FadeTransition(Duration.millis(500), this);
-		fadeOut.setFromValue(1);
-		fadeOut.setToValue(0);
-		fadeOut.setOnFinished(event -> {
-			try {
-				// Remove from parent if we have one
-				if (getParent() != null) {
-					((Pane) getParent()).getChildren().remove(this);
-				}
+	    // Fade out animation
+	    FadeTransition fadeOut = new FadeTransition(Duration.millis(500), this);
+	    fadeOut.setFromValue(1);
+	    fadeOut.setToValue(0);
+	    fadeOut.setOnFinished(event -> {
+	        try {
+	            // Remove from parent if we have one
+	            if (getParent() != null) {
+	                // Check parent type before casting
+	                if (getParent() instanceof Pane) {
+	                    ((Pane) getParent()).getChildren().remove(this);
+	                } else if (getParent() instanceof Group) {
+	                    ((Group) getParent()).getChildren().remove(this);
+	                } else {
+	                    // Use reflection for unknown parent types
+	                    java.lang.reflect.Method getChildrenMethod = 
+	                        getParent().getClass().getMethod("getChildren");
+	                    Object childrenList = getChildrenMethod.invoke(getParent());
+	                    
+	                    if (childrenList instanceof javafx.collections.ObservableList) {
+	                        ((javafx.collections.ObservableList<?>) childrenList).remove(this);
+	                    }
+	                }
+	            }
 
-				// Clear reference in GameWindow
-				if (gameWindow != null) {
-					gameWindow.clearActiveMeetingUI();
-				}
-			} catch (Exception e) {
-				System.err.println("Error closing meeting UI: " + e.getMessage());
-				e.printStackTrace();
+	            // Clear reference in GameWindow
+	            if (gameWindow != null) {
+	                gameWindow.clearActiveMeetingUI();
+	            }
+	        } catch (Exception e) {
+	            System.err.println("Error closing meeting UI: " + e.getMessage());
+	            e.printStackTrace();
 
-				// Emergency fallback - force remove from parent
-				if (getParent() != null) {
-					Platform.runLater(() -> {
-						((Pane) getParent()).getChildren().remove(this);
-					});
-				}
-			} finally {
-				// Shutdown executor if it exists and is not already shut down
-				if (executor != null && !executor.isShutdown()) {
-					executor.shutdownNow();
-				}
-			}
-		});
-		fadeOut.play();
+	            // Emergency fallback - force remove from parent on the JavaFX thread
+	            if (getParent() != null) {
+	                Platform.runLater(() -> {
+	                    try {
+	                        if (getParent() instanceof Group) {
+	                            ((Group) getParent()).getChildren().remove(this);
+	                        } else if (getParent() instanceof Pane) {
+	                            ((Pane) getParent()).getChildren().remove(this);
+	                        } else {
+	                            System.err.println("Unknown parent type: " + getParent().getClass().getName());
+	                        }
+	                    } catch (Exception ex) {
+	                        System.err.println("Emergency removal failed: " + ex.getMessage());
+	                    }
+	                });
+	            }
+	        } finally {
+	            // Shutdown executor if it exists and is not already shut down
+	            if (executor != null && !executor.isShutdown()) {
+	                executor.shutdownNow();
+	            }
+	        }
+	    });
+	    fadeOut.play();
 	}
 
 }
