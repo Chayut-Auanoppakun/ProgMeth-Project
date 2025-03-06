@@ -430,15 +430,15 @@ public class ClientLogic {
 									String reporterKey = meetingData.getString("reporter");
 									String reportedPlayerName = meetingData.optString("reportedPlayer", null);
 									int reportedCharId = meetingData.getInt("reportedCharId");
-									
+
 									// Start emergency meeting UI on this client if it doesn't exist
 									GameWindow gameWindowInstance = GameWindow.getGameWindowInstance();
 									if (gameWindowInstance != null) {
 										Platform.runLater(() -> {
 											// Check if meeting UI already exists
 											MeetingUI activeMeeting = gameWindowInstance.getActiveMeetingUI();
-											// If no active meeting, start a new one
 											if (activeMeeting == null) {
+												System.out.println("NO MEETING STARTING NEW ONE");
 												gameWindowInstance.startEmergencyMeeting(reporterKey,
 														reportedPlayerName, reportedCharId);
 											}
