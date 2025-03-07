@@ -20,6 +20,7 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
 import logic.ClientLogic;
+import logic.GameLogic;
 import logic.PlayerLogic;
 import logic.ServerLogic;
 import logic.SoundLogic;
@@ -134,57 +135,67 @@ public class TaskPane extends StackPane {
 			break;
 		case "99":
 			Platform.runLater(() -> {
-				Pane parent = (Pane) getParent();
-				if (parent != null) {
-					parent.getChildren().remove(this);
-				}
-			});
-
-			// Call the emergency meeting
-			Platform.runLater(() -> {
-				if (GameWindow.getGameWindowInstance() != null) {
-					String reporterKey = PlayerLogic.getLocalAddressPort();
-					GameWindow.getGameWindowInstance().startEmergencyMeeting(reporterKey, null, 0);
-
-					// If we're in server mode, broadcast the meeting to all clients
-					if (MainMenuPane.getState() == State.SERVER) {
-						// Create meeting data
-						JSONObject meetingData = new JSONObject();
-						meetingData.put("reporter", reporterKey);
-						meetingData.put("reportedPlayer", JSONObject.NULL);
-						meetingData.put("reportedCharId", 0);
-						meetingData.put("time", System.currentTimeMillis());
-
-						String meetingMessage = "/meeting/" + meetingData.toString();
-						byte[] buf = meetingMessage.getBytes(StandardCharsets.UTF_8);
-
-						// Send to all connected clients
-						for (ClientInfo clientInfo : ServerLogic.getConnectedClients()) {
-							try {
-								DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
-										clientInfo.getPort());
-								ServerLogic.getServerSocket().send(packet);
-
-								// Send multiple times to reduce chance of packet loss
-								for (int i = 0; i < 3; i++) {
-									Thread.sleep(50); // Short delay between retransmissions
-									ServerLogic.getServerSocket().send(packet);
-								}
-							} catch (Exception e) {
-								System.err.println("Error sending meeting message: " + e.getMessage());
-							}
-						}
-					} else if (MainMenuPane.getState() == State.CLIENT) {
-						// Client mode - send meeting request to server
-						JSONObject meetingData = new JSONObject();
-						meetingData.put("reporter", reporterKey);
-						meetingData.put("reportedPlayer", JSONObject.NULL);
-						meetingData.put("reportedCharId", 0);
-						meetingData.put("time", System.currentTimeMillis());
-
-						String meetingMessage = "/meeting/" + meetingData.toString();
-						ClientLogic.sendMessage(meetingMessage, null);
+				System.out.println("Emergency button pressed");
+				System.out.println("Is Emergency Meeting Available: " + GameLogic.isEmergencyMeetingAvailable());
+				System.out.println("Remaining Cooldown: " + GameLogic.getRemainingEmergencyMeetingCooldown());
+				// Check emergency meeting cooldown
+				if (GameLogic.isEmergencyMeetingAvailable()) {
+					Pane parent = (Pane) getParent();
+					if (parent != null) {
+						parent.getChildren().remove(this);
 					}
+
+					// Call the emergency meeting
+					if (GameWindow.getGameWindowInstance() != null) {
+						String reporterKey = PlayerLogic.getLocalAddressPort();
+						GameWindow.getGameWindowInstance().startEmergencyMeeting(reporterKey, null, 0);
+						GameLogic.recordEmergencyMeetingTime(); // Record the time of emergency meeting
+
+						// If we're in server mode, broadcast the meeting to all clients
+						if (MainMenuPane.getState() == State.SERVER) {
+							// Create meeting data
+							JSONObject meetingData = new JSONObject();
+							meetingData.put("reporter", reporterKey);
+							meetingData.put("reportedPlayer", JSONObject.NULL);
+							meetingData.put("reportedCharId", 0);
+							meetingData.put("time", System.currentTimeMillis());
+
+							String meetingMessage = "/meeting/" + meetingData.toString();
+							byte[] buf = meetingMessage.getBytes(StandardCharsets.UTF_8);
+
+							// Send to all connected clients
+							for (ClientInfo clientInfo : ServerLogic.getConnectedClients()) {
+								try {
+									DatagramPacket packet = new DatagramPacket(buf, buf.length, clientInfo.getAddress(),
+											clientInfo.getPort());
+									ServerLogic.getServerSocket().send(packet);
+
+									// Send multiple times to reduce chance of packet loss
+									for (int i = 0; i < 3; i++) {
+										Thread.sleep(50); // Short delay between retransmissions
+										ServerLogic.getServerSocket().send(packet);
+									}
+								} catch (Exception e) {
+									System.err.println("Error sending meeting message: " + e.getMessage());
+								}
+							}
+						} else if (MainMenuPane.getState() == State.CLIENT) {
+							// Client mode - send meeting request to server
+							JSONObject meetingData = new JSONObject();
+							meetingData.put("reporter", reporterKey);
+							meetingData.put("reportedPlayer", JSONObject.NULL);
+							meetingData.put("reportedCharId", 0);
+							meetingData.put("time", System.currentTimeMillis());
+
+							String meetingMessage = "/meeting/" + meetingData.toString();
+							ClientLogic.sendMessage(meetingMessage, null);
+						}
+					}
+				} else {
+					// Show cooldown notification
+					int remainingCooldown = GameLogic.getRemainingEmergencyMeetingCooldown();
+					GameWindow.getGameWindowInstance()
+							.showNotification("Emergency Meeting on cooldown. Wait " + remainingCooldown + " seconds.");
 				}
 			});
 

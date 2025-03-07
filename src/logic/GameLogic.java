@@ -14,7 +14,7 @@ import server.PlayerInfo;
 public class GameLogic {
 	private static int ImposterCount;
 	private static int AlivePlayers;
-	private static int AliveCrewMates;;
+	private static int AliveCrewMates;
 	private static int AliveImposters;
 	private static boolean gameEnded = false;
 	private static GameResult gameResult = GameResult.ONGOING;
@@ -22,7 +22,13 @@ public class GameLogic {
 	public static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 	private static boolean prepEnded = false;
 	private static ScheduledExecutorService gameLoopExecutor;
-	private static int KillCooldown = 25;
+
+	// Cooldown related variables
+	private static int KillCooldown = 10; // Kill cooldown in seconds
+	private static int EmergencyMeetingCooldown = 10; // Emergency meeting cooldown in seconds
+	private static long lastKillTime = 0;
+	private static long lastEmergencyMeetingTime = 0;
+
 	private static int taskAmount = 5;
 	private static float SFXVolume = 0; // 0 is max -- to make quiet
 	private static float MUSICVolume = 0;
@@ -63,6 +69,8 @@ public class GameLogic {
 		// Count alive players and imposters
 		updatePlayerCounts();
 
+		if (!GameLogic.prepEnded)
+			return;
 		// Check win conditions
 		if (checkImpostorWinCondition()) {
 			System.out.println("IMPOSTER WINS");
@@ -77,17 +85,15 @@ public class GameLogic {
 		int totalPlayers = 0;
 		int aliveImposters = 0;
 		int aliveCrewmates = 0;
-		
+
 		if (PlayerLogic.getStatus().equals("dead")) {
 			totalPlayers++;
-		}
-		else if (PlayerLogic.getStatus().equals("imposter")) {
+		} else if (PlayerLogic.getStatus().equals("imposter")) {
 			aliveImposters++;
-		}
-		else {
+		} else {
 			aliveCrewmates++;
 		}
-		
+
 		for (PlayerInfo player : playerList.values()) {
 			// Assuming each player has a "status" field that tracks their alive/dead state
 			if (!player.getStatus().equals("dead")) {
@@ -103,8 +109,8 @@ public class GameLogic {
 		AliveCrewMates = aliveCrewmates;
 		AlivePlayers = totalPlayers;
 		AliveImposters = aliveImposters;
-		System.out.println("ALIVE PLAYERS = " + totalPlayers);
-		System.out.println("ALIVE IMPOSTERS = " + aliveImposters);
+//		System.out.println("ALIVE PLAYERS = " + totalPlayers);
+//		System.out.println("ALIVE IMPOSTERS = " + aliveImposters);
 	}
 
 	private static boolean checkImpostorWinCondition() {
@@ -142,6 +148,64 @@ public class GameLogic {
 				break;
 			}
 		});
+	}
+
+	// Cooldown management methods
+	public static int getKillCooldown() {
+		return KillCooldown;
+	}
+
+	public static void setKillCooldown(int killCooldown) {
+		KillCooldown = killCooldown;
+	}
+
+	public static boolean isKillAvailable() {
+		long currentTime = System.currentTimeMillis() / 1000; // Convert to seconds
+		return currentTime - lastKillTime >= KillCooldown;
+	}
+
+	public static void recordKillTime() {
+		lastKillTime = System.currentTimeMillis() / 1000; // Convert to seconds
+	}
+
+	public static int getRemainingKillCooldown() {
+		long currentTime = System.currentTimeMillis() / 1000;
+		int remainingCooldown = KillCooldown - (int) (currentTime - lastKillTime);
+		return Math.max(0, remainingCooldown);
+	}
+
+	public static int getEmergencyMeetingCooldown() {
+		return EmergencyMeetingCooldown;
+	}
+
+	public static void setEmergencyMeetingCooldown(int cooldown) {
+		EmergencyMeetingCooldown = cooldown;
+	}
+
+	// Reset emergency meeting cooldown when game prep ends
+	public static void resetEmergencyMeetingCooldown() {
+		lastEmergencyMeetingTime = 0; // This ensures the first meeting is always available
+	}
+
+	public static boolean isEmergencyMeetingAvailable() {
+		long currentTime = System.currentTimeMillis() / 1000; // Convert to seconds
+		// If lastEmergencyMeetingTime is 0, it means the first meeting is always
+		// available
+		return lastEmergencyMeetingTime == 0 || currentTime - lastEmergencyMeetingTime >= EmergencyMeetingCooldown;
+	}
+
+	public static void recordEmergencyMeetingTime() {
+		lastEmergencyMeetingTime = System.currentTimeMillis() / 1000; // Convert to seconds
+	}
+
+	public static int getRemainingEmergencyMeetingCooldown() {
+		long currentTime = System.currentTimeMillis() / 1000;
+		// If lastEmergencyMeetingTime is 0, there's no cooldown
+		if (lastEmergencyMeetingTime == 0) {
+			return 0;
+		}
+		int remainingCooldown = EmergencyMeetingCooldown - (int) (currentTime - lastEmergencyMeetingTime);
+		return Math.max(0, remainingCooldown);
 	}
 
 	// Existing methods remain the same
@@ -227,13 +291,5 @@ public class GameLogic {
 
 	public static int getFoundCorpseCount() {
 		return (int) corpseList.values().stream().filter(Corpse::isFound).count();
-	}
-
-	public int getKillCooldown() {
-		return KillCooldown;
-	}
-
-	public void setKillCooldown(int killCooldown) {
-		KillCooldown = killCooldown;
 	}
 }

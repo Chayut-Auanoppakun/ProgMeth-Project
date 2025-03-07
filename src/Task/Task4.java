@@ -14,6 +14,7 @@ import javafx.scene.text.Text;
 import javafx.scene.layout.StackPane;
 import javafx.animation.KeyFrame;
 import javafx.util.Duration;
+import logic.SoundLogic;
 
 public class Task4 extends Task {
     private Timeline washingTimeline;
