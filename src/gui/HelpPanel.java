@@ -1,5 +1,4 @@
 package gui;
-
 import javafx.animation.FadeTransition;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -27,87 +26,88 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
-
 /**
- * HelpPanel provides game instructions, controls, and tips for players.
- */
+
+HelpPanel provides game instructions, controls, and tips for players.
+*/
 public class HelpPanel extends VBox {
-    
-    private boolean isVisible = false;
-    
-    public HelpPanel() {
-        // Set up the panel with styling that matches the game's theme
-        setPrefSize(700, 550);
-        setMaxSize(700, 550);
-        setPadding(new Insets(25));
-        setSpacing(15);
-        setAlignment(Pos.TOP_CENTER);
-        
-        // Dark blue-gray background matching game theme
-        setBackground(new Background(new BackgroundFill(
-                Color.rgb(30, 30, 50, 0.95), 
-                new CornerRadii(0), 
-                Insets.EMPTY)));
-        
-        // Blue border to match game theme
-        setBorder(new Border(new BorderStroke(
-                Color.rgb(30, 144, 255), 
-                BorderStrokeStyle.SOLID, 
-                new CornerRadii(0), 
-                new BorderWidths(3))));
-        
-        // Shadow effect for depth
-        DropShadow shadow = new DropShadow();
-        shadow.setRadius(10);
-        shadow.setOffsetX(3);
-        shadow.setOffsetY(3);
-        shadow.setColor(Color.rgb(0, 0, 0, 0.6));
-        setEffect(shadow);
-        
-        // Title text
-        Text titleText = new Text("GAME HELP");
-        titleText.setFont(Font.font("Monospace", FontWeight.BOLD, 36));
-        titleText.setFill(Color.WHITE);
-        titleText.setTextAlignment(TextAlignment.CENTER);
-        
-        // Create tab pane for different help topics
-        TabPane tabPane = new TabPane();
-        tabPane.setStyle("-fx-background-color: transparent;");
-        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
-        
-        // Style the tab pane to match the game theme
-        tabPane.setStyle(
-            "-fx-background-color: rgba(40, 40, 60, 0.6);" +
-            "-fx-tab-min-height: 30px;" +
-            "-fx-tab-max-height: 30px;"
-        );
-        
-        // Add tabs for different help sections
-        Tab controlsTab = createControlsTab();
-        Tab rolesTab = createRolesTab();
-        Tab gameplayTab = createGameplayTab();
-        Tab tasksTab = createTasksTab();
-        
-        tabPane.getTabs().addAll(controlsTab, rolesTab, gameplayTab, tasksTab);
-        VBox.setVgrow(tabPane, Priority.ALWAYS);
-        
-        // Close button
-        Button closeButton = new Button("CLOSE");
-        styleButton(closeButton);
-        closeButton.setOnAction(e -> hide());
-        
-        // Add all elements to the panel
-        getChildren().addAll(
-            titleText,
-            tabPane,
-            closeButton
-        );
-        
-        // Initially invisible
-        setOpacity(0);
-        setVisible(false);
-    }
-    
+private boolean isVisible = false;
+public HelpPanel() {
+// Set up the panel with styling that matches the game's theme
+setPrefWidth(670);
+setPrefHeight(480); // Adjusted to fit typical window height
+setMaxWidth(670);
+setMaxHeight(480);
+setPadding(new Insets(25));
+ setSpacing(15);
+ setAlignment(Pos.TOP_CENTER);
+ 
+ // Dark blue-gray background matching game theme
+ setBackground(new Background(new BackgroundFill(
+         Color.rgb(30, 30, 50, 0.95), 
+         new CornerRadii(0), 
+         Insets.EMPTY)));
+ 
+ // Blue border to match game theme
+ setBorder(new Border(new BorderStroke(
+         Color.rgb(30, 144, 255), 
+         BorderStrokeStyle.SOLID, 
+         new CornerRadii(0), 
+         new BorderWidths(3))));
+ 
+ // Shadow effect for depth
+ DropShadow shadow = new DropShadow();
+ shadow.setRadius(10);
+ shadow.setOffsetX(3);
+ shadow.setOffsetY(3);
+ shadow.setColor(Color.rgb(0, 0, 0, 0.6));
+ setEffect(shadow);
+ 
+ // Title text
+ Text titleText = new Text("GAME HELP");
+ titleText.setFont(Font.font("Monospace", FontWeight.BOLD, 36));
+ titleText.setFill(Color.WHITE);
+ titleText.setTextAlignment(TextAlignment.CENTER);
+ 
+ // Create tab pane for different help topics
+ TabPane tabPane = new TabPane();
+ tabPane.setPrefHeight(350); // Leave room for title and close button
+ tabPane.setMaxHeight(350);
+ tabPane.setStyle(
+     "-fx-background-color: transparent;" +
+     "-fx-tab-min-height: 30px;" +
+     "-fx-tab-max-height: 30px;"
+ );
+ 
+ // Ensure only vertical scrolling in tab content
+ tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+ 
+ // Add tabs for different help sections
+ Tab controlsTab = createControlsTab();
+ Tab rolesTab = createRolesTab();
+ Tab gameplayTab = createGameplayTab();
+ Tab tasksTab = createTasksTab();
+ 
+ tabPane.getTabs().addAll(controlsTab, rolesTab, gameplayTab, tasksTab);
+ VBox.setVgrow(tabPane, Priority.ALWAYS);
+ 
+ // Close button
+ Button closeButton = new Button("CLOSE");
+ styleButton(closeButton);
+ closeButton.setOnAction(e -> hide());
+ 
+ // Add all elements to the panel
+ getChildren().addAll(
+     titleText,
+     tabPane,
+     closeButton
+ );
+ 
+ // Initially invisible
+ setOpacity(0);
+ setVisible(false);
+}
+
     private Tab createControlsTab() {
         Tab tab = new Tab("CONTROLS");
         styleTab(tab);
@@ -165,7 +165,7 @@ public class HelpPanel extends VBox {
         crewTitle.setFill(Color.rgb(100, 200, 255)); // Light blue
         
         Text crewInfo = new Text(
-            "As a Crewmate, your goal is to complete all tasks and identify the Impostors.\n\n" +
+            "As a Crewmate, your goal is to complete\nall tasks and identify the Impostors.\n\n" +
             "• Complete all tasks assigned to you\n" +
             "• Report dead bodies when you find them\n" +
             "• Use emergency meetings to discuss suspicious behavior\n" +
@@ -203,7 +203,7 @@ public class HelpPanel extends VBox {
             "• As a Crewmate Ghost, you can still complete tasks to help your team\n" +
             "• Ghost players can pass through walls and move freely\n" +
             "• Only other ghosts can see your messages in chat\n" +
-            "• You can observe the gameplay but cannot interact with living players"
+            "• You can observe the gameplay\nbut cannot interact with living players"
         );
         ghostInfo.setFont(Font.font("Monospace", FontWeight.NORMAL, 16));
         ghostInfo.setFill(Color.WHITE);
@@ -252,7 +252,7 @@ public class HelpPanel extends VBox {
             "   • Skip voting if unsure\n\n" +
             "5. Game End\n" +
             "   • Crewmates win by completing all tasks or ejecting all Impostors\n" +
-            "   • Impostors win by eliminating enough Crewmates to equal their numbers"
+            "   • Impostors win by eliminating enough Crewmates\nto equal their numbers"
         );
         phaseInfo.setFont(Font.font("Monospace", FontWeight.NORMAL, 16));
         phaseInfo.setFill(Color.WHITE);
@@ -264,7 +264,7 @@ public class HelpPanel extends VBox {
         tipsTitle.setFill(Color.rgb(100, 200, 255)); // Light blue
         
         Text tipsInfo = new Text(
-            "• Stay with other players to avoid being eliminated when alone\n" +
+            "• Stay with other players to avoid\nbeing eliminated when alone\n" +
             "• Watch for players who aren't doing tasks or are moving suspiciously\n" +
             "• Don't falsely accuse without evidence\n" +
             "• Pay attention to where other players were during meetings\n" +
@@ -302,7 +302,7 @@ public class HelpPanel extends VBox {
         
         Text tasksIntro = new Text(
             "Tasks are represented by interactive objects around the map. " +
-            "Approach a task and press F to interact with it. Each task has unique instructions. " +
+            "Approach a task and press F to interact with it.\nEach task has unique instructions. " +
             "Here are some common tasks you'll encounter:"
         );
         tasksIntro.setFont(Font.font("Monospace", FontWeight.NORMAL, 16));
@@ -333,7 +333,7 @@ public class HelpPanel extends VBox {
             "Arrange books in their correct positions on the shelves.");
         
         Text emergencyInfo = new Text(
-            "EMERGENCY BUTTON: Located in the center of the map, press F to call an emergency meeting."
+            "EMERGENCY BUTTON: Located in the center of the map,\npress F to call an emergency meeting."
         );
         emergencyInfo.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
         emergencyInfo.setFill(Color.rgb(255, 200, 100)); // Orange

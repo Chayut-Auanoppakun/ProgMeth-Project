@@ -354,29 +354,23 @@ public class MainMenuPane extends Pane {
 	 * Shows the about panel
 	 */
 	private void showAboutPanel() {
-	    // Center the panel in the current window
-	    double centerX = getScene().getWindow().getWidth() / 2;
-	    double centerY = getScene().getWindow().getHeight() / 2;
-	    
-	    aboutPanel.setLayoutX(centerX - aboutPanel.getPrefWidth()/2);
-	    aboutPanel.setLayoutY(centerY - aboutPanel.getPrefHeight()/2);
-	    
-	    aboutPanel.toFront();
-	    aboutPanel.show();
-	}
+        aboutPanel.setLayoutX(this.getWidth() - 620);
+        aboutPanel.setLayoutY(100);
+        
+        //this.getChildren().add(aboutPanel);
+        aboutPanel.toFront();
+        aboutPanel.show();
+    }
 
-	/**
-	 * Shows the help panel
-	 */
-	private void showHelpPanel() {
-	    // Center the panel in the current window
-	    double centerX = getScene().getWindow().getWidth() / 2;
-	    double centerY = getScene().getWindow().getHeight() / 2;
-	    
-	    helpPanel.setLayoutX(centerX - helpPanel.getPrefWidth()/2);
-	    helpPanel.setLayoutY(centerY - helpPanel.getPrefHeight()/2);
-	    
-	    helpPanel.toFront();
-	    helpPanel.show();
-	}
+    /**
+     * Shows the help panel
+     */
+    private void showHelpPanel() {
+        helpPanel.setLayoutX(this.getWidth() - 710);
+        helpPanel.setLayoutY(100);
+        
+        //this.getChildren().add(helpPanel);
+        helpPanel.toFront();
+        helpPanel.show();
+    }
 }
