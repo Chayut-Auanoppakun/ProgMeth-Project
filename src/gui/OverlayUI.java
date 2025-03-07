@@ -504,7 +504,6 @@ public class OverlayUI extends Pane {
 			// Update hover handlers based on new state
 			updateButtonHoverHandlers(isImposter, isDead);
 		});
-
 	}
 
 	/**

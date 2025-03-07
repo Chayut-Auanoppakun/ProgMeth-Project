@@ -615,7 +615,7 @@ public class ClientLogic {
 									if (GameWindow.getGameWindowInstance() != null) {
 										MeetingUI activeMeeting = GameWindow.getGameWindowInstance()
 												.getActiveMeetingUI();
-										if (activeMeeting != null && activeMeeting.getMeetingId().equals(meetingId)) {
+										if (activeMeeting != null) {
 											System.out.println("CLIENT: Updating meeting UI with voting results");
 											activeMeeting.showVotingResults(ejectedPlayerKey, voteResults);
 										} else {

@@ -1236,6 +1236,20 @@ public class MeetingUI extends StackPane {
 
 					// Skip showing ejection text in meeting UI
 					return;
+				} else if (ejectedPlayerKey == null) {
+					// Flag for determining if this was a skip vote
+					boolean isSkip = voteResults.getOrDefault("skip", 0) > 0;
+					System.out.println("SKIPPED OR DRAW");
+					// Show UI results briefly, then close and show panel
+					Timeline closingTimer = new Timeline(new KeyFrame(Duration.seconds(3), e -> {
+						closeMeetingUI();
+
+						// Show the skip/draw panel
+						if (gameWindow != null) {
+							gameWindow.showSkipDrawPanel(isSkip, voteResults);
+						}
+					}));
+					closingTimer.play();
 				}
 				int skipVotes = voteResults.getOrDefault("skip", 0);
 				int totalVotes = 0;

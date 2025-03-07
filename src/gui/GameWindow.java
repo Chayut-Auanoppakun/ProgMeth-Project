@@ -2658,7 +2658,8 @@ public class GameWindow {
 		if (System.currentTimeMillis() - lastFpressed > 250) {
 			lastFpressed = System.currentTimeMillis();
 
-			if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead") && !PlayerLogic.isWasImposter()) {
+			if (PlayerLogic.getStatus().equals("crewmate")
+					|| PlayerLogic.getStatus().equals("dead") && !PlayerLogic.isWasImposter()) {
 				System.out.println("Interact - checking for interactive objects");
 
 				// Check for event collisions
@@ -3384,5 +3385,28 @@ public class GameWindow {
 		} else {
 			System.out.println("GameWindow: No pending ejection, not showing panel");
 		}
+	}// This method should be added to GameWindow.java to properly determine if
+		// results show a skip or a tie
+
+	private boolean isSkipVote(java.util.Map<String, Integer> voteResults) {
+		// If there's at least one skip vote
+		int skipVotes = voteResults.getOrDefault("skip", 0);
+
+		if (skipVotes == 0) {
+			return false; // Can't be a skip if no one voted to skip
+		}
+
+		// Find the highest player vote count
+		int highestPlayerVotes = 0;
+		for (java.util.Map.Entry<String, Integer> entry : voteResults.entrySet()) {
+			if (!entry.getKey().equals("skip") && !entry.getKey().equals("wasImposter")) {
+				highestPlayerVotes = Math.max(highestPlayerVotes, entry.getValue());
+			}
+		}
+
+		// It's a skip vote if:
+		// 1. Skip votes are greater than any single player's votes
+		// 2. Skip votes are equal to highest player votes (tie with skip)
+		return skipVotes >= highestPlayerVotes;
 	}
 }
