@@ -275,7 +275,7 @@ public class GameWindow {
 				if (System.currentTimeMillis() - lastchecktask > 500) {
 					lastchecktask = System.currentTimeMillis();
 					PlayerLogic.updateTaskPercent();
-					GameLogic.isGameEnded();
+					GameLogic.checkGameConditions();
 				}
 
 				if (PlayerLogic.getMoving()) {

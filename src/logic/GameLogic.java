@@ -6,13 +6,15 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import gameObjects.Corpse;
+import gui.GameWindow;
+import gui.MainMenuPane;
 import javafx.application.Platform;
 import server.PlayerInfo;
 
 public class GameLogic {
 	private static int ImposterCount;
-	private static int TaskPercent;
 	private static int AlivePlayers;
+	private static int AliveCrewMates;;
 	private static int AliveImposters;
 	private static boolean gameEnded = false;
 	private static GameResult gameResult = GameResult.ONGOING;
@@ -22,8 +24,9 @@ public class GameLogic {
 	private static ScheduledExecutorService gameLoopExecutor;
 	private static int KillCooldown = 25;
 	private static int taskAmount = 5;
-	private static float SFXVolume = 0; //0 is max -- to make quiet
+	private static float SFXVolume = 0; // 0 is max -- to make quiet
 	private static float MUSICVolume = 0;
+
 	public enum GameResult {
 		ONGOING, CREWMATE_WIN, IMPOSTER_WIN
 	}
@@ -48,7 +51,7 @@ public class GameLogic {
 		return taskAmount;
 	}
 
-	public static  void setTaskAmount(int ntaskAmount) {
+	public static void setTaskAmount(int ntaskAmount) {
 		taskAmount = ntaskAmount;
 	}
 
@@ -56,33 +59,16 @@ public class GameLogic {
 		System.out.println("GameLogic initialized.");
 	}
 
-	public static void startGameLoop() {
-		if (gameLoopExecutor != null) {
-			gameLoopExecutor.shutdown();
-		}
-
-		// Reset game state
-		gameEnded = false;
-		gameResult = GameResult.ONGOING;
-
-		gameLoopExecutor = Executors.newSingleThreadScheduledExecutor();
-
-		// Run game loop every second
-		gameLoopExecutor.scheduleAtFixedRate(() -> {
-			if (!gameEnded) {
-				checkGameConditions();
-			}
-		}, 0, 1, TimeUnit.SECONDS);
-	}
-
-	private static void checkGameConditions() {
+	public static void checkGameConditions() {
 		// Count alive players and imposters
 		updatePlayerCounts();
 
 		// Check win conditions
 		if (checkImpostorWinCondition()) {
+			System.out.println("IMPOSTER WINS");
 			endGame(GameResult.IMPOSTER_WIN);
 		} else if (checkCrewmateWinCondition()) {
+			System.out.println("CREWMATE WINS");
 			endGame(GameResult.CREWMATE_WIN);
 		}
 	}
@@ -91,7 +77,17 @@ public class GameLogic {
 		int totalPlayers = 0;
 		int aliveImposters = 0;
 		int aliveCrewmates = 0;
-
+		
+		if (PlayerLogic.getStatus().equals("dead")) {
+			totalPlayers++;
+		}
+		else if (PlayerLogic.getStatus().equals("imposter")) {
+			aliveImposters++;
+		}
+		else {
+			aliveCrewmates++;
+		}
+		
 		for (PlayerInfo player : playerList.values()) {
 			// Assuming each player has a "status" field that tracks their alive/dead state
 			if (!player.getStatus().equals("dead")) {
@@ -104,32 +100,34 @@ public class GameLogic {
 				}
 			}
 		}
-
+		AliveCrewMates = aliveCrewmates;
 		AlivePlayers = totalPlayers;
 		AliveImposters = aliveImposters;
+		System.out.println("ALIVE PLAYERS = " + totalPlayers);
+		System.out.println("ALIVE IMPOSTERS = " + aliveImposters);
 	}
 
 	private static boolean checkImpostorWinCondition() {
 		// Imposters win if they equal or outnumber crewmates
-		return AliveImposters >= (AlivePlayers / 2);
+		return AliveImposters >= AliveCrewMates;
 	}
 
 	private static boolean checkCrewmateWinCondition() {
 		// Crewmates win if all tasks are complete and at least one crewmate is alive
-		return (TaskPercent >= 100) || (AliveImposters == 0);
+		return (GameWindow.getTotalPercentage() >= 100) || (AliveImposters == 0);
 	}
 
 	private static void endGame(GameResult result) {
-		if (gameEnded)
+		if (gameEnded || !GameLogic.isPrepEnded())
 			return;
 
 		gameEnded = true;
 		gameResult = result;
 
 		// Shutdown the game loop executor
-		if (gameLoopExecutor != null) {
-			gameLoopExecutor.shutdown();
-		}
+//		if (gameLoopExecutor != null) {
+//			gameLoopExecutor.shutdown();
+//		}
 
 		// Run game end logic on JavaFX thread
 		Platform.runLater(() -> {
@@ -184,11 +182,6 @@ public class GameLogic {
 		return ImposterCount;
 	}
 
-	// New method to update task percentage
-	public static void updateTaskPercentage(double percentage) {
-		TaskPercent = (int) percentage;
-	}
-
 	// Getter for game result
 	public static GameResult getGameResult() {
 		return gameResult;
@@ -215,7 +208,6 @@ public class GameLogic {
 		System.out.println("GAMELOGIC: Corpse created, total corpses: " + corpseList.size());
 		return corpse;
 	}
-
 
 	public static Corpse getCorpse(String playerKey) {
 		return corpseList.get(playerKey);
