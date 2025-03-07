@@ -11,8 +11,8 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 
 public class Task7 extends Task {
-    public Task7(TaskPane parent) {
-        super(parent, "task7");
+    public Task7(TaskPane parent, String taskId) {
+        super(parent, taskId);
         
         // Pixel-art style background
         setStyle("-fx-background-color: #8b6c42; -fx-border-color: #555; -fx-border-width: 2px;");

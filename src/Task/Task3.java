@@ -17,8 +17,8 @@ class Task3 extends Task {
     private Text displayText;
     private Text codeHint;
     
-    public Task3(TaskPane parent) {
-        super(parent, "task3");
+    public Task3(TaskPane parent, String taskId) {
+        super(parent, taskId);
         
         // Pixel-art style background
         setStyle("-fx-background-color: #8b6c42; -fx-border-color: #555; -fx-border-width: 2px;");

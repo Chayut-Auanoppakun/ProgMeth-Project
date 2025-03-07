@@ -22,8 +22,8 @@ public class Task4 extends Task {
     private double mouseX = 0.00;
     private double mouseY = 0.00;
 
-    public Task4(TaskPane parent) {
-        super(parent, "task4");
+    public Task4(TaskPane parent, String taskId) {
+        super(parent, taskId);
         
         // Set pixelated style background with brown color matching the interior walls
         setStyle("-fx-background-color: #8b6c42; -fx-border-color: #555; -fx-border-width: 2px;");

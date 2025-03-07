@@ -16,8 +16,8 @@ import java.util.List;
 public class Task6 extends Task {
     private int depositedBags = 0;
 
-    public Task6(TaskPane parent) {
-        super(parent, "task6");
+    public Task6(TaskPane parent, String taskId) {
+        super(parent, taskId);
         
         // Pixel-art style background
         setStyle("-fx-background-color: #8b6c42; -fx-border-color: #555; -fx-border-width: 2px;");

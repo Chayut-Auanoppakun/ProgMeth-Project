@@ -20,8 +20,8 @@ public class Task11 extends Task {
     private final List<ImageView> fires = new ArrayList<>();
     private boolean completeTaskCalled=false;
     
-    public Task11(TaskPane parent) {
-        super(parent, "task11");
+    public Task11(TaskPane parent, String taskId) {
+        super(parent, taskId);
         
         setStyle("-fx-background-color: #8b6c42; -fx-border-color: #555; -fx-border-width: 2px;");
         

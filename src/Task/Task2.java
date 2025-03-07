@@ -17,8 +17,8 @@ public class Task2 extends Task {
     private static int pumpCount = 0;
     private static boolean pumpTaskRunning = false;
     
-    public Task2(TaskPane parent) {
-        super(parent, "task2");
+    public Task2(TaskPane parent, String taskId) {
+        super(parent, taskId);
         
         // Pixel-art style background matching the game's aesthetic
         setStyle("-fx-background-color: #8b6c42; -fx-border-color: #555; -fx-border-width: 2px;");

@@ -2120,7 +2120,8 @@ public class GameWindow {
 
 			// Ensure death state is finalized even if panel fails
 			PlayerLogic.finalizeDeathState();
-			activeDeathPanel = null;		}
+			activeDeathPanel = null;
+		}
 	}
 
 	/**
@@ -2997,7 +2998,7 @@ public class GameWindow {
 			PlayerInfo info = GameLogic.playerList.get(key);
 			totalCompleted += Math.round(info.getTaskPercent());
 		}
-		totalCompleted/= GameLogic.playerList.size()-GameLogic.getImposterCount();
+		totalCompleted /= (GameLogic.playerList.size() - GameLogic.getImposterCount() + 1);
 		if (totalCompleted > 100) {
 			totalCompleted = 100;
 		}

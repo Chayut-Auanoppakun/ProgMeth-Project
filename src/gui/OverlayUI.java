@@ -86,7 +86,8 @@ public class OverlayUI extends Pane {
 		taskListBg.setEffect(dropShadow);
 		Text taskListTitle = new Text("");
 		// Task list title
-		if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead")) {
+		if (PlayerLogic.getStatus().equals("crewmate")
+				|| PlayerLogic.getStatus().equals("dead") && !PlayerLogic.isWasImposter()) {
 			taskListTitle.setText("Remaining Tasks");
 		} else {
 			taskListTitle.setText("Fake Tasks");
@@ -313,7 +314,7 @@ public class OverlayUI extends Pane {
 				return; // Debounce
 			lastActionTime = System.currentTimeMillis();
 
-			if ("imposter".equals(PlayerLogic.getStatus()) && !"dead".equals(PlayerLogic.getStatus())) {
+			if (("imposter".equals(PlayerLogic.getStatus()) && !"dead".equals(PlayerLogic.getStatus()))|| PlayerLogic.isWasImposter()) {
 				// For imposters: try to kill
 				PlayerInfo target = gameWindow.findClosestKillablePlayer();
 				if (target != null) {

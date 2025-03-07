@@ -13,8 +13,8 @@ import javafx.scene.text.Text;
 import javafx.scene.layout.Pane;
 
 public class Task13 extends Task {
-    public Task13(TaskPane parent) {
-        super(parent, "task13");
+    public Task13(TaskPane parent, String taskId) {
+        super(parent, taskId);
         
         // Pixel-art style background
         setStyle("-fx-background-color: #8b6c42; -fx-border-color: #555; -fx-border-width: 2px;");

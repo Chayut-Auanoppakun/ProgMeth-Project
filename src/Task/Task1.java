@@ -23,8 +23,8 @@ class Task1 extends Task {
     private int switchesOn = 0;
     private final int totalSwitches = 8;
     
-    public Task1(TaskPane parent) {
-        super(parent, "task1");
+    public Task1(TaskPane parent, String taskId) {
+        super(parent, taskId);
         
         // Set pixelated style background with brown color matching the interior walls
         setStyle("-fx-background-color: #8b6c42; -fx-border-color: #555; -fx-border-width: 2px;");
