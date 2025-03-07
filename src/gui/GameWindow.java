@@ -265,9 +265,9 @@ public class GameWindow {
 
 				if (!GameLogic.isPrepEnded() && prepPhaseGui != null) {
 					updatePrepPhasePlayerCount();
+					tracking = System.currentTimeMillis();
 				}
 				if (GameLogic.isPrepEnded() && overlayManager != null) { // update overlay
-					tracking = System.currentTimeMillis();
 					overlayManager.updateTaskProgress();
 					overlayManager.updatePlayerRoleUI();
 					overlayManager.updateButtonStates();
