@@ -24,7 +24,7 @@ public class GameLogic {
 	private static ScheduledExecutorService gameLoopExecutor;
 
 	// Cooldown related variables
-	private static int KillCooldown = 10; // Kill cooldown in seconds
+	private static int KillCooldown = 25; // Kill cooldown in seconds
 	private static int EmergencyMeetingCooldown = 10; // Emergency meeting cooldown in seconds
 	private static long lastKillTime = 0;
 	private static long lastEmergencyMeetingTime = 0;

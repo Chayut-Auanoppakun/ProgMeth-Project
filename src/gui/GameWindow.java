@@ -180,6 +180,8 @@ public class GameWindow {
 	// === Animation Timer ===
 	private AnimationTimer timer;
 	private long lastchecktask = 0;
+	private long laskcheckkill = 0;
+
 	// === Player Size ===
 	private final double PLAYER_RADIUS = 10;
 
@@ -276,6 +278,10 @@ public class GameWindow {
 					lastchecktask = System.currentTimeMillis();
 					PlayerLogic.updateTaskPercent();
 					GameLogic.checkGameConditions();
+				}
+				if (System.currentTimeMillis() - laskcheckkill > 1000) {
+					if (GameLogic.getKillCooldown() > 0)
+						GameLogic.setKillCooldown(GameLogic.getKillCooldown() - 1);
 				}
 
 				if (PlayerLogic.getMoving()) {
@@ -1087,28 +1093,24 @@ public class GameWindow {
 				lastFpressed = System.currentTimeMillis();
 				SoundLogic.playSound("assets/sounds/UI_Select.wav", GameLogic.getSFXVolume());
 				// Check for emergency meeting button first (allow both roles)
-				String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
-				if (!eventId.isEmpty() && eventId.equals("99")) {
-					// Check emergency meeting cooldown
-					if (GameLogic.isEmergencyMeetingAvailable()) {
-						System.out.println("Emergency meeting button pressed");
-						GameLogic.recordEmergencyMeetingTime(); // Record the time of emergency meeting
-
-						TaskLogic.openTask(eventId, taskContainer);
-
-						try {
-							root.getChildren().remove(taskContainer); // Remove taskContainer first
-						} catch (Exception e) {
-						}
-
-						root.getChildren().add(taskContainer); // Re-add it to ensure it's on top
-					} else {
-						int remainingCooldown = GameLogic.getRemainingEmergencyMeetingCooldown();
-						showNotification("Emergency Meeting on cooldown. Wait " + remainingCooldown + " seconds.");
-					}
+				if (GameLogic.getKillCooldown() > 0) {
+					showNotification("KILL COOL DOWN "+ GameLogic.getKillCooldown());
 					return;
 				}
+				GameLogic.setKillCooldown(25);
+				String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
+				if (!eventId.isEmpty() && eventId.equals("99")) {
+					System.out.println("Emergency meeting button pressed");
+					TaskLogic.openTask(eventId, taskContainer);
 
+					try {
+						root.getChildren().remove(taskContainer); // Remove taskContainer first
+					} catch (Exception e) {
+					}
+
+					root.getChildren().add(taskContainer); // Re-add it to ensure it's on top
+					return;
+				}
 				// Handle regular tasks vs imposter kill
 				if ((PlayerLogic.getStatus().equals("crewmate")
 						|| (PlayerLogic.getStatus().equals("dead") && !PlayerLogic.isWasImposter()))) {
@@ -1129,80 +1131,35 @@ public class GameWindow {
 						root.getChildren().add(taskContainer); // Re-add it to ensure it's on top
 						if (taskOpened) {
 							System.out.println("Task opened: " + eventId);
+							// You might want to disable player movement here or add other effects
+							// PlayerLogic.setMovementEnabled(false);
 						} else {
 							System.out.println("Failed to open task: " + eventId);
 						}
 					} else {
 						System.out.println("No interactive object nearby");
+						// Maybe show a hint message that there's nothing to interact with
 					}
 				} else { // For Imposter kill code
-					// Check kill cooldown
-					if (GameLogic.isKillAvailable()) {
-						PlayerInfo closestTarget = findClosestKillablePlayer();
-						if (closestTarget != null) {
-							GameLogic.recordKillTime(); // Record the time of kill
-							killPlayer(closestTarget);
-						} else {
-							System.out.println("No players in kill range");
-						}
+					PlayerInfo closestTarget = findClosestKillablePlayer();
+					if (closestTarget != null) {
+						// Trigger kill method
+						killPlayer(closestTarget);
 					} else {
-						int remainingCooldown = GameLogic.getRemainingKillCooldown();
-						showNotification("Kill on cooldown. Wait " + remainingCooldown + " seconds.");
+						System.out.println("No players in kill range");
 					}
 				}
 			}
+
 		}
-		if (pressedKeys.contains(KeyCode.R)) {
+		if (pressedKeys.contains(KeyCode.R))
+
+		{
 			if (System.currentTimeMillis() - lastRpressed > 250) {
 				lastRpressed = System.currentTimeMillis();
 				reportNearbyCorpse(); // Call the existing method to report corpses
 			}
 		}
-	}
-
-	/**
-	 * Public method to show a notification in the game window
-	 * 
-	 * @param message The message to display
-	 */
-	public void showNotification(String message) {
-		Platform.runLater(() -> {
-			try {
-				Text notificationText = new Text(message);
-				notificationText.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
-				notificationText.setFill(Color.WHITE);
-				notificationText.setStroke(Color.BLACK);
-				notificationText.setStrokeWidth(1);
-
-				StackPane notificationPane = new StackPane(notificationText);
-				notificationPane.setStyle(
-						"-fx-background-color: rgba(50, 50, 70, 0.7);" + "-fx-padding: 10px;" + "-fx-background-radius: 5px;");
-
-				notificationPane.setLayoutX((screenWidth - 200) / 2);
-				notificationPane.setLayoutY(screenHeight * 0.7);
-				notificationPane.setOpacity(0);
-
-				root.getChildren().add(notificationPane);
-
-				// Fade in
-				FadeTransition fadeIn = new FadeTransition(Duration.millis(200), notificationPane);
-				fadeIn.setFromValue(0);
-				fadeIn.setToValue(1);
-				fadeIn.play();
-
-				// Hold then fade out
-				FadeTransition fadeOut = new FadeTransition(Duration.millis(200), notificationPane);
-				fadeOut.setFromValue(1);
-				fadeOut.setToValue(0);
-				fadeOut.setDelay(Duration.millis(1500));
-				fadeOut.setOnFinished(e -> root.getChildren().remove(notificationPane));
-
-				fadeIn.setOnFinished(e -> fadeOut.play());
-
-			} catch (Exception e) {
-				System.err.println("Error creating notification: " + e.getMessage());
-			}
-		});
 	}
 
 	public PlayerInfo findClosestKillablePlayer() {
@@ -1988,6 +1945,45 @@ public class GameWindow {
 		}
 
 		return playerBox;
+	}
+
+	/**
+	 * Shows a temporary notification message to the player.
+	 * 
+	 * @param message The message to display
+	 */
+	public void showNotification(String message) {
+		// Create a stylized label for the notification
+		Text notification = new Text(message);
+		notification.setFont(Font.font("Monospace", FontWeight.BOLD, 16));
+		notification.setFill(Color.WHITE);
+		notification.setStroke(Color.BLACK);
+		notification.setStrokeWidth(1);
+
+		StackPane notificationPane = new StackPane(notification);
+		notificationPane.setStyle(
+				"-fx-background-color: rgba(50, 50, 70, 0.7);" + "-fx-padding: 10px;" + "-fx-background-radius: 5px;");
+
+		notificationPane.setLayoutX((screenWidth - 200) / 2);
+		notificationPane.setLayoutY(screenHeight * 0.7);
+		notificationPane.setOpacity(0);
+
+		root.getChildren().add(notificationPane);
+
+		// Fade in
+		FadeTransition fadeIn = new FadeTransition(Duration.millis(200), notificationPane);
+		fadeIn.setFromValue(0);
+		fadeIn.setToValue(1);
+		fadeIn.play();
+
+		// Hold then fade out
+		FadeTransition fadeOut = new FadeTransition(Duration.millis(200), notificationPane);
+		fadeOut.setFromValue(1);
+		fadeOut.setToValue(0);
+		fadeOut.setDelay(Duration.millis(1500));
+		fadeOut.setOnFinished(e -> root.getChildren().remove(notificationPane));
+
+		fadeIn.setOnFinished(e -> fadeOut.play());
 	}
 
 	/**
