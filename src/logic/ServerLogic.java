@@ -1186,70 +1186,70 @@ public class ServerLogic {
 	 * @return The key of the ejected player, or null if no one was ejected
 	 */
 	public static String calculateVotingResult(String meetingId) {
-	    meetingId = "default";
-	    Map<String, String> votesMap = meetingVotes.getOrDefault(meetingId, new HashMap<>());
+		meetingId = "default";
+		Map<String, String> votesMap = meetingVotes.getOrDefault(meetingId, new HashMap<>());
 
-	    // If no votes, no one is ejected
-	    if (votesMap.isEmpty()) {
-	        System.out.println("SERVER: No votes were cast in meeting " + meetingId);
-	        return null;
-	    }
+		// If no votes, no one is ejected
+		if (votesMap.isEmpty()) {
+			System.out.println("SERVER: No votes were cast in meeting " + meetingId);
+			return null;
+		}
 
-	    // Count votes for each target
-	    Map<String, Integer> voteCounts = new HashMap<>();
-	    for (String targetKey : votesMap.values()) {
-	        voteCounts.put(targetKey, voteCounts.getOrDefault(targetKey, 0) + 1);
-	    }
+		// Count votes for each target
+		Map<String, Integer> voteCounts = new HashMap<>();
+		for (String targetKey : votesMap.values()) {
+			voteCounts.put(targetKey, voteCounts.getOrDefault(targetKey, 0) + 1);
+		}
 
-	    System.out.println("SERVER: Vote counts for meeting " + meetingId + ": " + voteCounts);
+		System.out.println("SERVER: Vote counts for meeting " + meetingId + ": " + voteCounts);
 
-	    // Count skip votes
-	    int skipVotes = voteCounts.getOrDefault("skip", 0);
-	    
-	    // Find player with most votes and check for ties
-	    String mostVotedPlayer = null;
-	    int highestVotes = 0;
-	    boolean hasTie = false;
+		// Count skip votes
+		int skipVotes = voteCounts.getOrDefault("skip", 0);
 
-	    // First pass to find highest vote count among players (excluding "skip")
-	    for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
-	        if (!entry.getKey().equals("skip") && entry.getValue() > highestVotes) {
-	            highestVotes = entry.getValue();
-	            mostVotedPlayer = entry.getKey();
-	            hasTie = false;
-	        } else if (!entry.getKey().equals("skip") && entry.getValue() == highestVotes) {
-	            // We have a tie between player votes
-	            hasTie = true;
-	        }
-	    }
+		// Find player with most votes and check for ties
+		String mostVotedPlayer = null;
+		int highestVotes = 0;
+		boolean hasTie = false;
 
-	    // Check if skip wins
-	    if (skipVotes > highestVotes) {
-	        // Skip wins outright
-	        System.out.println("SERVER: Skip won the vote with " + skipVotes + " votes");
-	        return null; // No one is ejected
-	    } else if (skipVotes == highestVotes && highestVotes > 0) {
-	        // Skip ties with highest player vote
-	        System.out.println("SERVER: Skip tied with player votes at " + skipVotes + " votes");
-	        return null; // No one is ejected in a tie
-	    }
+		// First pass to find highest vote count among players (excluding "skip")
+		for (Map.Entry<String, Integer> entry : voteCounts.entrySet()) {
+			if (!entry.getKey().equals("skip") && entry.getValue() > highestVotes) {
+				highestVotes = entry.getValue();
+				mostVotedPlayer = entry.getKey();
+				hasTie = false;
+			} else if (!entry.getKey().equals("skip") && entry.getValue() == highestVotes) {
+				// We have a tie between player votes
+				hasTie = true;
+			}
+		}
 
-	    // Check if there's a tie between players
-	    if (hasTie) {
-	        System.out.println("SERVER: There was a tie between players with " + highestVotes + " votes each");
-	        return null; // No one is ejected in a tie
-	    }
+		// Check if skip wins
+		if (skipVotes > highestVotes) {
+			// Skip wins outright
+			System.out.println("SERVER: Skip won the vote with " + skipVotes + " votes");
+			return null; // No one is ejected
+		} else if (skipVotes == highestVotes && highestVotes > 0) {
+			// Skip ties with highest player vote
+			System.out.println("SERVER: Skip tied with player votes at " + skipVotes + " votes");
+			return null; // No one is ejected in a tie
+		}
 
-	    // Return the player with the most votes if they exist and have at least one vote
-	    if (mostVotedPlayer != null && highestVotes > 0) {
-	        System.out.println("SERVER: " + mostVotedPlayer + " was ejected with " + highestVotes + " votes");
-	        return mostVotedPlayer;
-	    } else {
-	        System.out.println("SERVER: No one was ejected (no valid votes)");
-	        return null;
-	    }
+		// Check if there's a tie between players
+		if (hasTie) {
+			System.out.println("SERVER: There was a tie between players with " + highestVotes + " votes each");
+			return null; // No one is ejected in a tie
+		}
+
+		// Return the player with the most votes if they exist and have at least one
+		// vote
+		if (mostVotedPlayer != null && highestVotes > 0) {
+			System.out.println("SERVER: " + mostVotedPlayer + " was ejected with " + highestVotes + " votes");
+			return mostVotedPlayer;
+		} else {
+			System.out.println("SERVER: No one was ejected (no valid votes)");
+			return null;
+		}
 	}
-
 
 	public static DatagramSocket getServerSocket() {
 		return serverSocket;
@@ -1261,5 +1261,37 @@ public class ServerLogic {
 
 	public static Set<ClientInfo> getConnectedClients() {
 		return new HashSet<>(clientAddresses);
+	}
+
+	public static void resetServerState() {
+		// Reset network-related variables
+		if (serverSocket != null && !serverSocket.isClosed()) {
+			serverSocket.close();
+		}
+		serverSocket = null;
+
+		// Clear client tracking
+		clientAddresses.clear();
+		clientPingCount.clear();
+
+		// Reset meeting-related variables
+		meetingVotes.clear();
+		recentChatMessages.clear();
+
+		// Stop timers and executors
+		if (pingCheckTimer != null) {
+			pingCheckTimer.cancel();
+			pingCheckTimer = null;
+		}
+
+		// Reset player-related tracking
+		readyPlayers = 0;
+		isRunning = false;
+
+		// Stop server thread
+		if (serverThread != null && serverThread.isAlive()) {
+			serverThread.interrupt();
+			serverThread = null;
+		}
 	}
 }

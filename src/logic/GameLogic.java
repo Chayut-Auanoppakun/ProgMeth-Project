@@ -78,16 +78,16 @@ public class GameLogic {
 		// Count alive players and imposters
 		updatePlayerCounts();
 
-		if (!GameLogic.prepEnded||!isImposterRolesSet) {
-			//System.out.println("WAIT FOR CHECK");
+		if (!GameLogic.prepEnded || !isImposterRolesSet) {
+			// System.out.println("WAIT FOR CHECK");
 			return;
 		}
 		// Check win conditions
 		if (checkImpostorWinCondition()) {
-			//System.out.println("IMPOSTER WINS");
+			// System.out.println("IMPOSTER WINS");
 			endGame(GameResult.IMPOSTER_WIN);
 		} else if (checkCrewmateWinCondition()) {
-			//System.out.println("CREWMATE WINS");
+			// System.out.println("CREWMATE WINS");
 			endGame(GameResult.CREWMATE_WIN);
 		}
 	}
@@ -312,5 +312,41 @@ public class GameLogic {
 
 	public static int getFoundCorpseCount() {
 		return (int) corpseList.values().stream().filter(Corpse::isFound).count();
+	}
+
+
+	public static void resetGameState() {
+		// Game state variables
+		ImposterCount = 0;
+		AlivePlayers = 0;
+		AliveCrewMates = 0;
+		AliveImposters = 0;
+		gameEnded = false;
+		gameResult = GameResult.ONGOING;
+
+		// Clear collections
+		corpseList.clear();
+		playerList.clear();
+
+		// Prep and role setup flags
+		prepEnded = false;
+		isImposterRolesSet = false;
+
+		// Cooldown and time tracking
+		lastKillTime = 0;
+		lastEmergencyMeetingTime = 0;
+		KillCooldown = 25; // Reset to default
+		EmergencyMeetingCooldown = 10; // Reset to default
+
+		// Volume and task settings
+		taskAmount = 5;
+		SFXVolume = 0;
+		MUSICVolume = 0;
+
+		// Stop any running game loop executor
+		if (gameLoopExecutor != null) {
+			gameLoopExecutor.shutdownNow();
+			gameLoopExecutor = null;
+		}
 	}
 }

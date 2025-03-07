@@ -3488,48 +3488,68 @@ public class GameWindow {
 	 * "MAIN MENU" button is clicked.
 	 */
 	public void returnToMainMenu() {
-		// Stop the game loop
-		if (timer != null) {
-			timer.stop();
-		}
-
-		// Clean up resources
-		if (threadPool != null) {
-			threadPool.shutdown();
-		}
-
-		// Clean up sound resources
-		SoundLogic.cleanup();
-
 		try {
-			// Stop game-related logic
-			if (MainMenuPane.getState().equals(logic.State.SERVER)) {
-				ServerLogic.stopServer();
-			} else {
-				ClientLogic.stopClient(ServerSelectGui.getLogArea());
+			// Stop the game loop and animations
+			if (timer != null) {
+				timer.stop();
+				timer = null;
 			}
 
-			// Reset game state
-			GameLogic.clearCorpses();
-			PlayerLogic.setCharID(0);
-			PlayerLogic.setStatus("crewmate");
+			// Clean up thread pool resources
+			if (threadPool != null) {
+				try {
+					threadPool.shutdown();
+					if (!threadPool.awaitTermination(5, TimeUnit.SECONDS)) {
+						threadPool.shutdownNow();
+					}
+				} catch (InterruptedException e) {
+					threadPool.shutdownNow();
+					Thread.currentThread().interrupt();
+				}
+				threadPool = null;
+			}
 
-			// Close current stage
+			// Clean up sound resources
+			SoundLogic.cleanup();
+
+			// Stop network connections based on game state
+			if (MainMenuPane.getState().equals(logic.State.SERVER)) {
+				ServerLogic.resetServerState();
+			} else {
+				ClientLogic.resetClientState();
+			}
+
+			// Reset game state completely
+			GameLogic.resetGameState();
+			PlayerLogic.resetPlayerState();
+
+			// Close the current game stage
 			if (gameStage != null) {
 				gameStage.close();
+				gameStage = null;
 			}
 
-			// Create new main menu
-			Stage primaryStage = new Stage();
-			new MainMenuPane(primaryStage, 900, 600);
-			Scene scene = new Scene(new MainMenuPane(primaryStage, 900, 600), 900, 600);
-			primaryStage.setTitle("Among CEDT");
-			primaryStage.setScene(scene);
-			primaryStage.setResizable(false);
-			primaryStage.show();
+			// Clear game window instance
+			gameWindowInstance = null;
+
+			// Create new main menu stage
+			Platform.runLater(() -> {
+				Stage primaryStage = new Stage();
+				MainMenuPane mainMenuPane = new MainMenuPane(primaryStage, 900, 600);
+				Scene scene = new Scene(mainMenuPane, 900, 600);
+				primaryStage.setTitle("Among CEDT");
+				primaryStage.setScene(scene);
+				primaryStage.setResizable(false);
+				primaryStage.show();
+			});
+
 		} catch (Exception e) {
-			System.err.println("Error returning to main menu: " + e.getMessage());
+			System.err.println("Critical error returning to main menu: " + e.getMessage());
 			e.printStackTrace();
+
+			// Force exit if something goes wrong
+			Platform.exit();
+			System.exit(0);
 		}
 	}
 }

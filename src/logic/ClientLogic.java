@@ -789,4 +789,38 @@ public class ClientLogic {
 		return null;
 	}
 
+	public static void resetClientState() {
+		// Clear server discovery information
+		serverSet.clear();
+		serverList.clear();
+		processedVotes.clear();
+
+		// Reset network connection variables
+		if (clientSocket != null && !clientSocket.isClosed()) {
+			clientSocket.close();
+		}
+		clientSocket = null;
+
+		connectedServerAddress = null;
+		connectedServerPort = -1;
+
+		// Stop client thread
+		if (clientThread != null && clientThread.isAlive()) {
+			clientThread.interrupt();
+			clientThread = null;
+		}
+
+		// Reset connection tracking variables
+		lastLoggedData = "";
+		missedPings = 0;
+		wasDiscon = false;
+		lastPRint = 0;
+
+		// Stop timer if running
+		if (timer != null) {
+			timer.cancel();
+			timer = null;
+		}
+	}
+
 }

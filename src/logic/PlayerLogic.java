@@ -13,7 +13,7 @@ import gui.MainMenuPane;
 //For our own Player
 //In PlayerLogic.java, modify the status handling to support different death types
 
-public class PlayerLogic {
+public class PlayerLogic  {
 	static boolean isMoving;
 	static int Direction; // 1 left, 2 Right
 	private static String name;
@@ -221,5 +221,34 @@ public class PlayerLogic {
 			tasks.add(random.nextInt(1, 22)); // 1-23
 		}
 		System.out.println("Random Tasks : " + tasks);
+	}
+
+
+
+	public static void resetPlayerState() {
+		// Movement and position
+		isMoving = false;
+		Direction = 2; // Default direction
+		myPosX = 0;
+		myPosY = 0;
+
+		// Player identification and name
+		name = "Player";
+		charID = 99; // Not initialized state
+
+		// Player status
+		status = "crewmate";
+		isPlayerReady = false;
+
+		// Death-related flags
+		temporaryKilled = false;
+		temporaryEjected = false;
+		wasImposter = false;
+		wasEjected = false;
+		playdeadsound = false;
+
+		// Task-related variables
+		tasks.clear();
+		taskPercent = 0;
 	}
 }
