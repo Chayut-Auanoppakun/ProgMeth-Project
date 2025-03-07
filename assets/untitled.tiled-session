@@ -1,0 +1,112 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "map.tmx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "12_Kitchen_Black_Shadow_32x32.tsx": {
+            "scaleInDock": 1
+        },
+        "18_Jail_Black_Shadow_32x32.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1
+        },
+        "1_Generic_Black_Shadow_32x32.tsx": {
+            "scaleInDock": 1
+        },
+        "22_Museum_Black_Shadow_32x32.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1
+        },
+        "2_LivingRoom_Black_Shadow_32x32.tsx": {
+            "scaleInDock": 1
+        },
+        "4_Bedroom_Black_Shadow_32x32.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1
+        },
+        "5_Classroom_and_library_Black_Shadow_32x32.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1
+        },
+        "7_Art_Black_Shadow_32x32.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "9_Fishing_Black_Shadow_32x32.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "Interiors_32x32.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "ME_Singles_Camping_48x48_Tree_163.tsx": {
+            "scaleInDock": 1
+        },
+        "Modern_Exteriors_Complete_Tileset_32x32.tsx": {
+            "scaleInDock": 0.75
+        },
+        "Modern_Exteriors_Complete_Tileset_48x48.tsx": {
+            "scaleInDock": 1
+        },
+        "Room_Builder_32x32.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 0.75
+        },
+        "W:/ProgMeth Project/Map/Interiors_32x32.tsx": {
+            "scaleInDock": 1
+        },
+        "map.tmx": {
+            "expandedObjectLayers": [
+                14
+            ],
+            "scale": 1.5,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 2867,
+                "y": 1030.6666666666665
+            }
+        },
+        "map.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 0.5
+        },
+        "map_old.tmx": {
+            "scale": 0.31171875,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 2975.438596491228,
+                "y": 1918.3959899749375
+            }
+        },
+        "output-onlinetools.tsx": {
+            "scaleInDock": 1
+        }
+    },
+    "openFiles": [
+        "Room_Builder_32x32.tsx",
+        "7_Art_Black_Shadow_32x32.tsx",
+        "Interiors_32x32.tsx",
+        "map.tsx",
+        "9_Fishing_Black_Shadow_32x32.tsx",
+        "map_old.tmx",
+        "map.tmx"
+    ],
+    "project": "untitled.tiled-project",
+    "recentFiles": [
+        "map.tsx",
+        "map_old.tmx",
+        "Room_Builder_32x32.tsx",
+        "7_Art_Black_Shadow_32x32.tsx",
+        "Interiors_32x32.tsx",
+        "9_Fishing_Black_Shadow_32x32.tsx",
+        "map.tmx"
+    ]
+}
