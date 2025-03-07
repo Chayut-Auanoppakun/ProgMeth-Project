@@ -78,8 +78,10 @@ public class GameLogic {
 		// Count alive players and imposters
 		updatePlayerCounts();
 
-		if (!GameLogic.prepEnded||!isImposterRolesSet)
+		if (!GameLogic.prepEnded||!isImposterRolesSet) {
+			System.out.println("WAIT FOR CHECK");
 			return;
+		}
 		// Check win conditions
 		if (checkImpostorWinCondition()) {
 			System.out.println("IMPOSTER WINS");

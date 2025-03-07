@@ -106,6 +106,7 @@ public class GameWindow {
 	private static long lastCollisionChanged = 0;
 	private static long lastFpressed = 0;
 	private static long lastRpressed = 0;
+	private static long tracking = 0;
 	private static boolean MeetingOpen = false;
 
 	// === Player Properties ===
@@ -190,6 +191,7 @@ public class GameWindow {
 	private CharacterSelectgui characterSelectGui;
 	private boolean characterSelectVisible = false;
 	private boolean PrepEnd = false;
+	boolean hasRun = false;
 
 	public void start(Stage stage) {
 		this.gameStage = stage;
@@ -235,6 +237,7 @@ public class GameWindow {
 			e.printStackTrace();
 			// Continue with a null map - will need to handle this case in rendering
 		}
+		tracking = System.currentTimeMillis();
 
 		timer = new AnimationTimer() {
 			@Override
@@ -264,6 +267,7 @@ public class GameWindow {
 					updatePrepPhasePlayerCount();
 				}
 				if (GameLogic.isPrepEnded() && overlayManager != null) { // update overlay
+					tracking = System.currentTimeMillis();
 					overlayManager.updateTaskProgress();
 					overlayManager.updatePlayerRoleUI();
 					overlayManager.updateButtonStates();
@@ -275,6 +279,12 @@ public class GameWindow {
 				render();
 				displayFPS();
 				checkPlayerStateChange();
+				if (System.currentTimeMillis() - tracking > 10000 && !hasRun && GameLogic.isPrepEnded()) {
+					hasRun = true;
+					tracking = System.currentTimeMillis();
+					System.out.println("Start checking Game Win/Loss");
+					GameLogic.setImposterRolesSet(true);
+				}
 				if (System.currentTimeMillis() - lastchecktask > 500) {
 					lastchecktask = System.currentTimeMillis();
 					PlayerLogic.updateTaskPercent();
@@ -288,7 +298,6 @@ public class GameWindow {
 					if (GameLogic.getEmergencyMeetingCooldown() > 0)
 						GameLogic.setEmergencyMeetingCooldown(GameLogic.getEmergencyMeetingCooldown() - 1);
 				}
-				GameLogic.setImposterRolesSet(true);
 				if (PlayerLogic.getMoving()) {
 					animation.play();
 				} else {
@@ -305,7 +314,6 @@ public class GameWindow {
 			}
 		};
 		timer.start();
-
 		root = new Group();
 		root.getChildren().add(canvas);
 		overlayManager = new OverlayUI(this);
