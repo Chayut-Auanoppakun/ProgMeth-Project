@@ -31,10 +31,11 @@ public class TaskLogic {
 			// Standard rectangle collision detection
 			if (playerRight > eventPosX && playerLeft < eventPosX + event.getWidth() && playerBottom > eventPosY
 					&& playerTop < eventPosY + event.getHeight()) {
-				if (PlayerLogic.getTasks().contains(Integer.parseInt(event.getEventID()))) {
+				if (PlayerLogic.getTasks().contains(Integer.parseInt(event.getEventID()))
+						|| (event.getEventID().equals("99"))) {
 					return event.getEventID();
 				} else {
-					//System.out.println("Collided with " + event.getEventID() + " but not in task lisk.");
+					System.out.println("Collided with " + event.getEventID() + " but not in task lisk.");
 				}
 			}
 		}
@@ -47,7 +48,7 @@ public class TaskLogic {
 		parentPane.setLayoutY(GameWindow.getScreenheight() * 0.15);
 		return TaskPane.getInstance().openTask(eventId, parentPane);
 	}
-	
+
 	public static void completeTask(String taskId) {
 		PlayerLogic.getTasks().remove(Integer.parseInt(taskId.substring(4)));
 		// Log task completion

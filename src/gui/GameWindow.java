@@ -275,7 +275,7 @@ public class GameWindow {
 				if (System.currentTimeMillis() - lastchecktask > 500) {
 					lastchecktask = System.currentTimeMillis();
 					PlayerLogic.updateTaskPercent();
-					// System.out.println("Total Task % = " + getTotalPercentage());
+					GameLogic.isGameEnded();
 				}
 
 				if (PlayerLogic.getMoving()) {
@@ -1083,14 +1083,28 @@ public class GameWindow {
 		if (pressedKeys.contains(KeyCode.F)) { // Task for player and Kill for Imposter
 			if (System.currentTimeMillis() - lastFpressed > 250) {
 				lastFpressed = System.currentTimeMillis();
+
+				// Check for emergency meeting button first (allow both roles)
+				String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
+				if (!eventId.isEmpty() && eventId.equals("99")) {
+					System.out.println("Emergency meeting button pressed");
+					TaskLogic.openTask(eventId, taskContainer);
+
+					try {
+						root.getChildren().remove(taskContainer); // Remove taskContainer first
+					} catch (Exception e) {
+					}
+
+					root.getChildren().add(taskContainer); // Re-add it to ensure it's on top
+					return;
+				}
+
+				// Handle regular tasks vs imposter kill
 				if ((PlayerLogic.getStatus().equals("crewmate")
 						|| (PlayerLogic.getStatus().equals("dead") && !PlayerLogic.isWasImposter()))) {
 					System.out.println("F pressed - checking for interactive objects");
 
 					// Check for event collisions
-					String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
-
-					// If we're colliding with an event object
 					if (!eventId.isEmpty()) {
 						System.out.println("Interacting with event: " + eventId);
 
@@ -1102,7 +1116,7 @@ public class GameWindow {
 						} catch (Exception e) {
 						}
 
-						root.getChildren().add(taskContainer); // Re-add it to ensure it’s on top
+						root.getChildren().add(taskContainer); // Re-add it to ensure it's on top
 						if (taskOpened) {
 							System.out.println("Task opened: " + eventId);
 							// You might want to disable player movement here or add other effects
@@ -1124,6 +1138,7 @@ public class GameWindow {
 					}
 				}
 			}
+
 		}
 		if (pressedKeys.contains(KeyCode.R)) {
 			if (System.currentTimeMillis() - lastRpressed > 250) {
@@ -1976,7 +1991,7 @@ public class GameWindow {
 			// Create panel container
 			StackPane deathPanel = new StackPane();
 			deathPanel.setPrefSize(screenWidth, screenHeight);
-	        activeDeathPanel = deathPanel;
+			activeDeathPanel = deathPanel;
 			// Add semi-transparent dark background
 			Rectangle darkOverlay = new Rectangle(screenWidth, screenHeight);
 			darkOverlay.setFill(new Color(0, 0, 0, 0.8));

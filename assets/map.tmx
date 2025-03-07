@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="120" height="120" tilewidth="32" tileheight="32" infinite="0" nextlayerid="20" nextobjectid="541">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="120" height="120" tilewidth="32" tileheight="32" infinite="0" nextlayerid="20" nextobjectid="542">
  <editorsettings>
   <export target="../temp/map.tmx" format="tmx"/>
  </editorsettings>
@@ -2012,6 +2012,9 @@
   <object id="503" x="2884" y="2266.33" width="30" height="3.66667"/>
  </objectgroup>
  <objectgroup id="19" name="EventTrigger">
+  <properties>
+   <property name="Event_ID" value="99"/>
+  </properties>
   <object id="510" name="ele_fix" x="2887.33" y="1343.33" width="85" height="30.6667">
    <properties>
     <property name="Event_ID" value="1"/>
@@ -2122,7 +2125,12 @@
     <property name="Event_ID" value="13"/>
    </properties>
   </object>
-  <object id="539" name="emer_99" x="1594.36" y="1088.55" width="44.9091" height="22.1818">
+  <object id="539" name="emer_99" x="1594.36" y="1088.55" width="44.9091" height="35.0909">
+   <properties>
+    <property name="Event_ID" value="99"/>
+   </properties>
+  </object>
+  <object id="541" name="emer_99" x="1594.36" y="1088.55" width="44.9091" height="35.0909">
    <properties>
     <property name="Event_ID" value="99"/>
    </properties>
