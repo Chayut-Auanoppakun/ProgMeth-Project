@@ -115,6 +115,15 @@ public class OverlayUI extends Pane {
 				put(11, "> Fire Extinguish");
 				put(12, "> Clean Observatory Mirror");
 				put(13, "> Prepare Nutrition Supplies");
+				put(14, "> Enter Passcode");
+				put(15, "> Sanitize Kitchen Dishes");
+				put(16, "> Fishing Equipment Check");
+				put(17, "> Make the bed");
+				put(18, "> Repair Electrical Wiring");
+				put(19, "> Organize books in Library");
+				put(20, "> Collect Botanical Samples");
+				put(21, "> Fire Extinguish");
+				put(22, "> Clean Observatory Mirror");
 			}
 		};
 

@@ -533,21 +533,33 @@ public class ClientLogic {
 
 									// Handle player ejection
 									if (ejectedPlayerKey != null) {
+										// IMPORTANT: Get wasImposter directly from the server's result data
 										boolean wasImposter = resultsData.has("wasImposter")
 												? resultsData.getBoolean("wasImposter")
 												: false;
 
-										System.out.println("CLIENT: Ejected player wasImposter: " + wasImposter);
+										System.out.println(
+												"CLIENT: Ejected player wasImposter from server: " + wasImposter);
 
 										// If it's the local player
 										if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
 											System.out.println("CLIENT: You were ejected!");
-											wasImposter = "imposter".equals(PlayerLogic.getStatus());
-											System.out.println("imposter".equals(PlayerLogic.getStatus()));
+
+											// Store original status for debugging purposes only
+											boolean localStatusIsImposter = "imposter".equals(PlayerLogic.getStatus());
+											System.out.println(
+													"CLIENT: Local player status isImposter? " + localStatusIsImposter);
+
+											// CRITICAL: Don't override server's wasImposter value
+											// wasImposter = "imposter".equals(PlayerLogic.getStatus()); <-- REMOVED
+											// THIS LINE
+
 											// Flag as ejected instead of changing status directly
 											PlayerLogic.flagEjected(true);
 
 											System.out.println("CLIENT: Local player flagged as being ejected");
+											System.out.println(
+													"CLIENT: Using server's wasImposter value: " + wasImposter);
 										}
 										// If it's another player
 										else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
@@ -566,14 +578,19 @@ public class ClientLogic {
 												System.out.println("CLIENT: Other player set to dead");
 											}
 										}
+
 										// Explicitly set ejection info in the GameWindow
-										 if (GameWindow.getGameWindowInstance() != null) {
-							                    System.out.println("CLIENT: Setting ejection info in GameWindow with wasImposter=" + wasImposter);
-							                    GameWindow.getGameWindowInstance().setEjectionInfo(ejectedPlayerKey, wasImposter);
-							                } else {
-							                    System.err.println("CLIENT ERROR: GameWindow instance is null when handling ejection result");
-							                }
-							            }
+										if (GameWindow.getGameWindowInstance() != null) {
+											System.out.println(
+													"CLIENT: Setting ejection info in GameWindow with wasImposter="
+															+ wasImposter);
+											GameWindow.getGameWindowInstance().setEjectionInfo(ejectedPlayerKey,
+													wasImposter);
+										} else {
+											System.err.println(
+													"CLIENT ERROR: GameWindow instance is null when handling ejection result");
+										}
+									}
 
 									// If there's an active meeting UI, update it with the results
 									if (GameWindow.getGameWindowInstance() != null) {

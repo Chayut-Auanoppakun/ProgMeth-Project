@@ -1190,17 +1190,18 @@ public class MeetingUI extends StackPane {
 					// If it's the local player
 					if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
 						localPlayerEjected = true;
-						wasLocalPlayerImposter = "imposter".equals(PlayerLogic.getStatus());
+						wasLocalPlayerImposter = "imposter".equals(PlayerLogic.getStatus()); // check if we're imposter
 						PlayerLogic.flagEjected(true);
 						System.out.println("CLIENT: You were ejected!");
 					}
 					// If it's another player
 					else if (GameLogic.playerList.containsKey(ejectedPlayerKey)) {
+						System.out.println("OTHER PLAYER EJECTED");
 						PlayerInfo player = GameLogic.playerList.get(ejectedPlayerKey);
 						if (player != null) {
 							// Update player status
 							player.setStatus("dead");
-							System.out.println("CLIENT: Player " + player.getName() + " was ejected!");
+							System.out.println("MEETING UI: Player " + player.getName() + " was ejected!");
 						}
 					}
 
@@ -1213,8 +1214,9 @@ public class MeetingUI extends StackPane {
 					} else {
 						// Get imposter status from server broadcast
 						finalWasImposter = voteResults.containsKey("wasImposter")
-								? (voteResults.get("wasImposter") == 1)
+								? (voteResults.get("wasImposter").intValue() == 1)
 								: false;
+						System.out.println("Final was Imposter : " + finalWasImposter);
 					}
 
 					// Add a custom callback to the GameWindow class when closing the meeting UI
@@ -1235,7 +1237,39 @@ public class MeetingUI extends StackPane {
 					// Skip showing ejection text in meeting UI
 					return;
 				}
+				int skipVotes = voteResults.getOrDefault("skip", 0);
+				int totalVotes = 0;
+				int highestVotes = 0;
+				boolean hasTie = false;
 
+				// Count votes and check for tie
+				for (Map.Entry<String, Integer> entry : voteResults.entrySet()) {
+					if (!entry.getKey().equals("wasImposter")) {
+						totalVotes += entry.getValue();
+
+						if (!entry.getKey().equals("skip") && entry.getValue() > highestVotes) {
+							highestVotes = entry.getValue();
+						}
+					}
+				}
+				boolean isSkip = skipVotes > highestVotes;
+
+				// Close the meeting UI quickly
+				if (executor != null && !executor.isShutdown()) {
+					executor.schedule(() -> Platform.runLater(this::closeMeetingUI), 1, TimeUnit.SECONDS);
+				} else {
+					// Fallback if executor is already shut down
+					Timeline closingTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> closeMeetingUI()));
+					closingTimer.play();
+				}
+
+				// Show the skip/draw panel after closing the meeting UI
+				if (gameWindow != null) {
+					final boolean finalIsSkip = isSkip;
+					Platform.runLater(() -> {
+						gameWindow.showSkipDrawPanel(finalIsSkip, voteResults);
+					});
+				}
 				// Create results display only for no ejection case
 				VBox resultsBox = new VBox(20);
 				resultsBox.setAlignment(Pos.CENTER);

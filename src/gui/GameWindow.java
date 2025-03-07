@@ -1961,13 +1961,16 @@ public class GameWindow {
 	 */
 	private void showDeathPanel(int killerCharId) {
 		try {
+			// Finalize death state immediately so other players can see it
+			PlayerLogic.finalizeDeathState();
+
 			// Create panel container
 			StackPane deathPanel = new StackPane();
 			deathPanel.setPrefSize(screenWidth, screenHeight);
 
 			// Add semi-transparent dark background
 			Rectangle darkOverlay = new Rectangle(screenWidth, screenHeight);
-			darkOverlay.setFill(new Color(0, 0, 0, 0.8)); // Darker overlay to make panel stand out
+			darkOverlay.setFill(new Color(0, 0, 0, 0.8));
 
 			// Create content container styled like CharacterSelectGui
 			VBox contentBox = new VBox(20);
@@ -1991,7 +1994,7 @@ public class GameWindow {
 			title.setFill(Paint.valueOf("#ff6347")); // Tomato red
 			title.setFont(Font.font("Monospace", FontWeight.BOLD, 28));
 
-			// Shadow effect for title text to make it pop (just like in CharacterSelectGui)
+			// Shadow effect for title text to make it pop
 			title.setStyle("-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 3, 0, 0, 0);");
 
 			// Character display container
@@ -1999,7 +2002,7 @@ public class GameWindow {
 			characterBox.setAlignment(Pos.CENTER);
 			characterBox.setPadding(new Insets(15, 0, 15, 0));
 
-			// Create character displays with same style as CharacterSelectGui
+			// Create character displays
 			VBox playerBox = createCharSelectStyleCharacterDisplay(PlayerLogic.getCharID(), PlayerLogic.getName(),
 					"Dead");
 			VBox killerBox = createCharSelectStyleCharacterDisplay(killerCharId, "Your Killer", "Impostor");
@@ -2043,10 +2046,15 @@ public class GameWindow {
 			// Add hover effects
 			continueButton.setOnMouseEntered(e -> continueButton.setStyle(hoverButtonStyle));
 			continueButton.setOnMouseExited(e -> continueButton.setStyle(baseButtonStyle));
-			PlayerLogic.finalizeDeathState();
+
+			// Create auto-close counter
+			Text autoCloseText = new Text("Auto-closing in 5");
+			autoCloseText.setFont(Font.font("Monospace", FontWeight.NORMAL, 14));
+			autoCloseText.setFill(Color.LIGHTGRAY);
+			autoCloseText.setTextAlignment(TextAlignment.CENTER);
+
 			// Button action to close the panel
 			continueButton.setOnAction(e -> {
-				//PlayerLogic.finalizeDeathState();
 				FadeTransition fadeOut = new FadeTransition(Duration.millis(500), deathPanel);
 				fadeOut.setFromValue(1);
 				fadeOut.setToValue(0);
@@ -2055,7 +2063,7 @@ public class GameWindow {
 			});
 
 			// Add all elements to the content box
-			contentBox.getChildren().addAll(title, characterBox, ghostInfoText, continueButton);
+			contentBox.getChildren().addAll(title, characterBox, ghostInfoText, continueButton, autoCloseText);
 
 			// Add elements to the panel
 			deathPanel.getChildren().addAll(darkOverlay, contentBox);
@@ -2070,8 +2078,29 @@ public class GameWindow {
 			fadeIn.setToValue(1);
 			fadeIn.play();
 
+			// Create timer for auto-close
+			Timeline autoCloseTimer = new Timeline();
+			for (int i = 5; i >= 0; i--) {
+				final int seconds = i;
+				KeyFrame frame = new KeyFrame(Duration.seconds(5 - i), event -> {
+					autoCloseText.setText("Auto-closing in " + seconds);
+
+					// When timer reaches 0, close the panel
+					if (seconds == 0 && deathPanel.getParent() != null) {
+						FadeTransition fadeOut = new FadeTransition(Duration.millis(500), deathPanel);
+						fadeOut.setFromValue(1);
+						fadeOut.setToValue(0);
+						fadeOut.setOnFinished(e -> root.getChildren().remove(deathPanel));
+						fadeOut.play();
+					}
+				});
+				autoCloseTimer.getKeyFrames().add(frame);
+			}
+			autoCloseTimer.play();
+
 			// Play death sound
 			SoundLogic.playSound("assets/sounds/impostor_kill.wav", 0);
+
 		} catch (Exception e) {
 			System.err.println("Error showing death panel: " + e.getMessage());
 			e.printStackTrace();
@@ -2670,6 +2699,238 @@ public class GameWindow {
 		});
 	}
 
+	public void showSkipDrawPanel(boolean isSkip, java.util.Map<String, Integer> voteResults) {
+		try {
+			// Create panel container
+			StackPane skipDrawPanel = new StackPane();
+			skipDrawPanel.setPrefSize(screenWidth, screenHeight);
+
+			// Add semi-transparent dark background with stars (space-like)
+			Rectangle darkOverlay = new Rectangle(screenWidth, screenHeight);
+			darkOverlay.setFill(new Color(0, 0, 0, 0.85)); // Dark overlay for space effect
+
+			// Create content container styled to match the game theme
+			VBox contentBox = new VBox(20);
+			contentBox.setAlignment(Pos.CENTER);
+			contentBox.setPrefWidth(600);
+			contentBox.setPrefHeight(500);
+			contentBox.setMaxWidth(600);
+			contentBox.setMaxHeight(500);
+			contentBox.setPadding(new Insets(25));
+
+			// Use the same dark blue-gray background as CharacterSelectGui
+			contentBox.setStyle("-fx-background-color: rgba(30, 30, 50, 0.95);");
+
+			// Create border with blue accent color
+			contentBox.setBorder(new Border(new BorderStroke(Paint.valueOf("#1e90ff"), // Blue border color
+					BorderStrokeStyle.SOLID, new CornerRadii(0), // Sharp corners
+					new BorderWidths(3))));
+
+			// Title text
+			Text title = new Text(isSkip ? "VOTE SKIPPED" : "NO CONSENSUS");
+			title.setFill(Paint.valueOf("#FFD700")); // Gold color to distinguish from ejection
+			title.setFont(Font.font("Monospace", FontWeight.BOLD, 28));
+			title.setTextAlignment(TextAlignment.CENTER);
+
+			// Shadow effect for title text to make it pop
+			title.setStyle("-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 3, 0, 0, 0);");
+
+			// Result description
+			Text descriptionText = new Text(
+					isSkip ? "The crew decided to skip voting." : "The votes resulted in a tie.");
+			descriptionText.setFont(Font.font("Monospace", FontWeight.BOLD, 20));
+			descriptionText.setFill(Color.WHITE);
+			descriptionText.setTextAlignment(TextAlignment.CENTER);
+
+			// Create center icon (question mark or skip icon)
+			ImageView centerIcon = new ImageView();
+			try {
+				// Try to load appropriate icon based on result
+				String iconPath = isSkip ? "/TaskAsset/skip_vote.png" // Use a skip icon if you have one
+						: "/TaskAsset/question_mark.png"; // Use a question mark for tie
+
+				// Fallback to creating a shape if image is not available
+				if (getClass().getResource(iconPath) == null) {
+					// Create a circle with ? or SKIP text as fallback
+					Circle circle = new Circle(60);
+					circle.setFill(Color.DARKGRAY);
+					circle.setStroke(Color.LIGHTGRAY);
+					circle.setStrokeWidth(3);
+
+					Text circleText = new Text(isSkip ? "SKIP" : "?");
+					circleText.setFont(Font.font("Monospace", FontWeight.BOLD, 40));
+					circleText.setFill(Color.WHITE);
+
+					StackPane iconPane = new StackPane(circle, circleText);
+					iconPane.setPadding(new Insets(20));
+
+					// Add rotation animation
+					RotateTransition rotateTransition = new RotateTransition(Duration.seconds(10), iconPane);
+					rotateTransition.setByAngle(360);
+					rotateTransition.setCycleCount(Animation.INDEFINITE);
+					rotateTransition.setInterpolator(Interpolator.LINEAR);
+					rotateTransition.play();
+
+					// Add the created icon to the content
+					contentBox.getChildren().add(iconPane);
+				} else {
+					// Use the image if available
+					Image iconImage = new Image(getClass().getResourceAsStream(iconPath));
+					centerIcon.setImage(iconImage);
+					centerIcon.setFitWidth(120);
+					centerIcon.setFitHeight(120);
+					centerIcon.setPreserveRatio(true);
+
+					// Add styling to match game aesthetics
+					centerIcon.setStyle("-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 5, 0, 0, 1);");
+
+					// Add rotation animation
+					RotateTransition rotateTransition = new RotateTransition(Duration.seconds(10), centerIcon);
+					rotateTransition.setByAngle(360);
+					rotateTransition.setCycleCount(Animation.INDEFINITE);
+					rotateTransition.setInterpolator(Interpolator.LINEAR);
+					rotateTransition.play();
+
+					// Add the icon to the content
+					contentBox.getChildren().add(centerIcon);
+				}
+			} catch (Exception e) {
+				System.err.println("Error loading icon image: " + e.getMessage());
+				// Icon will be skipped, continue with other elements
+			}
+
+			// Vote result summary
+			VBox voteResultsBox = new VBox(5);
+			voteResultsBox.setAlignment(Pos.CENTER);
+
+			Text voteHeader = new Text("Votes:");
+			voteHeader.setFont(Font.font("Monospace", FontWeight.BOLD, 18));
+			voteHeader.setFill(Color.LIGHTGRAY);
+			voteResultsBox.getChildren().add(voteHeader);
+
+			// Add vote details
+			int skipVotes = voteResults.getOrDefault("skip", 0);
+
+			if (skipVotes > 0) {
+				Text skipText = new Text("Skip: " + skipVotes);
+				skipText.setFont(Font.font("Monospace", FontWeight.NORMAL, 16));
+				skipText.setFill(Color.LIGHTBLUE);
+				voteResultsBox.getChildren().add(skipText);
+			}
+
+			// Add player votes
+			for (java.util.Map.Entry<String, Integer> entry : voteResults.entrySet()) {
+				if (!entry.getKey().equals("skip") && !entry.getKey().equals("wasImposter")) {
+					String playerName = "Unknown";
+
+					// Try to get player name
+					if (entry.getKey().equals(PlayerLogic.getLocalAddressPort())) {
+						playerName = PlayerLogic.getName();
+					} else if (GameLogic.playerList.containsKey(entry.getKey())) {
+						playerName = GameLogic.playerList.get(entry.getKey()).getName();
+					}
+
+					Text playerVoteText = new Text(playerName + ": " + entry.getValue());
+					playerVoteText.setFont(Font.font("Monospace", FontWeight.NORMAL, 16));
+					playerVoteText.setFill(Color.LIGHTBLUE);
+					voteResultsBox.getChildren().add(playerVoteText);
+				}
+			}
+
+			// Final outcome text
+			Text outcomeText = new Text("No one was ejected.");
+			outcomeText.setFont(Font.font("Monospace", FontWeight.BOLD, 22));
+			outcomeText.setFill(Color.LIGHTGREEN);
+			outcomeText.setTextAlignment(TextAlignment.CENTER);
+
+			// Continue button
+			Button continueButton = new Button("CONTINUE");
+
+			// Match the button style with game's theme
+			String baseButtonStyle = "-fx-background-color: #1e90ff;" + "-fx-text-fill: white;"
+					+ "-fx-font-family: 'Monospace';" + "-fx-font-size: 16px;" + "-fx-font-weight: bold;"
+					+ "-fx-padding: 10 20 10 20;" + "-fx-border-color: #87cefa;" + "-fx-border-width: 2px;"
+					+ "-fx-background-radius: 0;" + "-fx-border-radius: 0;"
+					+ "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 5, 0, 0, 1);";
+
+			String hoverButtonStyle = "-fx-background-color: #00bfff;" + "-fx-text-fill: white;"
+					+ "-fx-font-family: 'Monospace';" + "-fx-font-size: 16px;" + "-fx-font-weight: bold;"
+					+ "-fx-padding: 10 20 10 20;" + "-fx-border-color: #b0e2ff;" + "-fx-border-width: 2px;"
+					+ "-fx-background-radius: 0;" + "-fx-border-radius: 0;"
+					+ "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 8, 0, 0, 1);";
+
+			continueButton.setStyle(baseButtonStyle);
+			continueButton.setPrefWidth(250);
+
+			// Add hover effects
+			continueButton.setOnMouseEntered(e -> continueButton.setStyle(hoverButtonStyle));
+			continueButton.setOnMouseExited(e -> continueButton.setStyle(baseButtonStyle));
+
+			// Create auto-close counter
+			Text autoCloseText = new Text("Auto-closing in 5");
+			autoCloseText.setFont(Font.font("Monospace", FontWeight.NORMAL, 14));
+			autoCloseText.setFill(Color.LIGHTGRAY);
+			autoCloseText.setTextAlignment(TextAlignment.CENTER);
+
+			// Button action to close the panel
+			continueButton.setOnAction(e -> {
+				FadeTransition fadeOut = new FadeTransition(Duration.millis(500), skipDrawPanel);
+				fadeOut.setFromValue(1);
+				fadeOut.setToValue(0);
+				fadeOut.setOnFinished(event -> root.getChildren().remove(skipDrawPanel));
+				fadeOut.play();
+			});
+
+			// Add all elements to the content box
+			contentBox.getChildren().addAll(title, descriptionText);
+			// Icon is added conditionally above
+			contentBox.getChildren().addAll(voteResultsBox, outcomeText, continueButton, autoCloseText);
+
+			// Create starfield for space background
+			Pane starField = createStarField(screenWidth, screenHeight);
+
+			// Add elements to the panel (stars in back, overlay, then content)
+			skipDrawPanel.getChildren().addAll(starField, darkOverlay, contentBox);
+
+			// Add panel to the root with animation
+			skipDrawPanel.setOpacity(0);
+			root.getChildren().add(skipDrawPanel);
+
+			// Create fade-in animation
+			FadeTransition fadeIn = new FadeTransition(Duration.millis(800), skipDrawPanel);
+			fadeIn.setFromValue(0);
+			fadeIn.setToValue(1);
+			fadeIn.play();
+
+			// Create timer for auto-close
+			Timeline autoCloseTimer = new Timeline();
+			for (int i = 5; i >= 0; i--) {
+				final int seconds = i;
+				KeyFrame frame = new KeyFrame(Duration.seconds(5 - i), event -> {
+					autoCloseText.setText("Auto-closing in " + seconds);
+
+					// When timer reaches 0, close the panel
+					if (seconds == 0 && skipDrawPanel.getParent() != null) {
+						FadeTransition fadeOut = new FadeTransition(Duration.millis(500), skipDrawPanel);
+						fadeOut.setFromValue(1);
+						fadeOut.setToValue(0);
+						fadeOut.setOnFinished(e -> root.getChildren().remove(skipDrawPanel));
+						fadeOut.play();
+					}
+				});
+				autoCloseTimer.getKeyFrames().add(frame);
+			}
+			autoCloseTimer.play();
+
+			// Play sound effect
+			SoundLogic.playSound("assets/sounds/vote_skipped.wav", 0);
+
+		} catch (Exception e) {
+			System.err.println("ERROR in showSkipDrawPanel: " + e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
 	public void showVotingUI(String reportedPlayerName, int reportedCharacterId, String reporterKey) {
 		// Create the meeting UI
 		MeetingUI meetingUI = new MeetingUI(this, reportedPlayerName, reporterKey);
@@ -2730,6 +2991,20 @@ public class GameWindow {
 
 	private void showEjectionPanel(String ejectedPlayerKey, boolean wasImposter) {
 		try {
+			System.out.println("EJECTION PANEL: Starting with wasImposter=" + wasImposter);
+
+			// Call finalizeDeathState AFTER capturing and using any necessary status
+			// information
+			if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+				// Check original status for debugging purposes
+				String originalStatus = PlayerLogic.getStatus();
+				System.out.println("EJECTION PANEL: Original player status: " + originalStatus);
+
+				// Now it's safe to call finalizeDeathState
+				PlayerLogic.finalizeDeathState();
+				System.out.println("EJECTION PANEL: finalizeDeathState called");
+			}
+
 			// Create panel container
 			StackPane ejectionPanel = new StackPane();
 			ejectionPanel.setPrefSize(screenWidth, screenHeight);
@@ -2892,10 +3167,15 @@ public class GameWindow {
 			// Add hover effects
 			continueButton.setOnMouseEntered(e -> continueButton.setStyle(hoverButtonStyle));
 			continueButton.setOnMouseExited(e -> continueButton.setStyle(baseButtonStyle));
-			PlayerLogic.finalizeDeathState();
+
+			// Create auto-close counter
+			Text autoCloseText = new Text("Auto-closing in 5");
+			autoCloseText.setFont(Font.font("Monospace", FontWeight.NORMAL, 14));
+			autoCloseText.setFill(Color.LIGHTGRAY);
+			autoCloseText.setTextAlignment(TextAlignment.CENTER);
+
 			// Button action to close the panel
 			continueButton.setOnAction(e -> {
-
 				FadeTransition fadeOut = new FadeTransition(Duration.millis(500), ejectionPanel);
 				fadeOut.setFromValue(1);
 				fadeOut.setToValue(0);
@@ -2903,11 +3183,12 @@ public class GameWindow {
 				fadeOut.play();
 			});
 
-			// Space styling: add starfield
-			Pane starField = createStarField(screenWidth, screenHeight);
-
 			// Add all elements to the content box
-			contentBox.getChildren().addAll(title, profileView, statusText, remainingText, continueButton);
+			contentBox.getChildren().addAll(title, profileView, statusText, remainingText, continueButton,
+					autoCloseText);
+
+			// Create starfield
+			Pane starField = createStarField(screenWidth, screenHeight);
 
 			// Add elements to the panel (stars in back, overlay, then content)
 			ejectionPanel.getChildren().addAll(starField, darkOverlay, contentBox);
@@ -2922,16 +3203,37 @@ public class GameWindow {
 			fadeIn.setToValue(1);
 			fadeIn.play();
 
+			// Create timer for auto-close
+			Timeline autoCloseTimer = new Timeline();
+			for (int i = 5; i >= 0; i--) {
+				final int seconds = i;
+				KeyFrame frame = new KeyFrame(Duration.seconds(5 - i), event -> {
+					autoCloseText.setText("Auto-closing in " + seconds);
+
+					// When timer reaches 0, close the panel
+					if (seconds == 0 && ejectionPanel.getParent() != null) {
+						FadeTransition fadeOut = new FadeTransition(Duration.millis(500), ejectionPanel);
+						fadeOut.setFromValue(1);
+						fadeOut.setToValue(0);
+						fadeOut.setOnFinished(e -> root.getChildren().remove(ejectionPanel));
+						fadeOut.play();
+					}
+				});
+				autoCloseTimer.getKeyFrames().add(frame);
+			}
+			autoCloseTimer.play();
+
 			// Play ejection sound
 			SoundLogic.playSound("assets/sounds/ejection.wav", 0);
+
 		} catch (Exception e) {
 			System.err.println("ERROR in showEjectionPanel: " + e.getMessage());
 			e.printStackTrace();
 
 			// Ensure death state is finalized even if panel fails
-
-			PlayerLogic.finalizeDeathState();
-
+			if (ejectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())) {
+				PlayerLogic.finalizeDeathState();
+			}
 		}
 	}
 
@@ -3040,13 +3342,13 @@ public class GameWindow {
 					+ (pendingEjectedPlayerKey.equals(PlayerLogic.getLocalAddressPort())));
 
 			try {
-				// Ensure we're on the JavaFX thread
+				// Ensure we're on the JavaFX thread - DO NOT call finalizeDeathState here
+				// Let the ejection panel handle it at the right time
 				if (Platform.isFxApplicationThread()) {
 					showEjectionPanel(pendingEjectedPlayerKey, pendingEjectedWasImposter);
 				} else {
 					Platform.runLater(() -> showEjectionPanel(pendingEjectedPlayerKey, pendingEjectedWasImposter));
 				}
-
 				// Clear the pending ejection info after showing the panel
 				String ejectedKey = pendingEjectedPlayerKey; // Store for debugging
 				pendingEjectedPlayerKey = null;
