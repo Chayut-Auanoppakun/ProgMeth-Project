@@ -138,8 +138,7 @@ public class Task11 extends Task {
                  obj1Top > obj2Bottom);
     }
 
-    @Override
-    protected void initializeTask() {}
+    
 
     @Override
     public boolean isCompleted() {

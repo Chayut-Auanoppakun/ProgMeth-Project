@@ -206,10 +206,7 @@ class Task1 extends Task {
         getChildren().add(getCloseButton());
     }
 
-    @Override
-    protected void initializeTask() {
-        // Task initialization happens in the constructor
-    }
+    
 
     @Override
     public boolean isCompleted() {

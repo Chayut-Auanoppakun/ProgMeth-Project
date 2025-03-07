@@ -108,10 +108,7 @@ public class Task8 extends Task {
         getChildren().addAll(mainContainer, getCloseButton());
     }
 
-    @Override
-    protected void initializeTask() {
-        // Initialization happens in constructor
-    }
+    
 
     @Override
     public boolean isCompleted() {

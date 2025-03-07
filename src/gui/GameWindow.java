@@ -127,6 +127,9 @@ public class GameWindow {
 	private static final int SPRITE_COLUMNS = 6;
 	private static final int ANIMATION_SPEED = 150; // milliseconds per frame
 	private boolean wasProcessingKill = false;
+	private StackPane activeDeathPanel = null;
+	private StackPane activeEjectionPanel = null;
+	private StackPane activeSkipDrawPanel = null;
 	// === Camera & Viewport ===
 	private static double viewportX = 1010;
 	private static double viewportY = 3616;
@@ -1961,6 +1964,11 @@ public class GameWindow {
 	 */
 	private void showDeathPanel(int killerCharId) {
 		try {
+			if (activeDeathPanel != null && activeDeathPanel.getParent() != null) {
+				System.out.println("GameWindow: Death panel already active, removing");
+				root.getChildren().remove(activeDeathPanel);
+				activeDeathPanel = null;
+			}
 			// Finalize death state immediately so other players can see it
 			PlayerLogic.finalizeDeathState();
 
@@ -2060,6 +2068,7 @@ public class GameWindow {
 				fadeOut.setToValue(0);
 				fadeOut.setOnFinished(event -> root.getChildren().remove(deathPanel));
 				fadeOut.play();
+				activeDeathPanel = null;
 			});
 
 			// Add all elements to the content box
@@ -2090,7 +2099,11 @@ public class GameWindow {
 						FadeTransition fadeOut = new FadeTransition(Duration.millis(500), deathPanel);
 						fadeOut.setFromValue(1);
 						fadeOut.setToValue(0);
-						fadeOut.setOnFinished(e -> root.getChildren().remove(deathPanel));
+						fadeOut.setOnFinished(e -> {
+							root.getChildren().remove(deathPanel);
+							activeDeathPanel = null;
+						});
+
 						fadeOut.play();
 					}
 				});
@@ -2107,7 +2120,7 @@ public class GameWindow {
 
 			// Ensure death state is finalized even if panel fails
 			PlayerLogic.finalizeDeathState();
-		}
+			activeDeathPanel = null;		}
 	}
 
 	/**
@@ -2928,6 +2941,7 @@ public class GameWindow {
 		} catch (Exception e) {
 			System.err.println("ERROR in showSkipDrawPanel: " + e.getMessage());
 			e.printStackTrace();
+
 		}
 	}
 
@@ -2983,6 +2997,7 @@ public class GameWindow {
 			PlayerInfo info = GameLogic.playerList.get(key);
 			totalCompleted += Math.round(info.getTaskPercent());
 		}
+		totalCompleted/= GameLogic.playerList.size()-GameLogic.getImposterCount()+1;
 		if (totalCompleted > 100) {
 			totalCompleted = 100;
 		}
@@ -2991,6 +3006,11 @@ public class GameWindow {
 
 	private void showEjectionPanel(String ejectedPlayerKey, boolean wasImposter) {
 		try {
+			if (activeEjectionPanel != null && activeEjectionPanel.getParent() != null) {
+				System.out.println("GameWindow: Ejection panel already active, removing");
+				root.getChildren().remove(activeEjectionPanel);
+				activeEjectionPanel = null;
+			}
 			System.out.println("EJECTION PANEL: Starting with wasImposter=" + wasImposter);
 
 			// Call finalizeDeathState AFTER capturing and using any necessary status

@@ -430,7 +430,26 @@ public class ClientLogic {
 									String reporterKey = meetingData.getString("reporter");
 									String reportedPlayerName = meetingData.optString("reportedPlayer", null);
 									int reportedCharId = meetingData.getInt("reportedCharId");
+									// IMPORTANT: Mark the reported corpse as found
+									if (reportedPlayerName != null) {
+										// Find and mark the corresponding corpse as found
+										boolean corpseFound = false;
+										for (String corpseKey : GameLogic.corpseList.keySet()) {
+											Corpse corpse = GameLogic.corpseList.get(corpseKey);
+											if (corpse != null && corpse.getPlayerName().equals(reportedPlayerName)) {
+												corpse.setFound(true);
+												corpseFound = true;
+												System.out.println("CLIENT: Marked corpse of " + reportedPlayerName
+														+ " as found after meeting notification");
+												break;
+											}
+										}
 
+										if (!corpseFound) {
+											System.out.println("CLIENT: Could not find corpse for reported player: "
+													+ reportedPlayerName);
+										}
+									}
 									Platform.runLater(() -> {
 										GameWindow.getGameWindowInstance().startEmergencyMeeting(reporterKey,
 												reportedPlayerName, reportedCharId);

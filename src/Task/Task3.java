@@ -212,8 +212,7 @@ class Task3 extends Task {
         return code.toString();
     }
 
-    @Override
-    protected void initializeTask() {}
+    
 
     @Override
     public boolean isCompleted() {

@@ -128,10 +128,7 @@ public class Task2 extends Task {
         }
     }
 
-    @Override
-    protected void initializeTask() {
-        // Initialization happens in constructor
-    }
+    
 
     @Override
     public boolean isCompleted() {

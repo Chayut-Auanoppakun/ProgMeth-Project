@@ -108,11 +108,6 @@ public class Task7 extends Task {
     }
 
     @Override
-    protected void initializeTask() {
-        // Initialization happens in constructor
-    }
-
-    @Override
     public boolean isCompleted() {
         return false; // This is handled by the completeTask method
     }

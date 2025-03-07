@@ -144,11 +144,7 @@ public class Task12 extends Task {
         );
     }
 
-    @Override
-    protected void initializeTask() {
-        // No specific initialization needed
-    }
-
+    
     @Override
     public boolean isCompleted() {
         return false; // Placeholder
