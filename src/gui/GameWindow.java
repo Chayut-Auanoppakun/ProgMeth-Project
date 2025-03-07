@@ -2997,6 +2997,7 @@ public class GameWindow {
 			PlayerInfo info = GameLogic.playerList.get(key);
 			totalCompleted += Math.round(info.getTaskPercent());
 		}
+		totalCompleted/= GameLogic.playerList.size()-GameLogic.getImposterCount();
 		if (totalCompleted > 100) {
 			totalCompleted = 100;
 		}
