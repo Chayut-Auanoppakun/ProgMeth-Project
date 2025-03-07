@@ -280,8 +280,12 @@ public class GameWindow {
 					GameLogic.checkGameConditions();
 				}
 				if (System.currentTimeMillis() - laskcheckkill > 1000) {
+					laskcheckkill = System.currentTimeMillis();
 					if (GameLogic.getKillCooldown() > 0)
 						GameLogic.setKillCooldown(GameLogic.getKillCooldown() - 1);
+
+					if (GameLogic.getEmergencyMeetingCooldown() > 0)
+						GameLogic.setEmergencyMeetingCooldown(GameLogic.getEmergencyMeetingCooldown() - 1);
 				}
 
 				if (PlayerLogic.getMoving()) {
@@ -1093,13 +1097,16 @@ public class GameWindow {
 				lastFpressed = System.currentTimeMillis();
 				SoundLogic.playSound("assets/sounds/UI_Select.wav", GameLogic.getSFXVolume());
 				// Check for emergency meeting button first (allow both roles)
-				if (GameLogic.getKillCooldown() > 0) {
-					showNotification("KILL COOL DOWN "+ GameLogic.getKillCooldown());
-					return;
-				}
-				GameLogic.setKillCooldown(25);
+				
+				
 				String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
 				if (!eventId.isEmpty() && eventId.equals("99")) {
+					
+					if (GameLogic.getRemainingEmergencyMeetingCooldown() > 0) {
+						showNotification("KILL COOLDOWN : " + GameLogic.getRemainingEmergencyMeetingCooldown());
+						return;
+					}
+					GameLogic.setEmergencyMeetingCooldown(25);
 					System.out.println("Emergency meeting button pressed");
 					TaskLogic.openTask(eventId, taskContainer);
 
@@ -1141,6 +1148,11 @@ public class GameWindow {
 						// Maybe show a hint message that there's nothing to interact with
 					}
 				} else { // For Imposter kill code
+					if (GameLogic.getKillCooldown() > 0) {
+						showNotification("KILL COOLDOWN : " + GameLogic.getKillCooldown());
+						return;
+					}
+					GameLogic.setKillCooldown(25);
 					PlayerInfo closestTarget = findClosestKillablePlayer();
 					if (closestTarget != null) {
 						// Trigger kill method
