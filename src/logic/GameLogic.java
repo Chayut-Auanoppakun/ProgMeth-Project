@@ -22,8 +22,26 @@ public class GameLogic {
 	private static ScheduledExecutorService gameLoopExecutor;
 	private static int KillCooldown = 25;
 	private static int taskAmount = 5;
+	private static float SFXVolume = 0; //0 is max -- to make quiet
+	private static float MUSICVolume = 0;
 	public enum GameResult {
 		ONGOING, CREWMATE_WIN, IMPOSTER_WIN
+	}
+
+	public static float getSFXVolume() {
+		return SFXVolume;
+	}
+
+	public static void setSFXVolume(float sFXVolume) {
+		SFXVolume = sFXVolume;
+	}
+
+	public static float getMUSICVolume() {
+		return MUSICVolume;
+	}
+
+	public static void setMUSICVolume(float mUSICVolume) {
+		MUSICVolume = mUSICVolume;
 	}
 
 	public static int getTaskAmount() {

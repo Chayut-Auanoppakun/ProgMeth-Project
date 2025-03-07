@@ -1074,6 +1074,8 @@ public class GameWindow {
 		if (pressedKeys.contains(KeyCode.C)) {
 			if (System.currentTimeMillis() - lastCollisionChanged > 250) {
 				lastCollisionChanged = System.currentTimeMillis();
+				SoundLogic.playSound("assets/sounds/UI_Select.wav", GameLogic.getSFXVolume());
+
 				if (!showCollision)
 					showCollision = true;
 				else
@@ -1083,7 +1085,7 @@ public class GameWindow {
 		if (pressedKeys.contains(KeyCode.F)) { // Task for player and Kill for Imposter
 			if (System.currentTimeMillis() - lastFpressed > 250) {
 				lastFpressed = System.currentTimeMillis();
-
+				SoundLogic.playSound("assets/sounds/UI_Select.wav", GameLogic.getSFXVolume());
 				// Check for emergency meeting button first (allow both roles)
 				String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
 				if (!eventId.isEmpty() && eventId.equals("99")) {
@@ -2271,6 +2273,7 @@ public class GameWindow {
 				return;
 			} else {
 				System.out.println("Starting Meeting");
+				GameWindow.TeleportToStart();
 			}
 			MeetingOpen = true;
 			// Create a full-screen overlay for the meeting
