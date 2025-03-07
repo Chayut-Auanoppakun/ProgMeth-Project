@@ -79,15 +79,15 @@ public class GameLogic {
 		updatePlayerCounts();
 
 		if (!GameLogic.prepEnded||!isImposterRolesSet) {
-			System.out.println("WAIT FOR CHECK");
+			//System.out.println("WAIT FOR CHECK");
 			return;
 		}
 		// Check win conditions
 		if (checkImpostorWinCondition()) {
-			System.out.println("IMPOSTER WINS");
+			//System.out.println("IMPOSTER WINS");
 			endGame(GameResult.IMPOSTER_WIN);
 		} else if (checkCrewmateWinCondition()) {
-			System.out.println("CREWMATE WINS");
+			//System.out.println("CREWMATE WINS");
 			endGame(GameResult.CREWMATE_WIN);
 		}
 	}
