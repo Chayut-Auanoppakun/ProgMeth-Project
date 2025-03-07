@@ -1976,7 +1976,7 @@ public class GameWindow {
 			// Create panel container
 			StackPane deathPanel = new StackPane();
 			deathPanel.setPrefSize(screenWidth, screenHeight);
-
+	        activeDeathPanel = deathPanel;
 			// Add semi-transparent dark background
 			Rectangle darkOverlay = new Rectangle(screenWidth, screenHeight);
 			darkOverlay.setFill(new Color(0, 0, 0, 0.8));
@@ -2195,7 +2195,7 @@ public class GameWindow {
 
 	private void checkPlayerStateChange() {
 		// Check specific death flags first
-		if (PlayerLogic.isBeingKilled() && !wasProcessingKill) {
+		if (PlayerLogic.isBeingKilled() && !wasProcessingKill && activeDeathPanel == null) {
 			wasProcessingKill = true;
 			System.out.println("GameWindow: Player is being killed, showing death panel");
 
@@ -2205,9 +2205,6 @@ public class GameWindow {
 			// Show death panel
 			Platform.runLater(() -> {
 				showDeathPanel(killerCharId);
-
-				// After death panel animation completes, finalize death status
-				// This is usually handled by the death panel's closing action
 			});
 		}
 
@@ -3385,9 +3382,9 @@ public class GameWindow {
 		} else {
 			System.out.println("GameWindow: No pending ejection, not showing panel");
 		}
-	}// This method should be added to GameWindow.java to properly determine if
-		// results show a skip or a tie
+	}
 
+	// is skip vote or tie
 	private boolean isSkipVote(java.util.Map<String, Integer> voteResults) {
 		// If there's at least one skip vote
 		int skipVotes = voteResults.getOrDefault("skip", 0);
@@ -3404,9 +3401,6 @@ public class GameWindow {
 			}
 		}
 
-		// It's a skip vote if:
-		// 1. Skip votes are greater than any single player's votes
-		// 2. Skip votes are equal to highest player votes (tie with skip)
 		return skipVotes >= highestPlayerVotes;
 	}
 }

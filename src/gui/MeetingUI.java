@@ -1019,7 +1019,6 @@ public class MeetingUI extends StackPane {
 	public void receiveVote(String voterKey, String targetKey) {
 		Platform.runLater(() -> {
 			try {
-
 				if (processedVoterKeys.contains(voterKey)) {
 					// Check if the vote is the same as before
 					String previousVote = playerVotes.get(voterKey);
@@ -1045,6 +1044,9 @@ public class MeetingUI extends StackPane {
 					// Add chat message
 					String voterName = getPlayerNameByKey(voterKey);
 					addChatMessage("SYSTEM", voterName + " skipped voting");
+
+					// Count votes to check for everyone skipping
+					checkAllPlayersVoted();
 					return;
 				}
 
@@ -1129,12 +1131,26 @@ public class MeetingUI extends StackPane {
 		// Count all votes (including skip votes)
 		int votesCount = playerVotes.size();
 
+		// Count skip votes specifically
+		int skipVotes = 0;
+		for (String vote : playerVotes.values()) {
+			if ("skip".equals(vote)) {
+				skipVotes++;
+			}
+		}
+
 		System.out
 				.println("MEETING UI: Vote check - " + votesCount + " votes out of " + alivePlayers + " alive players");
+		System.out.println("MEETING UI: Skip votes: " + skipVotes);
 
 		// If all alive players have voted
 		if (votesCount >= alivePlayers && alivePlayers > 0) {
 			System.out.println("MEETING UI: All players have voted! Reducing timer to 3 seconds.");
+
+			// Also check if everyone voted to skip
+			if (skipVotes == alivePlayers && alivePlayers > 0) {
+				System.out.println("MEETING UI: All players voted to skip!");
+			}
 
 			// Stop existing timer
 			if (votingTimer != null) {
