@@ -32,6 +32,13 @@ public class MainMenuPane extends Pane {
 	private static TextField InputName;
 	private static Button hostButton;
 	private static Button joinButton;
+	
+	private AboutPanel aboutPanel;
+	private HelpPanel helpPanel;
+
+
+
+
 
 	Scene Curscene;
 	Stage thisStage;
@@ -63,8 +70,13 @@ public class MainMenuPane extends Pane {
 		newGameButton = createMenuButton("NEW GAME");
 		optionButton = createMenuButton("OPTIONS");
 		loadGameButton = createMenuButton("ABOUT");
+		loadGameButton.setOnAction(e -> showAboutPanel());
+
 		helpButton = createMenuButton("HELP");
+		helpButton.setOnAction(e -> showHelpPanel());
+
 		exitButton = createMenuButton("EXIT");
+		initializeHelpAndAboutPanels();
 
 		menuVBox = new VBox(10, titleText, newGameButton, optionButton, loadGameButton, helpButton);
 		menuVBox.setAlignment(Pos.TOP_LEFT);
@@ -321,5 +333,44 @@ public class MainMenuPane extends Pane {
 	public static State getState() {
 		return thisState;
 	}
+	
 
+	/**
+	 * Initializes the help and about panels 
+	 */
+	private void initializeHelpAndAboutPanels() {
+	    // Create the panels
+	    aboutPanel = new AboutPanel();
+	    helpPanel = new HelpPanel();
+	    
+	    // We'll set the positioning when showing the panels
+	    // to ensure they're always centered even if window resizes
+	    
+	    // Add them to the scene but keep them initially hidden
+	    getChildren().addAll(aboutPanel, helpPanel);
+	}
+
+	/**
+	 * Shows the about panel
+	 */
+	private void showAboutPanel() {
+        aboutPanel.setLayoutX(this.getWidth() - 620);
+        aboutPanel.setLayoutY(100);
+        
+        //this.getChildren().add(aboutPanel);
+        aboutPanel.toFront();
+        aboutPanel.show();
+    }
+
+    /**
+     * Shows the help panel
+     */
+    private void showHelpPanel() {
+        helpPanel.setLayoutX(this.getWidth() - 710);
+        helpPanel.setLayoutY(100);
+        
+        //this.getChildren().add(helpPanel);
+        helpPanel.toFront();
+        helpPanel.show();
+    }
 }

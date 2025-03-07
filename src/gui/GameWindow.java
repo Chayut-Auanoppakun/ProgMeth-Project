@@ -2732,10 +2732,14 @@ public class GameWindow {
 
 	public void showSkipDrawPanel(boolean isSkip, java.util.Map<String, Integer> voteResults) {
 		try {
+			if (activeSkipDrawPanel != null && activeSkipDrawPanel.getParent() != null) {
+				System.out.println("Skip/Draw panel already active, not creating another one");
+				return;
+			}
 			// Create panel container
 			StackPane skipDrawPanel = new StackPane();
 			skipDrawPanel.setPrefSize(screenWidth, screenHeight);
-
+			activeSkipDrawPanel = skipDrawPanel;
 			// Add semi-transparent dark background with stars (space-like)
 			Rectangle darkOverlay = new Rectangle(screenWidth, screenHeight);
 			darkOverlay.setFill(new Color(0, 0, 0, 0.85)); // Dark overlay for space effect
@@ -2908,7 +2912,10 @@ public class GameWindow {
 				FadeTransition fadeOut = new FadeTransition(Duration.millis(500), skipDrawPanel);
 				fadeOut.setFromValue(1);
 				fadeOut.setToValue(0);
-				fadeOut.setOnFinished(event -> root.getChildren().remove(skipDrawPanel));
+				fadeOut.setOnFinished(event -> {
+					root.getChildren().remove(skipDrawPanel);
+					activeSkipDrawPanel = null; // Clear the reference
+				});
 				fadeOut.play();
 			});
 
@@ -2945,7 +2952,10 @@ public class GameWindow {
 						FadeTransition fadeOut = new FadeTransition(Duration.millis(500), skipDrawPanel);
 						fadeOut.setFromValue(1);
 						fadeOut.setToValue(0);
-						fadeOut.setOnFinished(e -> root.getChildren().remove(skipDrawPanel));
+						fadeOut.setOnFinished(e -> {
+							root.getChildren().remove(skipDrawPanel);
+							activeSkipDrawPanel = null; // Clear the reference
+						});
 						fadeOut.play();
 					}
 				});
@@ -2954,10 +2964,13 @@ public class GameWindow {
 			autoCloseTimer.play();
 
 			// Play sound effect
-			SoundLogic.playSound("assets/sounds/vote_skipped.wav", 0);
+			SoundLogic.playSound("assets/sounds/ejection.wav", 0);
 
-		} catch (Exception e) {
+		} catch (
+
+		Exception e) {
 			System.err.println("ERROR in showSkipDrawPanel: " + e.getMessage());
+			activeSkipDrawPanel = null; // Clear the reference
 			e.printStackTrace();
 
 		}

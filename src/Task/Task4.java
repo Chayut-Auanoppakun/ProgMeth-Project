@@ -83,6 +83,7 @@ public class Task4 extends Task {
         });
         
         root.setOnMouseMoved(e -> {
+        	SoundLogic.playSound("assets/sounds/panel_waterfill.wav", 0);
             mouseX = e.getX();
             mouseY = e.getY();
         });

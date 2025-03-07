@@ -1,6 +1,6 @@
 package Task;
 
-import javafx.animation.PauseTransition;
+import javafx.animation.PauseTransition;	
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.image.Image;
@@ -13,6 +13,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
+import logic.SoundLogic;
 
 public class Task8 extends Task {
     public Task8(TaskPane parent, String taskId) {
@@ -72,7 +73,7 @@ public class Task8 extends Task {
         // Soldering interaction
         solderingIron.setOnMousePressed(event -> {
             solderingIron.setDisable(true); // Prevent multiple clicks
-
+            SoundLogic.playSound("assets/sounds/panel_electrical_wire2.wav", 0);
             PauseTransition solderTime = new PauseTransition(Duration.seconds(2));
             solderTime.setOnFinished(e -> {
                 // Remove previous elements

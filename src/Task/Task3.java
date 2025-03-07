@@ -1,6 +1,6 @@
 package Task;
 
-import java.util.Random;
+import java.util.Random;	
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
@@ -9,6 +9,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import logic.SoundLogic;
 import javafx.application.Platform;
 
 class Task3 extends Task {
@@ -101,6 +102,7 @@ class Task3 extends Task {
             "-fx-border-width: 2px;"
         );
         clearButton.setOnAction(e -> {
+        	SoundLogic.playSound("assets/sounds/panel_enterID01.wav", 0);
             enteredCode.setLength(0);
             updateDisplay();
         });

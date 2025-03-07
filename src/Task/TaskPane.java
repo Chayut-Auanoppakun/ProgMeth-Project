@@ -22,6 +22,7 @@ import javafx.util.Duration;
 import logic.ClientLogic;
 import logic.PlayerLogic;
 import logic.ServerLogic;
+import logic.SoundLogic;
 import logic.State;
 import logic.TaskLogic;
 import server.ClientInfo;
@@ -244,6 +245,7 @@ public class TaskPane extends StackPane {
 			successText.setTextAlignment(TextAlignment.CENTER);
 
 			successOverlay.getChildren().addAll(background, successText);
+			SoundLogic.playSound("assets/sounds/panel_admin_cardaccept.wav", 0);
 			getChildren().add(successOverlay);
 
 			new Thread(() -> {

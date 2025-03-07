@@ -10,6 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import logic.SoundLogic;
 import javafx.scene.layout.Pane;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +68,7 @@ public class Task11 extends Task {
         });
 
         extinguisher.setOnMouseDragged(event -> {
+        	SoundLogic.playSound("assets/sounds/panel_waterfill.wav", 0);
             double newX = extinguisher.getLayoutX() + (event.getX() - offsetX[0]);
             double newY = extinguisher.getLayoutY() + (event.getY() - offsetY[0]);
             newX = Math.max(0, Math.min(newX, taskContainer.getWidth() - extinguisher.getFitWidth()));

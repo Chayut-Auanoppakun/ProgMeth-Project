@@ -13,6 +13,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import logic.SoundLogic;
 import javafx.scene.layout.Pane;
 
 public class Task10 extends Task {
@@ -135,6 +136,7 @@ public class Task10 extends Task {
 
             // Detect when the flower is clicked to cut
             flower.setOnMouseClicked(e -> {
+            	SoundLogic.playSound("assets/sounds/panel_boardingFlip.wav", 0);
                 taskContainer.getChildren().remove(flower);
                 if (remainingFlowers.decrementAndGet() == 0) {
                     completeTask();

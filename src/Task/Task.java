@@ -1,9 +1,10 @@
 package Task;
 
-import javafx.geometry.Insets;
+import javafx.geometry.Insets;	
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.layout.StackPane;
+import logic.SoundLogic;
 
 abstract class Task extends StackPane implements Doable{
     protected TaskPane parentTaskPane;

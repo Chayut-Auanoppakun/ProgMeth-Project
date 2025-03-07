@@ -125,9 +125,9 @@ public class GameLogic {
 		gameResult = result;
 
 		// Shutdown the game loop executor
-//		if (gameLoopExecutor != null) {
-//			gameLoopExecutor.shutdown();
-//		}
+		if (gameLoopExecutor != null) {
+			gameLoopExecutor.shutdown();
+		}
 
 		// Run game end logic on JavaFX thread
 		Platform.runLater(() -> {

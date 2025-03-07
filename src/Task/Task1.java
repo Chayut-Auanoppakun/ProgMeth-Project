@@ -18,6 +18,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import logic.SoundLogic;
 
 class Task1 extends Task {
     private int switchesOn = 0;
@@ -150,6 +151,7 @@ class Task1 extends Task {
             });
             
             switchBtn.setOnAction(e -> {
+            	SoundLogic.playSound("assets/sounds/panel_beverageButton.wav", 0);
                 boolean isOn = switchBtn.getText().equals("ON");
                 if (isOn) {
                     switchBtn.setText("OFF");

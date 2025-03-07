@@ -10,6 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import logic.SoundLogic;
 import javafx.scene.layout.Pane;
 
 public class Task13 extends Task {
@@ -109,6 +110,7 @@ public class Task13 extends Task {
         // Cut carrot interaction
         knife.setOnMouseReleased(event -> {
             // Check if knife intersects with carrot
+        	SoundLogic.playSound("assets/sounds/panel_doorswitch.wav", 0);
             if (knife.getBoundsInParent().intersects(carrot.getBoundsInParent())) {
                 // Remove whole carrot
                 taskContainer.getChildren().remove(carrot);
