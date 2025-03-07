@@ -219,31 +219,4 @@ public class TaskPane extends StackPane {
 			fadeOut.play();
 		}
 	}
-
-//    private void showTaskSuccessMessage(Pane parentPane) {
-//        StackPane successOverlay = new StackPane();
-//        successOverlay.setAlignment(Pos.CENTER);
-//        
-//        Rectangle background = new Rectangle(parentPane.getWidth(), parentPane.getHeight(), Color.rgb(0, 0, 0, 0.5));
-//        background.widthProperty().bind(parentPane.widthProperty());
-//        background.heightProperty().bind(parentPane.heightProperty());
-//        
-//        Text successText = new Text("Task Completed Successfully!");
-//        successText.setFont(Font.font("Impact", FontWeight.BOLD, 36));
-//        successText.setFill(Color.WHITE);
-//        successText.setTextAlignment(TextAlignment.CENTER);
-//
-//        successOverlay.getChildren().addAll(background, successText);
-//        parentPane.getChildren().add(successOverlay);
-//        
-//        // Create a timer to remove the success message after a delay
-//        new Thread(() -> {
-//            try {
-//                Thread.sleep(2000); // Wait 2 seconds
-//            } catch (InterruptedException ex) {
-//                ex.printStackTrace();
-//            }
-//            Platform.runLater(() -> parentPane.getChildren().remove(successOverlay));
-//        }).start();
-//    }
 }
