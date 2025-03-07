@@ -25,10 +25,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
-import logic.GameLogic;
 import logic.PlayerLogic;
-import logic.SoundLogic;
-import logic.TaskLogic;
 import server.PlayerInfo;
 
 /**
@@ -86,7 +83,8 @@ public class OverlayUI extends Pane {
 		taskListBg.setEffect(dropShadow);
 		Text taskListTitle = new Text("");
 		// Task list title
-		if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead")) {
+		if (PlayerLogic.getStatus().equals("crewmate")
+				|| PlayerLogic.getStatus().equals("dead") && !PlayerLogic.isWasImposter()) {
 			taskListTitle.setText("Remaining Tasks");
 		} else {
 			taskListTitle.setText("Fake Tasks");
@@ -100,6 +98,7 @@ public class OverlayUI extends Pane {
 		content.setPadding(new Insets(10));
 
 		// Enhanced task descriptions with more context and emojis
+		@SuppressWarnings("serial")
 		Map<Integer, String> taskDescriptions = new HashMap<>() {
 			{
 				put(1, "> Fix Electrical Switches");
@@ -307,13 +306,14 @@ public class OverlayUI extends Pane {
 				actionButton.setStyle(baseButtonStyle);
 			}
 		});
-
+		// this works
 		actionButton.setOnAction(e -> {
 			if (System.currentTimeMillis() - lastActionTime < 250)
 				return; // Debounce
 			lastActionTime = System.currentTimeMillis();
 
-			if ("imposter".equals(PlayerLogic.getStatus()) && !"dead".equals(PlayerLogic.getStatus())) {
+			if (("imposter".equals(PlayerLogic.getStatus()) && !"dead".equals(PlayerLogic.getStatus()))
+					|| PlayerLogic.isWasImposter()) {
 				// For imposters: try to kill
 				PlayerInfo target = gameWindow.findClosestKillablePlayer();
 				if (target != null) {
@@ -480,7 +480,11 @@ public class OverlayUI extends Pane {
 					+ "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 5, 0, 0, 1);";
 
 			// Update action button
-			if (isDead) {
+			if (PlayerLogic.isWasImposter()) {
+				actionButton.setText("DEAD 👻");
+				actionButton.setStyle(imposterButtonStyle);
+				reportButton.setStyle(baseButtonStyle);
+			} else if (isDead) {
 				// Ghost appearance
 				actionButton.setText("INTERACT [F]");
 				actionButton.setStyle(ghostButtonStyle);
@@ -500,6 +504,7 @@ public class OverlayUI extends Pane {
 			// Update hover handlers based on new state
 			updateButtonHoverHandlers(isImposter, isDead);
 		});
+
 	}
 
 	/**

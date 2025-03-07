@@ -23,7 +23,7 @@ public class PlayerLogic {
 	private static boolean isPlayerReady = false;
 	private static boolean temporaryKilled = false;
 	private static boolean temporaryEjected = false;
-
+	private static boolean wasImposter = false;
 	// Modified status to be more specific
 	private static String status = "crewmate";
 
@@ -36,8 +36,20 @@ public class PlayerLogic {
 			System.out.println("PLAYERLOGIC: Finalizing death state to 'dead'");
 			temporaryKilled = false;
 			temporaryEjected = false;
+			if (status.equals("imposter")) {
+				wasImposter = true;
+			}
 			status = "dead"; // Set final status to dead for compatibility
 		}
+
+	}
+
+	public static boolean isWasImposter() {
+		return wasImposter;
+	}
+
+	public static void setWasImposter(boolean wasImposter) {
+		PlayerLogic.wasImposter = wasImposter;
 	}
 
 	public static boolean isBeingKilled() {

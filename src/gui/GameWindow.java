@@ -1080,10 +1080,16 @@ public class GameWindow {
 					showCollision = false;
 			}
 		}
+		if (pressedKeys.contains(KeyCode.K)) {
+			if (System.currentTimeMillis() - lastCollisionChanged > 250) {
+				showGameResultScreen();
+			}
+		}
 		if (pressedKeys.contains(KeyCode.F)) { // Task for player and Kill for Imposter
 			if (System.currentTimeMillis() - lastFpressed > 250) {
 				lastFpressed = System.currentTimeMillis();
-				if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead")) {
+				if ((PlayerLogic.getStatus().equals("crewmate")
+						|| (PlayerLogic.getStatus().equals("dead") && !PlayerLogic.isWasImposter()))) {
 					System.out.println("F pressed - checking for interactive objects");
 
 					// Check for event collisions
@@ -2120,7 +2126,8 @@ public class GameWindow {
 
 			// Ensure death state is finalized even if panel fails
 			PlayerLogic.finalizeDeathState();
-			activeDeathPanel = null;		}
+			activeDeathPanel = null;
+		}
 	}
 
 	/**
@@ -2656,7 +2663,7 @@ public class GameWindow {
 		if (System.currentTimeMillis() - lastFpressed > 250) {
 			lastFpressed = System.currentTimeMillis();
 
-			if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead")) {
+			if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead") && !PlayerLogic.isWasImposter()) {
 				System.out.println("Interact - checking for interactive objects");
 
 				// Check for event collisions
@@ -2997,7 +3004,7 @@ public class GameWindow {
 			PlayerInfo info = GameLogic.playerList.get(key);
 			totalCompleted += Math.round(info.getTaskPercent());
 		}
-		totalCompleted/= GameLogic.playerList.size()-GameLogic.getImposterCount()+1;
+		totalCompleted /= (GameLogic.playerList.size() - GameLogic.getImposterCount() + 1);
 		if (totalCompleted > 100) {
 			totalCompleted = 100;
 		}
@@ -3382,5 +3389,74 @@ public class GameWindow {
 		} else {
 			System.out.println("GameWindow: No pending ejection, not showing panel");
 		}
+	}
+	// Add these methods to your GameWindow class
+
+	/**
+	 * Shows the game result screen with the winner.
+	 * This should be called when the game ends.
+	 */
+	public void showGameResultScreen() {
+	    // Get the current game result from GameLogic
+	    GameLogic.GameResult result = GameLogic.getGameResult();
+	    
+	    // Create and show the result screen
+	    ResultScreen resultScreen = new ResultScreen(root, this, result);
+	    
+	    // Add to root to display it
+	    root.getChildren().add(resultScreen);
+	    
+	    // Bring it to front
+	    resultScreen.toFront();
+	}
+
+	/**
+	 * Returns to the main menu from the game.
+	 * Called by the Result Screen when the "MAIN MENU" button is clicked.
+	 */
+	public void returnToMainMenu() {
+	    // Stop the game loop
+	    if (timer != null) {
+	        timer.stop();
+	    }
+	    
+	    // Clean up resources
+	    if (threadPool != null) {
+	        threadPool.shutdown();
+	    }
+	    
+	    // Clean up sound resources
+	    SoundLogic.cleanup();
+	    
+	    try {
+	        // Stop game-related logic
+	        if (MainMenuPane.getState().equals(logic.State.SERVER)) {
+	            ServerLogic.stopServer();
+	        } else {
+	            ClientLogic.stopClient(ServerSelectGui.getLogArea());
+	        }
+	        
+	        // Reset game state
+	        GameLogic.clearCorpses();
+	        PlayerLogic.setCharID(0);
+	        PlayerLogic.setStatus("crewmate");
+	        
+	        // Close current stage
+	        if (gameStage != null) {
+	            gameStage.close();
+	        }
+	        
+	        // Create new main menu
+	        Stage primaryStage = new Stage();
+	        new MainMenuPane(primaryStage, 900, 600);
+	        Scene scene = new Scene(new MainMenuPane(primaryStage, 900, 600), 900, 600);
+	        primaryStage.setTitle("Among CEDT");
+	        primaryStage.setScene(scene);
+	        primaryStage.setResizable(false);
+	        primaryStage.show();
+	    } catch (Exception e) {
+	        System.err.println("Error returning to main menu: " + e.getMessage());
+	        e.printStackTrace();
+	    }
 	}
 }
