@@ -189,10 +189,7 @@ public class Task9 extends Task {
         getChildren().addAll(mainContainer, getCloseButton());
     }
 
-    @Override
-    protected void initializeTask() {
-        // No specific initialization needed
-    }
+
 
     @Override
     public boolean isCompleted() {

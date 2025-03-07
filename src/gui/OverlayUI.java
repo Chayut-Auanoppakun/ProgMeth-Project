@@ -25,10 +25,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
-import logic.GameLogic;
 import logic.PlayerLogic;
-import logic.SoundLogic;
-import logic.TaskLogic;
 import server.PlayerInfo;
 
 /**
@@ -101,6 +98,7 @@ public class OverlayUI extends Pane {
 		content.setPadding(new Insets(10));
 
 		// Enhanced task descriptions with more context and emojis
+		@SuppressWarnings("serial")
 		Map<Integer, String> taskDescriptions = new HashMap<>() {
 			{
 				put(1, "> Fix Electrical Switches");

@@ -5,7 +5,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.layout.StackPane;
 
-abstract class Task extends StackPane {
+abstract class Task extends StackPane implements Doable{
     protected TaskPane parentTaskPane;
     protected String taskId;
     private Button closeButton = new Button("X");
@@ -28,7 +28,6 @@ abstract class Task extends StackPane {
         StackPane.setMargin(closeButton, new Insets(10, 10, 0, 0));
 
         // Initialize the task
-        initializeTask();
     }
 
     public String getTaskId() {
@@ -46,7 +45,6 @@ abstract class Task extends StackPane {
      * Initialize task-specific components and logic. Each task must implement this
      * method.
      */
-    protected abstract void initializeTask();
 
     /**
      * Check if the task has been completed successfully. Each task must implement
@@ -54,7 +52,7 @@ abstract class Task extends StackPane {
      * 
      * @return true if the task is completed, false otherwise
      */
-    public abstract boolean isCompleted();
+    //public abstract boolean isCompleted();
     
     public Button getCloseButton() {
         return closeButton;

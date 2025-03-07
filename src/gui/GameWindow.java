@@ -1083,7 +1083,8 @@ public class GameWindow {
 		if (pressedKeys.contains(KeyCode.F)) { // Task for player and Kill for Imposter
 			if (System.currentTimeMillis() - lastFpressed > 250) {
 				lastFpressed = System.currentTimeMillis();
-				if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead")) {
+				if ((PlayerLogic.getStatus().equals("crewmate")
+						|| (PlayerLogic.getStatus().equals("dead") && !PlayerLogic.isWasImposter()))) {
 					System.out.println("F pressed - checking for interactive objects");
 
 					// Check for event collisions
@@ -2657,7 +2658,7 @@ public class GameWindow {
 		if (System.currentTimeMillis() - lastFpressed > 250) {
 			lastFpressed = System.currentTimeMillis();
 
-			if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead")) {
+			if (PlayerLogic.getStatus().equals("crewmate") || PlayerLogic.getStatus().equals("dead") && !PlayerLogic.isWasImposter()) {
 				System.out.println("Interact - checking for interactive objects");
 
 				// Check for event collisions
