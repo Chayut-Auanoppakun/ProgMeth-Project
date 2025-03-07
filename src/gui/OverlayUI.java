@@ -306,13 +306,14 @@ public class OverlayUI extends Pane {
 				actionButton.setStyle(baseButtonStyle);
 			}
 		});
-
+		// this works
 		actionButton.setOnAction(e -> {
 			if (System.currentTimeMillis() - lastActionTime < 250)
 				return; // Debounce
 			lastActionTime = System.currentTimeMillis();
 
-			if (("imposter".equals(PlayerLogic.getStatus()) && !"dead".equals(PlayerLogic.getStatus()))|| PlayerLogic.isWasImposter()) {
+			if (("imposter".equals(PlayerLogic.getStatus()) && !"dead".equals(PlayerLogic.getStatus()))
+					|| PlayerLogic.isWasImposter()) {
 				// For imposters: try to kill
 				PlayerInfo target = gameWindow.findClosestKillablePlayer();
 				if (target != null) {
@@ -479,7 +480,11 @@ public class OverlayUI extends Pane {
 					+ "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 5, 0, 0, 1);";
 
 			// Update action button
-			if (isDead) {
+			if (PlayerLogic.isWasImposter()) {
+				actionButton.setText("DEAD 👻");
+				actionButton.setStyle(imposterButtonStyle);
+				reportButton.setStyle(baseButtonStyle);
+			} else if (isDead) {
 				// Ghost appearance
 				actionButton.setText("INTERACT [F]");
 				actionButton.setStyle(ghostButtonStyle);
@@ -499,6 +504,7 @@ public class OverlayUI extends Pane {
 			// Update hover handlers based on new state
 			updateButtonHoverHandlers(isImposter, isDead);
 		});
+
 	}
 
 	/**
