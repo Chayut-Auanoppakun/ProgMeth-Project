@@ -194,6 +194,7 @@ public class GameWindow {
 	public void start(Stage stage) {
 		this.gameStage = stage;
 		gameWindowInstance = this;
+		GameLogic.setImposterRolesSet(false);
 		canvas = new Canvas(screenWidth, screenHeight);
 		gc = canvas.getGraphicsContext2D();
 		threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -287,7 +288,7 @@ public class GameWindow {
 					if (GameLogic.getEmergencyMeetingCooldown() > 0)
 						GameLogic.setEmergencyMeetingCooldown(GameLogic.getEmergencyMeetingCooldown() - 1);
 				}
-
+				GameLogic.setImposterRolesSet(true);
 				if (PlayerLogic.getMoving()) {
 					animation.play();
 				} else {
@@ -1097,16 +1098,16 @@ public class GameWindow {
 				lastFpressed = System.currentTimeMillis();
 				SoundLogic.playSound("assets/sounds/UI_Select.wav", GameLogic.getSFXVolume());
 				// Check for emergency meeting button first (allow both roles)
-				
-				
+
 				String eventId = TaskLogic.isPlayerCollidingWithEvent(eventObjects);
 				if (!eventId.isEmpty() && eventId.equals("99")) {
-					
+
 					if (GameLogic.getRemainingEmergencyMeetingCooldown() > 0) {
-						showNotification("KILL COOLDOWN : " + GameLogic.getRemainingEmergencyMeetingCooldown());
+						showNotification(
+								"EMERGENCY MEETING COOLDOWN : " + GameLogic.getRemainingEmergencyMeetingCooldown());
 						return;
 					}
-					GameLogic.setEmergencyMeetingCooldown(25);
+					GameLogic.setEmergencyMeetingCooldown(30);
 					System.out.println("Emergency meeting button pressed");
 					TaskLogic.openTask(eventId, taskContainer);
 
@@ -2520,6 +2521,7 @@ public class GameWindow {
 
 		// Skip if the game has ended
 		if (GameLogic.isGameEnded()) {
+			System.out.println("GAME ENDED REPORT NO WORK");
 			return;
 		}
 
@@ -3457,5 +3459,69 @@ public class GameWindow {
 		}
 
 		return skipVotes >= highestPlayerVotes;
+	}
+
+	public void showGameResultScreen() {
+		// Get the current game result from GameLogic
+		GameLogic.GameResult result = GameLogic.getGameResult();
+
+		// Create and show the result screen
+		ResultScreen resultScreen = new ResultScreen(root, this, result);
+
+		// Add to root to display it
+		root.getChildren().add(resultScreen);
+
+		// Bring it to front
+		resultScreen.toFront();
+	}
+
+	/**
+	 * Returns to the main menu from the game. Called by the Result Screen when the
+	 * "MAIN MENU" button is clicked.
+	 */
+	public void returnToMainMenu() {
+		// Stop the game loop
+		if (timer != null) {
+			timer.stop();
+		}
+
+		// Clean up resources
+		if (threadPool != null) {
+			threadPool.shutdown();
+		}
+
+		// Clean up sound resources
+		SoundLogic.cleanup();
+
+		try {
+			// Stop game-related logic
+			if (MainMenuPane.getState().equals(logic.State.SERVER)) {
+				ServerLogic.stopServer();
+			} else {
+				ClientLogic.stopClient(ServerSelectGui.getLogArea());
+			}
+
+			// Reset game state
+			GameLogic.clearCorpses();
+			PlayerLogic.setCharID(0);
+			PlayerLogic.setStatus("crewmate");
+
+			// Close current stage
+			if (gameStage != null) {
+				gameStage.close();
+			}
+
+			// Create new main menu
+			Stage primaryStage = new Stage();
+			new MainMenuPane(primaryStage, 900, 600);
+			Scene scene = new Scene(new MainMenuPane(primaryStage, 900, 600), 900, 600);
+			primaryStage.setTitle("Among CEDT");
+			primaryStage.setScene(scene);
+			primaryStage.setResizable(false);
+			primaryStage.show();
+		} catch (Exception e) {
+			System.err.println("Error returning to main menu: " + e.getMessage());
+			e.printStackTrace();
+		}
 	}
 }

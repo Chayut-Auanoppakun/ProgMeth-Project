@@ -1729,6 +1729,7 @@ public class MeetingUI extends StackPane {
 
 				// Start the transition
 				fadeOut.play();
+				GameLogic.setEmergencyMeetingCooldown(35);
 			} catch (Exception e) {
 				System.err.println("Error starting meeting UI fade out: " + e.getMessage());
 				e.printStackTrace();

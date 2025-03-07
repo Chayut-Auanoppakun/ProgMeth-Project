@@ -22,6 +22,7 @@ public class GameLogic {
 	public static ConcurrentHashMap<String, PlayerInfo> playerList = new ConcurrentHashMap<>();
 	private static boolean prepEnded = false;
 	private static ScheduledExecutorService gameLoopExecutor;
+	private static boolean isImposterRolesSet = false;
 
 	// Cooldown related variables
 	private static int KillCooldown = 25; // Kill cooldown in seconds
@@ -35,6 +36,14 @@ public class GameLogic {
 
 	public enum GameResult {
 		ONGOING, CREWMATE_WIN, IMPOSTER_WIN
+	}
+
+	public static boolean isImposterRolesSet() {
+		return isImposterRolesSet;
+	}
+
+	public static void setImposterRolesSet(boolean isImposterRolesSet) {
+		GameLogic.isImposterRolesSet = isImposterRolesSet;
 	}
 
 	public static float getSFXVolume() {
@@ -69,7 +78,7 @@ public class GameLogic {
 		// Count alive players and imposters
 		updatePlayerCounts();
 
-		if (!GameLogic.prepEnded)
+		if (!GameLogic.prepEnded||!isImposterRolesSet)
 			return;
 		// Check win conditions
 		if (checkImpostorWinCondition()) {
@@ -137,18 +146,28 @@ public class GameLogic {
 
 		// Run game end logic on JavaFX thread
 		Platform.runLater(() -> {
-			switch (result) {
-			case IMPOSTER_WIN:
-				System.out.println("GAME OVER: Imposters Win!");
-				// Add game end UI or logic for imposter victory
-				break;
-			case CREWMATE_WIN:
-				System.out.println("GAME OVER: Crewmates Win!");
-				// Add game end UI or logic for crewmate victory
-				break;
+			// Get the GameWindow instance and show the result screen
+			GameWindow gameWindowInstance = GameWindow.getGameWindowInstance();
+			if (gameWindowInstance != null) {
+				gameWindowInstance.showGameResultScreen();
 			}
 		});
 	}
+
+//		// Run game end logic on JavaFX thread
+//		Platform.runLater(() -> {
+//			switch (result) {
+//			case IMPOSTER_WIN:
+//				System.out.println("GAME OVER: Imposters Win!");
+//				// Add game end UI or logic for imposter victory
+//				break;
+//			case CREWMATE_WIN:
+//				System.out.println("GAME OVER: Crewmates Win!");
+//				// Add game end UI or logic for crewmate victory
+//				break;
+//			}
+//		});
+//	}
 
 	// Cooldown management methods
 	public static int getKillCooldown() {
